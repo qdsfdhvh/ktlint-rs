@@ -67,17 +67,17 @@ impl RuleEngine {
             Box::new(structure::EnumEntry),
             // disabled
             Box::new(structure::Indentation::new(config.indent_size)),
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
@@ -89,42 +89,42 @@ impl RuleEngine {
             // disabled
             // disabled
             Box::new(structure::NoEmptyClassBody),
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             // disabled
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             // disabled
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             // disabled
             // disabled
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
@@ -132,24 +132,24 @@ impl RuleEngine {
             // disabled
             // disabled
             // imports
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoBlankLineInList),
+            // too-broad-empty
+            // too-broad-list
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocFormatting),
+            // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
@@ -167,7 +167,7 @@ impl RuleEngine {
             // disabled
             Box::new(wrapping::StringTemplateIndent),
             Box::new(phase1_rules::WhenEntryBracing),
-            Box::new(phase1_rules::BlankLineBeforeDeclaration),
+            // too-broad-decl
             Box::new(phase1_rules::BlankLineBetweenWhenConditions),
             Box::new(phase1_rules::TrailingCommaOnCallSite),
             Box::new(phase1_rules::SpacingBetweenDeclarationsWithComments),

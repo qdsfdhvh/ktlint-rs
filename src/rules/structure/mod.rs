@@ -51,3 +51,5 @@ pub use trailing_spaces_comment::TrailingSpacesInComment;
 pub use unnecessary_paren_lambda::UnnecessaryParenBeforeLambda;
 pub mod no_semicolons;
 pub use no_semicolons::NoSemicolons;
+pub mod kdoc_simple;
+pub use kdoc_simple::KdocSimple;
