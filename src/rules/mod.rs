@@ -11,6 +11,7 @@ pub mod suppress;
 pub mod wrapping;
 pub mod new_rules;
 pub mod new_rules2;
+pub mod new_rules3;
 
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -114,6 +115,11 @@ impl RuleEngine {
             Box::new(new_rules2::BlankLineBeforeDeclarationRule), Box::new(new_rules2::SpacingAroundAngleBracketsRule),
             Box::new(new_rules2::SpacingAroundUnaryOperatorRule), Box::new(new_rules2::FunKeywordSpacingRule),
             Box::new(new_rules2::PackageImportSpacingRule), Box::new(new_rules2::MixedConditionOperatorsRule),
+            Box::new(new_rules3::EnumWrappingRule), Box::new(new_rules3::NoEmptyFirstLineInMethodBlockRule),
+            Box::new(new_rules3::TrailingCommaOnDeclarationSiteRule), Box::new(new_rules3::TypeArgumentCommentRule),
+            Box::new(new_rules3::TypeParameterCommentRule), Box::new(new_rules3::ValueArgumentCommentRule),
+            Box::new(new_rules3::ValueParameterCommentRule), Box::new(new_rules3::ThenSpacingRule),
+            Box::new(new_rules3::LambdaReturnRule), Box::new(new_rules3::BlankLineBetweenWhenConditionsRule),
         ];
         Self {
             config: config.clone(),
