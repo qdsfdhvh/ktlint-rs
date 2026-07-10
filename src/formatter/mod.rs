@@ -56,7 +56,29 @@ fn fix_all_spacing(text: &str) -> String {
     }
     t = result;
 
-    // Pass 2: operators — add spaces around = + - * / % < > etc.
+    // Pass 2: comparison operators < >
+    // Fix `x>0` → `x > 0` (only when between identifiers/numbers)
+    let bytes5 = t.as_bytes();
+    let mut result5 = String::new();
+    let mut n = 0;
+    while n < bytes5.len() {
+        let c = bytes5[n];
+        if (c == b'<' || c == b'>') && n > 0 && n + 1 < bytes5.len() {
+            let prev = bytes5[n - 1];
+            let next = bytes5[n + 1];
+            // Only fix if surrounded by identifiers/numbers (not generics like <T>)
+            if (prev.is_ascii_alphanumeric() || prev == b')') && (next.is_ascii_alphanumeric() || next == b'(') {
+                if prev != b' ' { result5.push(' '); }
+                result5.push(c as char);
+                if next != b' ' { result5.push(' '); }
+                n += 1; continue;
+            }
+        }
+        result5.push(c as char); n += 1;
+    }
+    t = result5;
+
+    // Pass 3: operators — add spaces around = + - * / %
     let ops = ["==","!=","<=",">=","&&","||","=","+","-","*","/","%","<",">"];
     for op in &ops {
         // Case: `x= y` → `x = y`
