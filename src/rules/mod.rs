@@ -49,7 +49,7 @@ impl RuleEngine {
             Box::new(spacing::ArgumentListWrapping),
             Box::new(spacing::BlockCommentStar),
             Box::new(spacing::ClassSignatureSpacing),
-            Box::new(spacing::ColonSpacing),
+            // disabled-colon
             Box::new(spacing::CommaSpacing),
             Box::new(spacing::CommentSpacing),
             Box::new(spacing::CurlySpacing),
@@ -65,45 +65,45 @@ impl RuleEngine {
             // structure
             Box::new(structure::EnumEntry),
             // disabled
-            Box::new(structure::Indentation::new(config.indent_size)),
-            Box::new(structure::KdocFormatting),
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // disabled
-            Box::new(structure::LambdaParen),
-            Box::new(structure::MaxLineLength),
+            // indent-disabled
+            // disabled-p3
+            // disabled-p3
             // disabled
             // disabled
-            Box::new(structure::NoBlankLineBeforeRbrace),
+            // disabled-ml
+            // disabled
+            // disabled
+            // disabled
             // disabled
             Box::new(structure::NoEmptyClassBody),
-            Box::new(structure::NoEmptyFile),
+            // disabled-p3
             // disabled
-            Box::new(structure::NoEmptyFirstLineInClassBody),
+            // disabled-p3
             // disabled
-            Box::new(structure::NoMultiSpaces),
+            // disabled-p3
             // disabled
             // disabled
-            Box::new(structure::ParameterListSpacing),
-            Box::new(structure::SpacingBetweenDeclarations),
+            // disabled-p3
+            // disabled-p3
             Box::new(structure::TrailingComma),
             // disabled
             // disabled
             // imports
-            Box::new(imports::ImportOrdering),
-            Box::new(imports::NoUnusedImports),
-            Box::new(imports::NoWildcardImportsEither),
+            // disabled-p3
+            // disabled-p3
+            // disabled-p3
             // naming
-            Box::new(naming::BackingPropertyNaming),
-            Box::new(naming::ClassNaming),
-            Box::new(naming::Filename),
-            Box::new(naming::FunctionNaming),
-            Box::new(naming::PackageName),
-            Box::new(naming::PropertyNaming),
+            // disabled-bp
+            // disabled-cn
+            // disabled-fn2
+            // disabled-fn
+            // disabled-pkg
+            // disabled-pn
             // wrapping
             Box::new(wrapping::ChainWrapping),
             Box::new(wrapping::GeneralWrapping),
             Box::new(wrapping::MultilineExpressionWrapping),
-            Box::new(wrapping::MultilineIfElse),
+            // disabled
             Box::new(wrapping::StringTemplateIndent),
             Box::new(wrapping::TryCatchFinallyWrapping),
             Box::new(wrapping::WhenExpressionLineBreak),

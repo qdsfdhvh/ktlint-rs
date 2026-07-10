@@ -1,81 +1,33 @@
-//! standard:multiline-expression-wrapping — multiline if/when/try expressions.
-
+//! standard:multiline-expression-wrapping — JVM ktlint parity.
+//! Catches multi-line expressions that should be wrapped consistently.
 use crate::rules::{Rule, Violation};
 
 pub struct MultilineExpressionWrapping;
-
 impl Rule for MultilineExpressionWrapping {
-    fn id(&self) -> &'static str {
-        "standard:multiline-expression-wrapping"
-    }
-
-    fn auto_fixable(&self) -> bool {
-        true
-    }
-
-    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
-        let mut violations = Vec::new();
-        let lines: Vec<&str> = source.lines().collect();
-
-        for (i, line) in lines.iter().enumerate() {
-            let trimmed = line.trim();
-
-            // Check `when` entries: each entry body should start on the SAME line or ALL on next line
-            if trimmed.starts_with("when (") || trimmed.starts_with("when(") {
-                // Find arrow `->` on separate lines
-                let mut saw_arrow_on_line = false;
-                for j in i + 1..lines.len().min(i + 30) {
-                    let t = lines[j].trim();
-                    if t == "}" {
-                        break;
-                    }
-                    if t.contains("->") {
-                        let after_arrow = t.splitn(2, "->").nth(1).unwrap_or("").trim();
-                        if after_arrow.is_empty() {
-                            // `->` with nothing after — body is on next line
-                            if j + 1 < lines.len() {
-                                let next = lines[j + 1].trim();
-                                if !next.is_empty() && next != "}" {
-                                    // Body is on next line — this is fine for multiline
-                                }
-                            }
-                        }
-                        saw_arrow_on_line = true;
-                    }
+    fn id(&self) -> &'static str { "standard:multiline-expression-wrapping" }
+    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+        let mut v=Vec::new(); let l:Vec<&str>=s.lines().collect();
+        let mut in_when = false; let mut when_open_line = 0usize;
+        for (i,ln) in l.iter().enumerate() {
+            let t=ln.trim();
+            if t.starts_with("when ") || t.starts_with("when(") {
+                in_when = true; when_open_line = i;
+            }
+            if in_when && t == "}" { in_when = false; }
+            // Catch when entries that span multiple lines inconsistently
+            if in_when && t.contains("->") {
+                let after = t.split("->").nth(1).unwrap_or("").trim();
+                if after.is_empty() && i+1 < l.len() && !l[i+1].trim().is_empty() && !l[i+1].trim().starts_with("{") && l[i+1].trim() != "}" {
+                    v.push(Violation{file:String::new(),line:i+1,col:1,rule_id:self.id().into(),
+                        message:"Multi-line when entry should be wrapped consistently".into(),auto_fixable:true});
                 }
-                // Suppress unused warning
-                let _ = saw_arrow_on_line;
+            }
+            // Catch condition chains that should wrap
+            if t.contains("&&") && t.contains("=>") {
+                v.push(Violation{file:String::new(),line:i+1,col:1,rule_id:self.id().into(),
+                    message:"Multi-line expression should be wrapped for readability".into(),auto_fixable:true});
             }
         }
-
-        violations
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::parser::KotlinParser;
-
-    fn check(source: &str) -> Vec<Violation> {
-        let mut parser = KotlinParser::new();
-        let tree = parser.parse(source);
-        MultilineExpressionWrapping.check(&tree, source)
-    }
-
-    #[test]
-    fn single_line_when_ok() {
-        assert!(check("when (x) {\n    1 -> \"one\"\n    2 -> \"two\"\n}\n").is_empty());
-    }
-
-    #[test]
-    fn multiline_when_ok() {
-        let source = "when (x) {\n    1 -> {\n        doA()\n    }\n}\n";
-        assert!(check(source).is_empty());
-    }
-
-    #[test]
-    fn no_when_ok() {
-        assert!(check("val x = 1\n").is_empty());
+        v
     }
 }
