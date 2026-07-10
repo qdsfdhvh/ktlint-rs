@@ -18,6 +18,7 @@ pub mod imports;
 pub mod naming;
 pub mod spacing;
 pub mod structure;
+pub mod suppress;
 pub mod wrapping;
 
 // ── Rule trait ──────────────────────────────────────────────────

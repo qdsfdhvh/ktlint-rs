@@ -32,6 +32,8 @@ fn main() -> anyhow::Result<()> {
         let source = std::fs::read_to_string(path)?;
         let tree = parser.parse(&source);
         let violations = engine.check(&path.to_string_lossy(), &tree, &source);
+        // Filter out violations suppressed by @Suppress annotations
+        let violations = rules::suppress::filter_suppressed(violations, &source);
         all_violations.extend(violations);
     }
 

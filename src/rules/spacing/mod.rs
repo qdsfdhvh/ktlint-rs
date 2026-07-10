@@ -1,6 +1,7 @@
 //! Spacing rules — whitespace around tokens, braces, operators, and keywords.
 
 pub mod annotation;
+pub mod argument_list;
 pub mod class_signature;
 pub mod colon;
 pub mod comma;
@@ -13,6 +14,7 @@ pub mod paren;
 
 // Re-export for convenience
 pub use annotation::AnnotationSpacing;
+pub use argument_list::ArgumentListWrapping;
 pub use class_signature::ClassSignatureSpacing;
 pub use colon::ColonSpacing;
 pub use comma::CommaSpacing;
