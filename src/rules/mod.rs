@@ -72,7 +72,7 @@ impl RuleEngine {
             Box::new(FinalNewline),
             Box::new(NoConsecutiveBlankLines),
             Box::new(structure::NoBlankLineBeforeRbrace),
-            Box::new(structure::Indentation),
+            Box::new(structure::Indentation::new(config.indent_size)),
             Box::new(structure::MaxLineLength),
             Box::new(structure::NoEmptyFile),
             Box::new(structure::TrailingComma),

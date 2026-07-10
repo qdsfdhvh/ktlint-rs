@@ -1,8 +1,16 @@
-//! standard:indent — enforce 4-space indentation (configurable via .editorconfig).
+//! standard:indent — enforce consistent indentation (configurable via .editorconfig).
 
 use crate::rules::{Rule, Violation};
 
-pub struct Indentation;
+pub struct Indentation {
+    indent_size: usize,
+}
+
+impl Indentation {
+    pub fn new(indent_size: usize) -> Self {
+        Self { indent_size }
+    }
+}
 
 impl Rule for Indentation {
     fn id(&self) -> &'static str {
@@ -11,7 +19,7 @@ impl Rule for Indentation {
 
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
-        let indent_size: usize = 4; // configurable
+        let indent_size = self.indent_size;
 
         for (i, line) in source.lines().enumerate() {
             if line.trim().is_empty() {
@@ -31,7 +39,6 @@ impl Rule for Indentation {
                 continue;
             }
 
-            // Check indentation is a multiple of indent_size
             let spaces = line.chars().take_while(|c| *c == ' ').count();
             if spaces > 0 && spaces % indent_size != 0 {
                 violations.push(Violation {
@@ -60,7 +67,7 @@ mod tests {
     fn check(source: &str) -> Vec<Violation> {
         let mut parser = KotlinParser::new();
         let tree = parser.parse(source);
-        Indentation.check(&tree, source)
+        Indentation::new(4).check(&tree, source)
     }
 
     #[test]
@@ -79,5 +86,14 @@ mod tests {
     fn tab_indentation() {
         let v = check("fun foo() {\n\tval x = 1\n}\n");
         assert!(!v.is_empty());
+    }
+
+    #[test]
+    fn two_space_indent() {
+        let rule = Indentation::new(2);
+        let mut parser = KotlinParser::new();
+        let source = "fun foo() {\n  val x = 1\n}\n";
+        let tree = parser.parse(source);
+        assert!(rule.check(&tree, source).is_empty());
     }
 }

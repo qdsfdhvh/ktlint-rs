@@ -117,12 +117,19 @@ impl KtlintConfig {
             config.project_root.join(&anchor_path)
         };
 
+        // Convert directory→file path (editorconfig crate needs a file)
+        let ec_lookup_path = if anchor_path.is_dir() {
+            anchor_path.join("dummy.kt")
+        } else {
+            anchor_path.clone()
+        };
+
         // Load .editorconfig → convert OrderMap to HashMap to avoid version conflicts
-        if let Ok(ec_map) = editorconfig::get_config(&anchor_path) {
+        if let Ok(ec_map) = editorconfig::get_config(&ec_lookup_path) {
             let map: HashMap<String, String> = ec_map.into_iter().collect();
             config.apply_editorconfig(&map);
             if let Some(ref ec_path) = cli.editorconfig {
-                if let Ok(named) = editorconfig::get_config_conffile(&anchor_path, ec_path.as_str())
+                if let Ok(named) = editorconfig::get_config_conffile(&ec_lookup_path, ec_path.as_str())
                 {
                     let named_map: HashMap<String, String> = named.into_iter().collect();
                     config.apply_editorconfig(&named_map);

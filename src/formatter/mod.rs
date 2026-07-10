@@ -147,9 +147,8 @@ fn fix_operator_spacing(text: &str) -> String {
 }
 
 fn fix_comma_spacing(text: &str) -> String {
-    // Fix: ` ,` → `,` and `,word` → `, word`
-    text.replace(" ,", ",").replace(", ", ",")
-        .replace(',', ", ")
+    // Only fix: space before comma, and double-space after comma
+    text.replace(" ,", ",")
         .replace(",  ", ", ")
 }
 
