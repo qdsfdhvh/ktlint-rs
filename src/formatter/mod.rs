@@ -1,6 +1,5 @@
-//! Auto-fix engine — applies corrections using CST-aware fixes.
-//! Phase 1: text-level patterns (curly, comma, comment, blank-lines).
-//! Phase 2: line-based fixes (trailing spaces, blank line removal).
+//! Auto-fix engine — applies corrections for spacing violations.
+//! Uses text-level pattern replacement to fix common violations.
 
 use crate::rules::Violation;
 use anyhow::Result;
@@ -9,113 +8,165 @@ use std::path::PathBuf;
 
 pub fn auto_fix(files: &[PathBuf], violations: &[Violation]) -> Result<()> {
     let mut by_file: HashMap<&str, Vec<&Violation>> = HashMap::new();
-    for v in violations {
-        if v.auto_fixable {
-            by_file.entry(&v.file).or_default().push(v);
-        }
-    }
+    for v in violations { if v.auto_fixable { by_file.entry(&v.file).or_default().push(v); } }
 
     for (file_path, _file_violations) in &by_file {
         let path = std::path::Path::new(file_path);
         let mut text = std::fs::read_to_string(path)?;
         let original = text.clone();
 
-        // Collect unique rule IDs for this file
         let rules: std::collections::HashSet<&str> = _file_violations.iter().map(|v| v.rule_id.as_str()).collect();
+        let any_spacing = rules.iter().any(|r| r.contains("spacing") || r.contains("curly") || r.contains("op") || r.contains("paren") || r.contains("colon") || r.contains("comma") || r.contains("comment"));
 
-        // Apply text-level fixes (each fix is idempotent, so order doesn't matter)
-        if rules.contains("standard:curly-spacing") {
-            text = fix_curly(&text);
-        }
-        if rules.contains("standard:comma-spacing") {
-            text = fix_comma(&text);
-        }
-        if rules.contains("standard:comment-spacing") {
-            text = fix_comment(&text);
-        }
-        if rules.contains("standard:no-blank-line-before-rbrace") {
-            text = fix_blank_rbrace(&text);
-        }
-        if rules.contains("standard:multiline-if-else") {
-            text = fix_else(&text);
+        if any_spacing {
+            text = fix_all_spacing(&text);
         }
 
-        // Line-based fixes (must be done after text-level to preserve line numbers)
+        // Line-based fixes
         if rules.contains("standard:no-trailing-spaces") || rules.contains("standard:no-consecutive-blank-lines") {
-            text = fix_lines(&text, &rules);
+            text = fix_line_based(&text, &rules);
         }
 
-        // Only write if changed
         if text != original {
             std::fs::write(path, text)?;
         }
     }
-
     Ok(())
 }
 
-fn fix_curly(text: &str) -> String {
-    // Add space before { when preceded by identifier, ) or ]
-    let mut result = String::with_capacity(text.len() * 2);
-    let bytes = text.as_bytes();
+fn fix_all_spacing(text: &str) -> String {
+    let mut t = text.to_string();
+
+    // Pass 1: curly braces — add space before { when preceded by identifier/) ]
+    let bytes = t.as_bytes();
+    let mut result = String::with_capacity(bytes.len() * 2);
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'{' && i > 0 {
             let prev = bytes[i - 1];
-            if (prev.is_ascii_alphanumeric() || prev == b')' || prev == b']') && prev != b'{' && prev != b'(' && prev != b'[' {
-                if prev != b' ' && prev != b'\n' {
-                    result.push(' ');
-                }
+            if (prev.is_ascii_alphanumeric() || prev == b')' || prev == b']')
+                && prev != b'{' && prev != b'(' && prev != b'['
+                && prev != b' ' && prev != b'\n'
+            {
+                result.push(' ');
             }
         }
         result.push(bytes[i] as char);
         i += 1;
     }
-    // Remove double spaces before {
-    while result.contains("  {") { result = result.replace("  {", " {"); }
-    result
-}
+    t = result;
 
-fn fix_comma(text: &str) -> String {
-    // Remove space before comma, fix double-space after comma
-    text.replace(" ,", ",")
-        .replace(",  ", ", ")
-}
+    // Pass 2: operators — add spaces around = + - * / % < > etc.
+    let ops = ["==","!=","<=",">=","&&","||","=","+","-","*","/","%","<",">"];
+    for op in &ops {
+        // Case: `x= y` → `x = y`
+        let pattern = format!("{} ", op);
+        let replacement = format!(" {} ", op);
+        // Find patterns like `word= ` → `word = `
+        t = t.replace(&format!("{}{} ", pattern, pattern.trim()), &replacement);
+    }
+    // General fix: add spaces around bare operators (conservative)
+    t = t.replace(" =", " =").replace("= ", "= ");
+    // Fix `x=1` pattern: letter/number before = without space
+    let bytes2 = t.as_bytes();
+    let mut result2 = String::new();
+    let mut j = 0;
+    while j < bytes2.len() {
+        let c = bytes2[j];
+        result2.push(c as char);
+        // After identifier/number, before =, add space if missing
+        if c.is_ascii_alphanumeric() && j + 1 < bytes2.len() && bytes2[j+1] == b'=' {
+            if j + 2 < bytes2.len() && bytes2[j+2] != b'=' && bytes2[j+2] != b' ' {
+                result2.push(' ');
+            }
+        }
+        // After =, before identifier/number, add space if missing
+        if c == b'=' && j + 1 < bytes2.len() && bytes2[j+1].is_ascii_alphanumeric() {
+            if j > 0 && bytes2[j-1] != b' ' && bytes2[j-1] != b'!' && bytes2[j-1] != b'<' && bytes2[j-1] != b'>' && bytes2[j-1] != b'=' {
+                // Don't add if it's inside string literals
+                if bytes2[j-1].is_ascii_alphanumeric() || bytes2[j-1] == b')' {
+                    // Insert space before =
+                    let last = result2.pop().unwrap();
+                    result2.push(' ');
+                    result2.push(last);
+                }
+            }
+            if j+1 < bytes2.len() && bytes2[j+1] != b' ' && bytes2[j+1] != b'"' && bytes2[j+1] != b'\'' {
+                result2.push(' ');
+            }
+        }
+        j += 1;
+    }
+    t = result2;
 
-fn fix_comment(text: &str) -> String {
-    // Add space after // unless it's /// or //// or empty
-    let mut result = String::with_capacity(text.len() * 2);
-    let bytes = text.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if i + 2 < bytes.len() && bytes[i] == b'/' && bytes[i+1] == b'/'
-            && bytes[i+2] != b'/' && bytes[i+2] != b' ' && bytes[i+2] != b'\n' {
-            result.push_str("// ");
-            i += 2;
+    // Pass 3: commas — remove space before, ensure space after
+    t = t.replace(" ,", ",").replace(",  ", ", ");
+
+    // Pass 4: parens — remove space after ( and before )
+    t = t.replace("( ", "(").replace(" )", ")");
+
+    // Pass 5: colon — ensure space after : in type annotations (not ::)
+    let bytes3 = t.as_bytes();
+    let mut result3 = String::new();
+    let mut k = 0;
+    while k < bytes3.len() {
+        let c = bytes3[k];
+        // Check for bare : (not ::)
+        if c == b':' && k > 0 && k + 1 < bytes3.len() {
+            if bytes3[k-1] != b':' && bytes3[k+1] != b':' {
+                // Single colon — ensure space after if followed by identifier
+                if bytes3[k+1].is_ascii_alphanumeric() && bytes3[k+1] != b' ' {
+                    result3.push(':');
+                    result3.push(' ');
+                    k += 1;
+                    continue;
+                }
+                // Remove space before : in type context (val x : Int → val x: Int)
+                if k >= 2 && bytes3[k-1] == b' ' && bytes3[k-2].is_ascii_alphanumeric() {
+                    result3.pop(); // remove the space before :
+                }
+            }
+        }
+        result3.push(c as char);
+        k += 1;
+    }
+    t = result3;
+
+    // Pass 6: comment spacing — add space after //
+    let bytes4 = t.as_bytes();
+    let mut result4 = String::new();
+    let mut m = 0;
+    while m < bytes4.len() {
+        if m + 2 < bytes4.len() && bytes4[m]==b'/' && bytes4[m+1]==b'/'
+            && bytes4[m+2]!=b'/' && bytes4[m+2]!=b' ' && bytes4[m+2]!=b'\n' {
+            result4.push_str("// ");
+            m += 2;
         } else {
-            result.push(bytes[i] as char);
-            i += 1;
+            result4.push(bytes4[m] as char);
+            m += 1;
         }
     }
-    result
+    t = result4;
+
+    // Pass 7: remove blank lines before }
+    while t.contains("\n\n}") { t = t.replace("\n\n}", "\n}"); }
+
+    // Pass 8: merge }\nelse → } else
+    t = t.replace("}\nelse", "} else").replace("}\n    else", "} else");
+
+    // Pass 9: merge }\ncatch → } catch
+    t = t.replace("}\ncatch", "} catch").replace("}\n    catch", "} catch");
+
+    // Pass 10: remove double spaces
+    while t.contains("  ") { t = t.replace("  ", " "); }
+
+    // Fix over-corrections: add back newlines
+    t = t.replace("\n ", "\n");
+
+    t
 }
 
-fn fix_blank_rbrace(text: &str) -> String {
-    // Remove blank lines before } (squash \n\n} to \n})
-    let mut result = text.replace("\n\n}", "\n}");
-    // Run again to catch cascading blanks
-    while result.contains("\n\n}") {
-        result = result.replace("\n\n}", "\n}");
-    }
-    result
-}
-
-fn fix_else(text: &str) -> String {
-    text.replace("}\nelse", "} else")
-        .replace("}\n    else", "} else")
-}
-
-fn fix_lines(text: &str, rules: &std::collections::HashSet<&str>) -> String {
+fn fix_line_based(text: &str, rules: &std::collections::HashSet<&str>) -> String {
     let mut lines: Vec<String> = text.lines().map(|l| l.to_string()).collect();
     let trailing_nl = text.ends_with('\n');
 
@@ -127,14 +178,9 @@ fn fix_lines(text: &str, rules: &std::collections::HashSet<&str>) -> String {
         if rules.contains("standard:no-trailing-spaces") {
             lines[i] = lines[i].trim_end().to_string();
         }
-
         if rules.contains("standard:no-consecutive-blank-lines") {
-            if cur_empty && prev_empty {
-                lines.remove(i);
-                continue;
-            }
+            if cur_empty && prev_empty { lines.remove(i); continue; }
         }
-
         i += 1;
     }
 
