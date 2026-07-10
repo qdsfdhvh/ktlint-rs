@@ -12,6 +12,7 @@ pub mod wrapping;
 pub mod new_rules;
 pub mod new_rules2;
 pub mod new_rules3;
+pub mod new_rules4;
 
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -120,6 +121,12 @@ impl RuleEngine {
             Box::new(new_rules3::TypeParameterCommentRule), Box::new(new_rules3::ValueArgumentCommentRule),
             Box::new(new_rules3::ValueParameterCommentRule), Box::new(new_rules3::ThenSpacingRule),
             Box::new(new_rules3::LambdaReturnRule), Box::new(new_rules3::BlankLineBetweenWhenConditionsRule),
+            Box::new(new_rules4::CommentWrappingRule), Box::new(new_rules4::KdocWrappingRule),
+            Box::new(new_rules4::FunctionExpressionBodyRule), Box::new(new_rules4::CallExpressionWrappingRule),
+            Box::new(new_rules4::BinaryExpressionWrappingRule), Box::new(new_rules4::PropertyWrappingRule),
+            Box::new(new_rules4::ParameterWrappingRule), Box::new(new_rules4::IfElseWrappingRule),
+            Box::new(new_rules4::StatementWrappingRule), Box::new(new_rules4::ChainMethodContinuationRule),
+            Box::new(new_rules4::MultilineLoopRule),
         ];
         Self {
             config: config.clone(),
