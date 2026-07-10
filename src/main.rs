@@ -6,6 +6,9 @@ mod parser;
 mod reporter;
 mod rules;
 
+#[cfg(test)]
+mod format_tests;
+
 use cli::Cli;
 use config::KtlintConfig;
 use discovery::FileCollector;
@@ -20,12 +23,10 @@ fn main() -> anyhow::Result<()> {
     let config = KtlintConfig::load(&cli)?;
     let files = FileCollector::new(&cli, &config).collect()?;
 
-    // Process files in parallel
     let all_violations: Vec<Violation> = files
         .par_iter()
         .flat_map(|path| {
-            let source = std::fs::read_to_string(path)
-                .unwrap_or_default();
+            let source = std::fs::read_to_string(path).unwrap_or_default();
             let mut parser = KotlinParser::new();
             let tree = parser.parse(&source);
             let engine = RuleEngine::new(&config);
@@ -34,11 +35,9 @@ fn main() -> anyhow::Result<()> {
         })
         .collect();
 
-    // Report
     let reporter = DiagnosticReporter::new(&cli);
     let exit_code = reporter.report(&all_violations);
 
-    // Auto-format
     if cli.format && !all_violations.is_empty() {
         formatter::auto_fix(&files, &all_violations)?;
     }

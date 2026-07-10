@@ -23,7 +23,7 @@ impl NoBlankBeforeListClose {
                         if let Some(prev) = node.child(i) {
                             let pr = prev.start_position().row;
                             if prev.kind() != "(" && prev.kind() != "comment" {
-                                if pr < lr - 1 {
+                                if pr + 1 < lr {
                                     v.push(Violation { file: String::new(), line: lr+1, col: 1,
                                         rule_id: "standard:no-blank-line-before-list-closing".into(),
                                         auto_fixable: true,
