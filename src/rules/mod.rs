@@ -80,8 +80,15 @@ impl RuleEngine {
             Box::new(NoWildcardImports),
             Box::new(imports::ImportOrdering),
             Box::new(imports::NoUnusedImports),
-            // ── Wrapping rules (extendable) ──
-            // ── Naming rules (extendable) ──
+            // ── Wrapping rules ──
+            Box::new(wrapping::ChainWrapping),
+            Box::new(wrapping::MultilineIfElse),
+            Box::new(wrapping::StringTemplateIndent),
+            // ── Naming rules ──
+            Box::new(naming::ClassNaming),
+            Box::new(naming::FunctionNaming),
+            Box::new(naming::PropertyNaming),
+            Box::new(naming::Filename),
         ];
 
         Self {

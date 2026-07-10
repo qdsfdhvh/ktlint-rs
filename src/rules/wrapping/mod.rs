@@ -1,4 +1,11 @@
-//! Wrapping rules — chain wrapping, argument list wrapping, condition wrapping.
-//! Phase 3: ~8 rules, ~20h
+//! Wrapping rules — chain wrapping, when/if/for/while brace placement.
+//!
+//! These rules control how multi-line constructs are formatted.
 
-// Stub — rules to be implemented in Phase 3
+pub mod chain_wrapping;
+pub mod multiline_if_else;
+pub mod string_template_indent;
+
+pub use chain_wrapping::ChainWrapping;
+pub use multiline_if_else::MultilineIfElse;
+pub use string_template_indent::StringTemplateIndent;
