@@ -69,9 +69,17 @@ impl RuleEngine {
             Box::new(structure::Indentation::new(config.indent_size)),
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             // disabled
             // disabled
@@ -83,22 +91,42 @@ impl RuleEngine {
             Box::new(structure::NoEmptyClassBody),
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             // disabled
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             // disabled
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             // disabled
             // disabled
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             Box::new(structure::TrailingComma),
             // disabled
@@ -106,12 +134,24 @@ impl RuleEngine {
             // imports
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
             Box::new(structure::NoBlankLineInList),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocFormatting),
+            Box::new(naming::Filename),
+            Box::new(structure::NoBlankLineBeforeRbrace),
             // disabled-p3
             // naming
             // disabled-bp
