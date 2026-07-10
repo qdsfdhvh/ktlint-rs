@@ -127,6 +127,7 @@ impl RuleEngine {
             Box::new(new_rules4::ParameterWrappingRule), Box::new(new_rules4::IfElseWrappingRule),
             Box::new(new_rules4::StatementWrappingRule), Box::new(new_rules4::ChainMethodContinuationRule),
             Box::new(new_rules4::MultilineLoopRule),
+            Box::new(structure::NoSemicolons),
         ];
         Self {
             config: config.clone(),

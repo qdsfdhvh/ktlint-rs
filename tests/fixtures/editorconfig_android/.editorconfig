@@ -1,0 +1,7 @@
+# .editorconfig with android_studio code style
+root = true
+[*]
+indent_size = 4
+[*.kt]
+ktlint_code_style = android_studio
+ktlint_standard_final_newline = disabled

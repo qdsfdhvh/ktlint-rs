@@ -1,0 +1,9 @@
+# .editorconfig with rule disabling
+root = true
+[*]
+indent_size = 4
+[*.kt]
+ktlint_standard_final_newline = disabled
+ktlint_standard_no_wildcard_imports = disabled
+ktlint_standard_no_trailing_spaces = disabled
+ktlint_standard_curly_spacing = disabled

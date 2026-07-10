@@ -1,0 +1,7 @@
+# .editorconfig for 2-space indent projects
+root = true
+[*]
+indent_size = 2
+indent_style = space
+[*.kt]
+ktlint_code_style = ktlint_official

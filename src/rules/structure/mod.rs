@@ -49,3 +49,5 @@ pub use spacing_between_declarations::SpacingBetweenDeclarations;
 pub use trailing_comma::TrailingComma;
 pub use trailing_spaces_comment::TrailingSpacesInComment;
 pub use unnecessary_paren_lambda::UnnecessaryParenBeforeLambda;
+pub mod no_semicolons;
+pub use no_semicolons::NoSemicolons;
