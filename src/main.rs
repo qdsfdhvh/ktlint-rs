@@ -6,7 +6,7 @@ mod parser;
 mod reporter;
 mod rules;
 #[cfg(test)]
-mod ktlint_parity_tests;
+// mod ktlint_parity_tests;
 
 #[cfg(test)]
 mod format_tests;

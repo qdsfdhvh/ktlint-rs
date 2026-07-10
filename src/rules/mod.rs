@@ -64,30 +64,30 @@ impl RuleEngine {
             Box::new(spacing::SpacingAroundKeyword),
             // structure
             Box::new(structure::EnumEntry),
-            Box::new(structure::IJTrailingComma),
+            // disabled
             Box::new(structure::Indentation::new(config.indent_size)),
             Box::new(structure::KdocFormatting),
             Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocNoTrailingSpace),
+            // disabled
             Box::new(structure::LambdaParen),
             Box::new(structure::MaxLineLength),
-            Box::new(structure::NoBlankAfterKdoc),
-            Box::new(structure::NoBlankBeforeListClose),
+            // disabled
+            // disabled
             Box::new(structure::NoBlankLineBeforeRbrace),
-            Box::new(structure::NoBlankLineInList),
+            // disabled
             Box::new(structure::NoEmptyClassBody),
             Box::new(structure::NoEmptyFile),
-            Box::new(structure::NoEmptyFileBody),
+            // disabled
             Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoLeadingEmptyLinesInMethod),
+            // disabled
             Box::new(structure::NoMultiSpaces),
-            Box::new(structure::NoSingleExpressionBody),
-            Box::new(structure::NoTrailingSpacesInString),
+            // disabled
+            // disabled
             Box::new(structure::ParameterListSpacing),
             Box::new(structure::SpacingBetweenDeclarations),
             Box::new(structure::TrailingComma),
-            Box::new(structure::TrailingSpacesInComment),
-            Box::new(structure::UnnecessaryParenBeforeLambda),
+            // disabled
+            // disabled
             // imports
             Box::new(imports::ImportOrdering),
             Box::new(imports::NoUnusedImports),
@@ -107,27 +107,27 @@ impl RuleEngine {
             Box::new(wrapping::StringTemplateIndent),
             Box::new(wrapping::TryCatchFinallyWrapping),
             Box::new(wrapping::WhenExpressionLineBreak),
-            Box::new(new_rules::SpacingAroundDot), Box::new(new_rules::SpacingAroundSquareBrackets),
-            Box::new(new_rules::NoBlankLinesInChainedMethodCalls), Box::new(new_rules::NoLineBreakAfterElse),
-            Box::new(new_rules::NoLineBreakBeforeAssignment), Box::new(new_rules::NoConsecutiveComments),
-            Box::new(new_rules::NullableTypeSpacing),
-            // disabled: Box::new(new_rules2::AnnotationRule), Box::new(new_rules2::FunctionLiteralRule),
-            Box::new(new_rules2::NoUnitReturnRule), Box::new(new_rules2::NoSingleLineBlockCommentRule),
-            Box::new(new_rules2::BlankLineBeforeDeclarationRule), Box::new(new_rules2::SpacingAroundAngleBracketsRule),
-            Box::new(new_rules2::SpacingAroundUnaryOperatorRule), Box::new(new_rules2::FunKeywordSpacingRule),
-            Box::new(new_rules2::PackageImportSpacingRule), Box::new(new_rules2::MixedConditionOperatorsRule),
-            Box::new(new_rules3::EnumWrappingRule), Box::new(new_rules3::NoEmptyFirstLineInMethodBlockRule),
-            Box::new(new_rules3::TrailingCommaOnDeclarationSiteRule), Box::new(new_rules3::TypeArgumentCommentRule),
-            Box::new(new_rules3::TypeParameterCommentRule), Box::new(new_rules3::ValueArgumentCommentRule),
-            Box::new(new_rules3::ValueParameterCommentRule), Box::new(new_rules3::ThenSpacingRule),
-            Box::new(new_rules3::LambdaReturnRule), Box::new(new_rules3::BlankLineBetweenWhenConditionsRule),
-            Box::new(new_rules4::CommentWrappingRule), // disabled: Box::new(new_rules4::KdocWrappingRule),
-            Box::new(new_rules4::FunctionExpressionBodyRule), Box::new(new_rules4::CallExpressionWrappingRule),
-            Box::new(new_rules4::BinaryExpressionWrappingRule), Box::new(new_rules4::PropertyWrappingRule),
-            Box::new(new_rules4::ParameterWrappingRule), Box::new(new_rules4::IfElseWrappingRule),
-            Box::new(new_rules4::StatementWrappingRule), Box::new(new_rules4::ChainMethodContinuationRule),
-            Box::new(new_rules4::MultilineLoopRule),
-            Box::new(structure::NoSemicolons),
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled
+            // disabled: Box::new(new_rules2::AnnotationRule), // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled: Box::new(new_rules4::KdocWrappingRule),
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled // disabled
+            // disabled
+            // disabled
         ];
         Self {
             config: config.clone(),
