@@ -27,10 +27,7 @@ impl Rule for PropertyNaming {
                         line: i + 1,
                         col: trimmed.find("const val ").unwrap_or(0) + 11,
                         rule_id: self.id().to_string(),
-                        message: format!(
-                            "Const property \"{}\" should be UPPER_SNAKE_CASE",
-                            name
-                        ),
+                        message: format!("Const property \"{}\" should be UPPER_SNAKE_CASE", name),
                         auto_fixable: false,
                     });
                 }
@@ -99,10 +96,7 @@ fn extract_name_after_keyword(line: &str, keyword: &str) -> Option<String> {
 }
 
 fn is_camel_case(s: &str) -> bool {
-    s.chars()
-        .next()
-        .map_or(false, |c| c.is_lowercase())
-        && !s.contains('_')
+    s.chars().next().map_or(false, |c| c.is_lowercase()) && !s.contains('_')
 }
 
 fn is_upper_snake(s: &str) -> bool {

@@ -34,8 +34,8 @@ impl Rule for StringTemplateIndent {
                     }
                     in_multiline_string = true;
                     string_start_line = i;
-                    found_trim_call = trimmed.contains(".trimIndent()")
-                        || trimmed.contains(".trimMargin()");
+                    found_trim_call =
+                        trimmed.contains(".trimIndent()") || trimmed.contains(".trimMargin()");
                 }
             } else {
                 // Inside multiline string

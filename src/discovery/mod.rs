@@ -36,10 +36,7 @@ impl<'a> FileCollector<'a> {
             } else if path.is_dir() {
                 // Directory: walk it
                 let mut builder = WalkBuilder::new(path);
-                builder
-                    .git_ignore(true)
-                    .hidden(false)
-                    .follow_links(false);
+                builder.git_ignore(true).hidden(false).follow_links(false);
                 for entry in builder.build() {
                     let entry = entry?;
                     let entry_path = entry.path();
@@ -99,6 +96,9 @@ impl<'a> FileCollector<'a> {
             return true;
         }
         let path_str = path.to_string_lossy();
-        self.cli.patterns.iter().any(|p| path_str.contains(p.as_str()))
+        self.cli
+            .patterns
+            .iter()
+            .any(|p| path_str.contains(p.as_str()))
     }
 }

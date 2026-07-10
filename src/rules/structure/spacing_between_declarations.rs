@@ -18,10 +18,25 @@ impl Rule for SpacingBetweenDeclarations {
         let lines: Vec<&str> = source.lines().collect();
 
         let declaration_keywords = [
-            "fun ", "val ", "var ", "class ", "object ", "interface ", "enum ",
-            "typealias ", "data class ", "sealed class ", "sealed interface ",
-            "abstract class ", "open class ", "inline class ", "value class ",
-            "annotation class ", "companion object", "init {", "constructor(",
+            "fun ",
+            "val ",
+            "var ",
+            "class ",
+            "object ",
+            "interface ",
+            "enum ",
+            "typealias ",
+            "data class ",
+            "sealed class ",
+            "sealed interface ",
+            "abstract class ",
+            "open class ",
+            "inline class ",
+            "value class ",
+            "annotation class ",
+            "companion object",
+            "init {",
+            "constructor(",
         ];
 
         for i in 0..lines.len() {
@@ -50,8 +65,7 @@ impl Rule for SpacingBetweenDeclarations {
                                     line: i + 1,
                                     col: 1,
                                     rule_id: self.id().to_string(),
-                                    message: "Missing blank line before declaration"
-                                        .to_string(),
+                                    message: "Missing blank line before declaration".to_string(),
                                     auto_fixable: true,
                                 });
                             }

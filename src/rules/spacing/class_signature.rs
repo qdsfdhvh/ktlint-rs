@@ -34,12 +34,7 @@ impl ClassSignatureSpacing {
         }
     }
 
-    fn check_class(
-        &self,
-        node: &tree_sitter::Node,
-        bytes: &[u8],
-        violations: &mut Vec<Violation>,
-    ) {
+    fn check_class(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
         let mut saw_class_keyword = false;
         let mut saw_constructor_or_body = false;
 
@@ -71,23 +66,19 @@ impl ClassSignatureSpacing {
                             line: pos.row + 1,
                             col: pos.column,
                             rule_id: self.id().to_string(),
-                            message: "Missing space before \":\" in super type list"
-                                .to_string(),
+                            message: "Missing space before \":\" in super type list".to_string(),
                             auto_fixable: true,
                         });
                     }
                     // Space after
-                    if end_byte < bytes.len()
-                        && bytes[end_byte] != b' '
-                        && bytes[end_byte] != b'\n'
+                    if end_byte < bytes.len() && bytes[end_byte] != b' ' && bytes[end_byte] != b'\n'
                     {
                         violations.push(Violation {
                             file: String::new(),
                             line: pos.row + 1,
                             col: pos.column + 2,
                             rule_id: self.id().to_string(),
-                            message: "Missing space after \":\" in super type list"
-                                .to_string(),
+                            message: "Missing space after \":\" in super type list".to_string(),
                             auto_fixable: true,
                         });
                     }

@@ -44,7 +44,6 @@ impl Rule for Filename {
 }
 
 impl Filename {
-
     /// Set file context after checking.
     pub fn check_with_file(&self, file_path: &Path, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();

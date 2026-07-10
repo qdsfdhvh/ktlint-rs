@@ -9,9 +9,17 @@
 use crate::rules::{Rule, Violation};
 
 const MODIFIER_ORDER: &[&str] = &[
-    "public", "protected", "private", "internal",
-    "expect", "actual",
-    "final", "open", "abstract", "sealed", "const",
+    "public",
+    "protected",
+    "private",
+    "internal",
+    "expect",
+    "actual",
+    "final",
+    "open",
+    "abstract",
+    "sealed",
+    "const",
     "external",
     "override",
     "lateinit",

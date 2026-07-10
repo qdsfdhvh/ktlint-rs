@@ -46,7 +46,10 @@ pub fn parse_suppress_annotations(source: &str) -> Vec<(usize, String)> {
 }
 
 /// Filter out violations that are suppressed by @Suppress annotations.
-pub fn filter_suppressed(violations: Vec<crate::rules::Violation>, source: &str) -> Vec<crate::rules::Violation> {
+pub fn filter_suppressed(
+    violations: Vec<crate::rules::Violation>,
+    source: &str,
+) -> Vec<crate::rules::Violation> {
     let suppressed = parse_suppress_annotations(source);
 
     // Build a set of suppressed rule IDs per line
@@ -97,7 +100,8 @@ mod tests {
         let source = "@Suppress(\"ktlint\")\nfun foo()\n";
         let s = parse_suppress_annotations(source);
         assert_eq!(s.len(), 1);
-        assert_eq!(s[0].1, "");         assert_eq!(s[0].0, 2); // line 2 (annotated element),
+        assert_eq!(s[0].1, "");
+        assert_eq!(s[0].0, 2); // line 2 (annotated element),
         assert_eq!(s[0].1, ""); // empty = all rules
     }
 

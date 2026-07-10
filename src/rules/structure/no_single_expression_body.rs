@@ -44,7 +44,9 @@ impl Rule for NoSingleExpressionBody {
                             line: i + 1,
                             col: 1,
                             rule_id: self.id().to_string(),
-                            message: "Multi-line expression body should use braces or be on one line".to_string(),
+                            message:
+                                "Multi-line expression body should use braces or be on one line"
+                                    .to_string(),
                             auto_fixable: true,
                         });
                     }
