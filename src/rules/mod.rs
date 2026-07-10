@@ -10,6 +10,7 @@ pub mod structure;
 pub mod suppress;
 pub mod wrapping;
 pub mod new_rules;
+pub mod new_rules2;
 
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -108,6 +109,11 @@ impl RuleEngine {
             Box::new(new_rules::NoBlankLinesInChainedMethodCalls), Box::new(new_rules::NoLineBreakAfterElse),
             Box::new(new_rules::NoLineBreakBeforeAssignment), Box::new(new_rules::NoConsecutiveComments),
             Box::new(new_rules::NullableTypeSpacing),
+            Box::new(new_rules2::AnnotationRule), Box::new(new_rules2::FunctionLiteralRule),
+            Box::new(new_rules2::NoUnitReturnRule), Box::new(new_rules2::NoSingleLineBlockCommentRule),
+            Box::new(new_rules2::BlankLineBeforeDeclarationRule), Box::new(new_rules2::SpacingAroundAngleBracketsRule),
+            Box::new(new_rules2::SpacingAroundUnaryOperatorRule), Box::new(new_rules2::FunKeywordSpacingRule),
+            Box::new(new_rules2::PackageImportSpacingRule), Box::new(new_rules2::MixedConditionOperatorsRule),
         ];
         Self {
             config: config.clone(),
