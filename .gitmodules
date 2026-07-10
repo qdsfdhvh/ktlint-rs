@@ -1,0 +1,6 @@
+[submodule "tests/fixtures/nowinandroid"]
+	path = tests/fixtures/nowinandroid
+	url = https://github.com/android/nowinandroid.git
+[submodule "tests/fixtures/compose-samples"]
+	path = tests/fixtures/compose-samples
+	url = https://github.com/android/compose-samples.git
