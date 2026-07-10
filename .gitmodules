@@ -4,3 +4,6 @@
 [submodule "tests/fixtures/compose-samples"]
 	path = tests/fixtures/compose-samples
 	url = https://github.com/android/compose-samples.git
+[submodule "tests/fixtures/androidx"]
+	path = tests/fixtures/androidx
+	url = https://github.com/androidx/androidx.git
