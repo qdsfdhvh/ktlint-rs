@@ -1,106 +1,63 @@
-//! standard:comma-spacing — no space before comma, exactly one space after.
+//! standard:comma-spacing — aligned with JVM ktlint SpacingAroundCommaRule.
+//! No space before comma. Single space after comma (skip if next is ), ], >)
 
 use crate::rules::{Rule, Violation};
 
 pub struct CommaSpacing;
-
 impl Rule for CommaSpacing {
-    fn id(&self) -> &'static str {
-        "standard:comma-spacing"
-    }
+    fn id(&self) -> &'static str { "standard:comma-spacing" }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
-        self.walk(tree.root_node(), bytes, &mut violations);
+        Self::walk(tree.root_node(), bytes, &mut violations);
         violations
     }
 }
-
 impl CommaSpacing {
-    fn walk(&self, node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn walk(node: tree_sitter::Node, bytes: &[u8], v: &mut Vec<Violation>) {
         if node.kind() == "," {
-            self.check_comma(&node, bytes, violations);
+            Self::check(&node, bytes, v);
         }
         for i in 0..node.child_count() {
-            if let Some(child) = node.child(i) {
-                self.walk(child, bytes, violations);
-            }
+            if let Some(c) = node.child(i) { Self::walk(c, bytes, v); }
         }
     }
 
-    fn check_comma(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn check(node: &tree_sitter::Node, bytes: &[u8], v: &mut Vec<Violation>) {
         let pos = node.start_position();
-        let start_byte = node.start_byte();
-        let end_byte = node.end_byte();
+        let s = node.start_byte();
+        let e = node.end_byte();
 
-        // No space before comma
-        if start_byte > 0 && bytes[start_byte - 1] == b' ' {
-            violations.push(Violation {
-                file: String::new(),
-                line: pos.row + 1,
-                col: pos.column,
-                rule_id: self.id().to_string(),
-                message: "Unexpected space before \",\"".to_string(),
-                auto_fixable: true,
-            });
+        // 1. No space before comma (unless after comment on same line)
+        if s > 0 && bytes[s - 1] == b' ' {
+            // Check if this is a comma after a comment (on new line) — skip
+            if s < 2 || bytes[s - 2] != b'\n' {
+                v.push(Violation { file: String::new(), line: pos.row+1, col: pos.column,
+                    rule_id: "standard:comma-spacing".into(), auto_fixable: true,
+                    message: "Unexpected spacing before \",\"".into() });
+            }
         }
 
-        // Exactly one space after comma (unless followed by newline)
-        if end_byte < bytes.len() {
-            let after = bytes[end_byte];
-            if after == b' ' {
-                // Check for double space
-                if end_byte + 1 < bytes.len() && bytes[end_byte + 1] == b' ' {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: pos.row + 1,
-                        col: pos.column + 2,
-                        rule_id: self.id().to_string(),
-                        message: "Too many spaces after \",\"".to_string(),
-                        auto_fixable: true,
-                    });
-                }
-                // Single space after comma is correct
-            } else if after != b'\n' && after != b'\r' {
-                violations.push(Violation {
-                    file: String::new(),
-                    line: pos.row + 1,
-                    col: pos.column + 2,
-                    rule_id: self.id().to_string(),
-                    message: "Missing space after \",\"".to_string(),
-                    auto_fixable: true,
-                });
+        // 2. Space after comma (skip if next is ), ], > or newline)
+        if e < bytes.len() {
+            let next = bytes[e];
+            if next == b')' || next == b']' || next == b'>' || next == b'\n' || next == b'\r' { return; }
+            if next != b' ' {
+                v.push(Violation { file: String::new(), line: pos.row+1, col: pos.column+2,
+                    rule_id: "standard:comma-spacing".into(), auto_fixable: true,
+                    message: "Missing spacing after \",\"".into() });
             }
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::parser::KotlinParser;
-
-    fn check(source: &str) -> Vec<Violation> {
-        let mut parser = KotlinParser::new();
-        let tree = parser.parse(source);
-        CommaSpacing.check(&tree, source)
-    }
-
-    #[test]
-    fn valid_comma_spacing() {
-        assert!(check("fun foo(a: Int, b: String)\n").is_empty());
-    }
-
-    #[test]
-    fn space_before_comma() {
-        let v = check("fun foo(a: Int , b: String)\n");
-        assert!(!v.is_empty());
-    }
-
-    #[test]
-    fn missing_space_after_comma() {
-        let v = check("fun foo(a: Int,b: String)\n");
-        assert!(!v.is_empty());
-    }
+#[cfg(test)] mod tests {
+    use super::*; use crate::parser::KotlinParser;
+    fn c(s: &str) -> Vec<Violation> { let mut p=KotlinParser::new(); CommaSpacing.check(&p.parse(s), s) }
+    #[test] fn ok() { assert!(c("fun f(a: Int, b: String)\n").is_empty()); }
+    #[test] fn space_before() { let v=c("fun f(a , b)\n"); assert!(v.iter().any(|x| x.message.contains("before"))); }
+    #[test] fn no_space_after() { let v=c("fun f(a,b)\n"); assert!(v.iter().any(|x| x.message.contains("after"))); }
+    #[test] fn trailing_comma() { assert!(c("fun f(a: Int,)\n").is_empty()); }
+    #[test] fn after_paren_skip() { assert!(c("mapOf(1,)\n").is_empty()); }
 }
