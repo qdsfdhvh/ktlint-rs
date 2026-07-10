@@ -8,7 +8,7 @@
 
 use crate::cli::Cli;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// ktlint configuration.
 #[derive(Debug, Clone)]
@@ -146,6 +146,17 @@ impl KtlintConfig {
             config.baseline = Some(PathBuf::from(b));
         }
 
+        Ok(config)
+    }
+
+    /// Load config for a specific file path (multi-project support).
+    pub fn load_for_file(file_path: &Path) -> anyhow::Result<Self> {
+        let mut config = Self::default();
+        if let Ok(ec_map) = editorconfig::get_config(file_path) {
+            let map: std::collections::HashMap<String, String> = ec_map.into_iter().collect();
+            config.apply_editorconfig(&map);
+        }
+        config.project_root = file_path.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
         Ok(config)
     }
 
