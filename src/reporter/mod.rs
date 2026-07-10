@@ -58,8 +58,7 @@ impl<'a> DiagnosticReporter<'a> {
         if self.cli.format {
             eprintln!(
                 "\n{}",
-                "Lint has found errors that can be autocorrected using 'ktlint --format'"
-                    .yellow()
+                "Lint has found errors that can be autocorrected using 'ktlint --format'".yellow()
             );
         }
         self.print_summary(violations);
@@ -83,7 +82,11 @@ impl<'a> DiagnosticReporter<'a> {
 
         let json = serde_json::to_string_pretty(&output).unwrap_or_default();
         println!("{}", json);
-        if violations.is_empty() { 0 } else { 1 }
+        if violations.is_empty() {
+            0
+        } else {
+            1
+        }
     }
 
     fn report_sarif(&self, violations: &[Violation]) -> i32 {
@@ -110,13 +113,24 @@ impl<'a> DiagnosticReporter<'a> {
             "runs": [{ "results": results }]
         });
 
-        println!("{}", serde_json::to_string_pretty(&sarif).unwrap_or_default());
-        if violations.is_empty() { 0 } else { 1 }
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&sarif).unwrap_or_default()
+        );
+        if violations.is_empty() {
+            0
+        } else {
+            1
+        }
     }
 
     fn report_plain_summary(&self, violations: &[Violation]) -> i32 {
         self.print_summary(violations);
-        if violations.is_empty() { 0 } else { 1 }
+        if violations.is_empty() {
+            0
+        } else {
+            1
+        }
     }
 
     fn print_summary(&self, violations: &[Violation]) {

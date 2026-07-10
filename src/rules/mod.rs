@@ -14,11 +14,11 @@
 use crate::config::KtlintConfig;
 use tree_sitter::Tree;
 
+pub mod imports;
+pub mod naming;
 pub mod spacing;
 pub mod structure;
-pub mod imports;
 pub mod wrapping;
-pub mod naming;
 
 // ── Rule trait ──────────────────────────────────────────────────
 

@@ -31,7 +31,12 @@ impl CommentSpacing {
         }
     }
 
-    fn check_line_comment(&self, node: &tree_sitter::Node, source: &str, violations: &mut Vec<Violation>) {
+    fn check_line_comment(
+        &self,
+        node: &tree_sitter::Node,
+        source: &str,
+        violations: &mut Vec<Violation>,
+    ) {
         let text = &source[node.start_byte()..node.end_byte()];
         let pos = node.start_position();
 
@@ -51,7 +56,12 @@ impl CommentSpacing {
         }
     }
 
-    fn check_multiline_comment(&self, node: &tree_sitter::Node, source: &str, violations: &mut Vec<Violation>) {
+    fn check_multiline_comment(
+        &self,
+        node: &tree_sitter::Node,
+        source: &str,
+        violations: &mut Vec<Violation>,
+    ) {
         let text = &source[node.start_byte()..node.end_byte()];
         let pos = node.start_position();
 

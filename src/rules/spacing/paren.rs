@@ -32,7 +32,12 @@ impl ParenSpacing {
         }
     }
 
-    fn check_open_paren(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn check_open_paren(
+        &self,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+        violations: &mut Vec<Violation>,
+    ) {
         let end_byte = node.end_byte();
         let pos = node.start_position();
 
@@ -48,7 +53,12 @@ impl ParenSpacing {
         }
     }
 
-    fn check_close_paren(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn check_close_paren(
+        &self,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+        violations: &mut Vec<Violation>,
+    ) {
         let start_byte = node.start_byte();
         let pos = node.start_position();
 

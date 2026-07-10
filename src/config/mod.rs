@@ -122,8 +122,7 @@ impl KtlintConfig {
             let map: HashMap<String, String> = ec_map.into_iter().collect();
             config.apply_editorconfig(&map);
             if let Some(ref ec_path) = cli.editorconfig {
-                if let Ok(named) =
-                    editorconfig::get_config_conffile(&anchor_path, ec_path.as_str())
+                if let Ok(named) = editorconfig::get_config_conffile(&anchor_path, ec_path.as_str())
                 {
                     let named_map: HashMap<String, String> = named.into_iter().collect();
                     config.apply_editorconfig(&named_map);
@@ -152,7 +151,11 @@ impl KtlintConfig {
                     self.indent_size = v.parse().unwrap_or(4);
                 }
                 "indent_style" => {
-                    self.indent_style = if v == "tab" { IndentStyle::Tab } else { IndentStyle::Space };
+                    self.indent_style = if v == "tab" {
+                        IndentStyle::Tab
+                    } else {
+                        IndentStyle::Space
+                    };
                 }
                 "max_line_length" => {
                     if let Ok(n) = v.parse() {

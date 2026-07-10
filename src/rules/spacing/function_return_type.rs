@@ -29,7 +29,12 @@ impl FunctionReturnTypeSpacing {
         }
     }
 
-    fn check_function(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn check_function(
+        &self,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+        violations: &mut Vec<Violation>,
+    ) {
         // Find the `:` between parameter list and return type
         // In function_declaration: `fun name(params)` then optional `:` then return type
         let mut saw_parens = false;
@@ -57,7 +62,8 @@ impl FunctionReturnTypeSpacing {
 
                     // Should have space after
                     let end_byte = child.end_byte();
-                    if end_byte < bytes.len() && bytes[end_byte] != b' ' && bytes[end_byte] != b'\n' {
+                    if end_byte < bytes.len() && bytes[end_byte] != b' ' && bytes[end_byte] != b'\n'
+                    {
                         violations.push(Violation {
                             file: String::new(),
                             line: pos.row + 1,

@@ -45,7 +45,15 @@ class Foo(
                 } else {
                     text.replace('\n', "⏎")
                 };
-                println!("{:indent$}{} {:?} [{}.{}]", "", kind, text_preview, start.row + 1, start.column + 1, indent = depth * 2);
+                println!(
+                    "{:indent$}{} {:?} [{}.{}]",
+                    "",
+                    kind,
+                    text_preview,
+                    start.row + 1,
+                    start.column + 1,
+                    indent = depth * 2
+                );
             }
         });
     }
@@ -60,7 +68,13 @@ class Foo(
         ctx.walk_nodes(&mut |node| {
             let text = ctx.node_text(&node).to_string();
             if text.len() <= 3 {
-                println!("  {} → {:?} [{}.{}]", node.kind(), text, node.start_position().row + 1, node.start_position().column + 1);
+                println!(
+                    "  {} → {:?} [{}.{}]",
+                    node.kind(),
+                    text,
+                    node.start_position().row + 1,
+                    node.start_position().column + 1
+                );
             }
         });
     }

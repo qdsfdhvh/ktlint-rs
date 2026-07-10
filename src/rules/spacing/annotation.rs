@@ -18,7 +18,13 @@ impl Rule for AnnotationSpacing {
 }
 
 impl AnnotationSpacing {
-    fn walk(&self, node: tree_sitter::Node, bytes: &[u8], source: &str, violations: &mut Vec<Violation>) {
+    fn walk(
+        &self,
+        node: tree_sitter::Node,
+        bytes: &[u8],
+        source: &str,
+        violations: &mut Vec<Violation>,
+    ) {
         // Find annotation nodes — they start with "@" in the annotations list
         if node.kind() == "annotation" {
             self.check_annotation(&node, bytes, source, violations);
@@ -30,7 +36,13 @@ impl AnnotationSpacing {
         }
     }
 
-    fn check_annotation(&self, node: &tree_sitter::Node, bytes: &[u8], _source: &str, violations: &mut Vec<Violation>) {
+    fn check_annotation(
+        &self,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+        _source: &str,
+        violations: &mut Vec<Violation>,
+    ) {
         let pos = node.start_position();
         let start_byte = node.start_byte();
 

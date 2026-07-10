@@ -37,10 +37,7 @@ impl Rule for ImportOrdering {
                         line: imports[i].0 + 1,
                         col: 1,
                         rule_id: self.id().to_string(),
-                        message: format!(
-                            "Import \"{}\" is not in alphabetical order",
-                            lines[i]
-                        ),
+                        message: format!("Import \"{}\" is not in alphabetical order", lines[i]),
                         auto_fixable: true,
                     });
                     break;
@@ -67,14 +64,14 @@ mod tests {
     fn sorted_imports() {
         assert!(check(
             "package foo\n\nimport android.view.View\nimport java.io.File\n\nclass Bar\n"
-        ).is_empty());
+        )
+        .is_empty());
     }
 
     #[test]
     fn unsorted_imports() {
-        let v = check(
-            "package foo\n\nimport java.io.File\nimport android.view.View\n\nclass Bar\n"
-        );
+        let v =
+            check("package foo\n\nimport java.io.File\nimport android.view.View\n\nclass Bar\n");
         assert!(!v.is_empty());
         assert_eq!(v[0].rule_id, "standard:import-ordering");
     }

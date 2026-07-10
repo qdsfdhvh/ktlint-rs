@@ -8,7 +8,9 @@ use crate::rules::{Rule, Violation};
 pub struct OperatorSpacing;
 
 // Known operator node kinds in tree-sitter-kotlin-sg
-const OPERATORS: &[&str] = &["=", "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||"];
+const OPERATORS: &[&str] = &[
+    "=", "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||",
+];
 
 impl Rule for OperatorSpacing {
     fn id(&self) -> &'static str {
@@ -24,7 +26,12 @@ impl Rule for OperatorSpacing {
 }
 
 impl OperatorSpacing {
-    fn walk_and_check(&self, node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn walk_and_check(
+        &self,
+        node: tree_sitter::Node,
+        bytes: &[u8],
+        violations: &mut Vec<Violation>,
+    ) {
         let kind = node.kind();
         if OPERATORS.contains(&kind) {
             // = in parameter default values: `val x: Int = 5` — check context
@@ -40,7 +47,12 @@ impl OperatorSpacing {
         }
     }
 
-    fn check_operator(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn check_operator(
+        &self,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+        violations: &mut Vec<Violation>,
+    ) {
         let pos = node.start_position();
         let start_byte = node.start_byte();
         let end_byte = node.end_byte();

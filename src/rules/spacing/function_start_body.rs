@@ -36,7 +36,10 @@ impl FunctionStartOfBodySpacing {
             if let Some(child) = node.child(i) {
                 if child.kind() == "{" {
                     let start_byte = child.start_byte();
-                    if start_byte > 0 && bytes[start_byte - 1] != b'\n' && bytes[start_byte - 1] != b' ' {
+                    if start_byte > 0
+                        && bytes[start_byte - 1] != b'\n'
+                        && bytes[start_byte - 1] != b' '
+                    {
                         let pos = child.start_position();
                         // This is a compact function body like `fun foo() { }` — that's OK
                         // Only flag if the previous token is not space or newline

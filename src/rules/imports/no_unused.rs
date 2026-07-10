@@ -50,11 +50,7 @@ impl NoUnusedImports {
     fn extract_import_name(line: &str) -> String {
         // "import java.io.File" → "File"
         // "import kotlin.collections.*" → "kotlin.collections.*"
-        let content = line
-            .trim()
-            .trim_start_matches("import ")
-            .trim()
-            .to_string();
+        let content = line.trim().trim_start_matches("import ").trim().to_string();
 
         // Check for wildcard imports — don't flag these as unused
         if content.ends_with(".*") {
@@ -62,11 +58,7 @@ impl NoUnusedImports {
         }
 
         // Get the last segment
-        content
-            .split('.')
-            .last()
-            .unwrap_or(&content)
-            .to_string()
+        content.split('.').last().unwrap_or(&content).to_string()
     }
 
     fn collect_identifiers(&self, tree: &tree_sitter::Tree, source: &str) -> HashSet<String> {
@@ -84,10 +76,7 @@ impl NoUnusedImports {
         }
 
         // Collect identifiers
-        if kind == "simple_identifier"
-            || kind == "type_identifier"
-            || kind == "user_type"
-        {
+        if kind == "simple_identifier" || kind == "type_identifier" || kind == "user_type" {
             if let Ok(text) = node.utf8_text(source.as_bytes()) {
                 ids.insert(text.to_string());
             }

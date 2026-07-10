@@ -29,7 +29,12 @@ impl TrailingComma {
         }
     }
 
-    fn check_trailing_comma(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn check_trailing_comma(
+        &self,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+        violations: &mut Vec<Violation>,
+    ) {
         // Get the last non-`)` child. If it has content (not just comments),
         // there should be a trailing comma before the closing `)`.
         // This is a simplified check — full implementation would consider line breaks.
@@ -58,7 +63,10 @@ impl TrailingComma {
                 for i in (0..ci).rev() {
                     if let Some(child) = node.child(i) {
                         let child_line = child.start_position().row;
-                        let cp_line = node.child(ci).map(|c| c.start_position().row).unwrap_or(child_line);
+                        let cp_line = node
+                            .child(ci)
+                            .map(|c| c.start_position().row)
+                            .unwrap_or(child_line);
 
                         if child_line != cp_line {
                             // Parameter is on a different line — check for trailing comma
