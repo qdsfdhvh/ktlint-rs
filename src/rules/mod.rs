@@ -171,6 +171,11 @@ impl RuleEngine {
             Box::new(phase1_rules::BlankLineBetweenWhenConditions),
             Box::new(phase1_rules::TrailingCommaOnCallSite),
             Box::new(phase1_rules::SpacingBetweenDeclarationsWithComments),
+            Box::new(phase1_more::KtlintAnnotation),
+            Box::new(phase1_more::KtlintWrapping),
+            Box::new(phase1_more::KtlintNoConsecutiveComments),
+            Box::new(phase1_more::KtlintArgumentListWrapping),
+            Box::new(phase1_more::KtlintFilename),
             Box::new(wrapping::TryCatchFinallyWrapping),
             Box::new(wrapping::WhenExpressionLineBreak),
             // disabled // disabled
@@ -313,3 +318,4 @@ impl Rule for NoWildcardImports {
     }
 }
 pub mod phase1_rules;
+pub mod phase1_more;
