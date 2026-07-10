@@ -1,27 +1,33 @@
-//! Spacing rules — whitespace around tokens, braces, operators, and keywords.
-
 pub mod annotation;
 pub mod argument_list;
+pub mod around_keyword;
 pub mod class_signature;
 pub mod colon;
 pub mod comma;
 pub mod comment;
 pub mod curly;
+pub mod double_colon;
+pub mod function_name_paren;
 pub mod function_return_type;
 pub mod function_start_body;
 pub mod modifier_order;
 pub mod operator;
 pub mod paren;
+pub mod range_operator;
 
 pub use annotation::AnnotationSpacing;
 pub use argument_list::ArgumentListWrapping;
+pub use around_keyword::SpacingAroundKeyword;
 pub use class_signature::ClassSignatureSpacing;
 pub use colon::ColonSpacing;
 pub use comma::CommaSpacing;
 pub use comment::CommentSpacing;
 pub use curly::CurlySpacing;
+pub use double_colon::DoubleColonSpacing;
+pub use function_name_paren::FunctionNameParenSpacing;
 pub use function_return_type::FunctionReturnTypeSpacing;
 pub use function_start_body::FunctionStartOfBodySpacing;
 pub use modifier_order::ModifierOrder;
 pub use operator::OperatorSpacing;
 pub use paren::ParenSpacing;
+pub use range_operator::RangeOperatorSpacing;

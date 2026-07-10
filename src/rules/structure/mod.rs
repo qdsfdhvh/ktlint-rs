@@ -1,10 +1,10 @@
-//! Structure rules — indentation, trailing whitespace, blank lines, etc.
-
 pub mod enum_entry;
 pub mod indentation;
 pub mod max_line_length;
 pub mod no_blank_line_before_rbrace;
+pub mod no_empty_class_body;
 pub mod no_empty_file;
+pub mod no_empty_first_line;
 pub mod no_single_expression_body;
 pub mod parameter_list_spacing;
 pub mod spacing_between_declarations;
@@ -14,7 +14,9 @@ pub use enum_entry::EnumEntry;
 pub use indentation::Indentation;
 pub use max_line_length::MaxLineLength;
 pub use no_blank_line_before_rbrace::NoBlankLineBeforeRbrace;
+pub use no_empty_class_body::NoEmptyClassBody;
 pub use no_empty_file::NoEmptyFile;
+pub use no_empty_first_line::NoEmptyFirstLineInClassBody;
 pub use no_single_expression_body::NoSingleExpressionBody;
 pub use parameter_list_spacing::ParameterListSpacing;
 pub use spacing_between_declarations::SpacingBetweenDeclarations;
