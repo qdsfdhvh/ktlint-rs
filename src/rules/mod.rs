@@ -68,8 +68,10 @@ impl RuleEngine {
             // disabled
             Box::new(structure::Indentation::new(config.indent_size)),
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             // disabled
             // disabled
@@ -80,28 +82,36 @@ impl RuleEngine {
             // disabled
             Box::new(structure::NoEmptyClassBody),
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             // disabled
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             // disabled
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             // disabled
             // disabled
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             Box::new(structure::TrailingComma),
             // disabled
             // disabled
             // imports
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             // naming
             // disabled-bp
