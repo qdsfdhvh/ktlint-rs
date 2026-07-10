@@ -5,19 +5,7 @@ pub struct AnnotationRule;
 impl Rule for AnnotationRule {
     fn id(&self) -> &'static str { "standard:annotation" }
     fn auto_fixable(&self) -> bool { false }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v=Vec::new();
-        for (i,l) in s.lines().enumerate() {
-            let t=l.trim();
-            if t.starts_with("@file:") { continue; }
-            if t.starts_with('@') && !t.contains("Suppress") && !t.contains("Deprecated") {
-                if !t.contains('(') && !t.ends_with("annotation") {
-                    v.push(Violation{file:String::new(),line:i+1,col:1,rule_id:self.id().into(),
-                        message:"Annotation usage should be checked".into(),auto_fixable:false});
-                }
-            }
-        } v
-    }
+    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> { vec![] } // disabled — too noisy
 }
 
 pub struct FunctionLiteralRule;
