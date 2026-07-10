@@ -12,36 +12,33 @@ use discovery::FileCollector;
 use parser::KotlinParser;
 use reporter::DiagnosticReporter;
 use rules::{RuleEngine, Violation};
+use rayon::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse_args();
-
-    // 1. Load configuration from .editorconfig
     let config = KtlintConfig::load(&cli)?;
-
-    // 2. Discover Kotlin files
     let files = FileCollector::new(&cli, &config).collect()?;
 
-    // 3. Process files
-    let mut parser = KotlinParser::new();
-    let engine = RuleEngine::new(&config);
+    // Process files in parallel
+    let all_violations: Vec<Violation> = files
+        .par_iter()
+        .flat_map(|path| {
+            let source = std::fs::read_to_string(path)
+                .unwrap_or_default();
+            let mut parser = KotlinParser::new();
+            let tree = parser.parse(&source);
+            let engine = RuleEngine::new(&config);
+            let violations = engine.check(&path.to_string_lossy(), &tree, &source);
+            rules::suppress::filter_suppressed(violations, &source)
+        })
+        .collect();
 
-    let mut all_violations: Vec<Violation> = Vec::new();
-    for path in &files {
-        let source = std::fs::read_to_string(path)?;
-        let tree = parser.parse(&source);
-        let violations = engine.check(&path.to_string_lossy(), &tree, &source);
-        // Filter out violations suppressed by @Suppress annotations
-        let violations = rules::suppress::filter_suppressed(violations, &source);
-        all_violations.extend(violations);
-    }
-
-    // 4. Report
+    // Report
     let reporter = DiagnosticReporter::new(&cli);
     let exit_code = reporter.report(&all_violations);
 
-    // 5. Auto-format if requested
+    // Auto-format
     if cli.format && !all_violations.is_empty() {
         formatter::auto_fix(&files, &all_violations)?;
     }
