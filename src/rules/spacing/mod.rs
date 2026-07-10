@@ -1,10 +1,7 @@
 //! Spacing rules — whitespace around tokens, braces, operators, and keywords.
-//!
-//! These rules account for ~80% of real-world Kotlin style violations.
-//! Each rule traverses the tree-sitter CST to find relevant nodes and checks
-//! whitespace around them.
 
 pub mod annotation;
+pub mod class_signature;
 pub mod colon;
 pub mod comma;
 pub mod comment;
@@ -16,6 +13,7 @@ pub mod paren;
 
 // Re-export for convenience
 pub use annotation::AnnotationSpacing;
+pub use class_signature::ClassSignatureSpacing;
 pub use colon::ColonSpacing;
 pub use comma::CommaSpacing;
 pub use comment::CommentSpacing;

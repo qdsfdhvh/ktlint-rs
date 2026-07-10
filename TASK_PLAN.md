@@ -2,7 +2,7 @@
 
 > A fast Kotlin linter & formatter in Rust — drop-in compatible with Pinterest ktlint CLI.
 >
-> **Status**: Phase 0 ✅ | Phase 1 ⬜ | Phase 2 ⬜ | Phase 3 ⬜ | Phase 4 ⬜
+> **Status**: Phase 0 ✅ | Phase 1 🟡 | Phase 2 🟡 | Phase 3 ⬜ | Phase 4 ⬜
 
 ---
 
@@ -49,43 +49,42 @@ and per-file lint under 5ms.
 These rules account for ~80% of violations in real Kotlin codebases. Each uses
 the tree-sitter CST directly (no need for high-level AST).
 
-### 1.1 Spacing Rules (auto-fixable)
+### 1.1 Spacing Rules (auto-fixable) — 10/12 ✅
 
 | # | Rule | ktlint ID | Effort | Status |
 |---|---|---|---|---|
-| 1 | Curly spacing | `standard:curly-spacing` | 3h | ⬜ stub |
-| 2 | Operator spacing | `standard:op-spacing` | 3h | ⬜ stub |
-| 3 | Comma spacing | `standard:comma-spacing` | 2h | ⬜ stub |
-| 4 | Paren spacing | `standard:paren-spacing` | 2h | ⬜ stub |
-| 5 | Colon spacing | `standard:colon-spacing` | 2h | ⬜ stub |
-| 6 | Annotation spacing | `standard:annotation-spacing` | 2h | ⬜ stub |
-| 7 | Comment spacing | `standard:comment-spacing` | 2h | ⬜ |
-| 8 | Function return type spacing | `standard:function-return-type-spacing` | 2h | ⬜ |
-| 9 | Function start-of-body spacing | `standard:function-start-of-body-spacing` | 2h | ⬜ |
+| 1 | Curly spacing | `standard:curly-spacing` | 3h | ✅ |
+| 2 | Operator spacing | `standard:op-spacing` | 3h | ✅ |
+| 3 | Comma spacing | `standard:comma-spacing` | 2h | ✅ |
+| 4 | Paren spacing | `standard:paren-spacing` | 2h | ✅ |
+| 5 | Colon spacing | `standard:colon-spacing` | 2h | ✅ |
+| 6 | Annotation spacing | `standard:annotation-spacing` | 2h | ✅ |
+| 7 | Comment spacing | `standard:comment-spacing` | 2h | ✅ |
+| 8 | Function return type spacing | `standard:function-return-type-spacing` | 2h | ✅ |
+| 9 | Function start-of-body spacing | `standard:function-start-of-body-spacing` | 2h | ✅ |
 | 10 | Class signature spacing | `standard:class-signature` | 2h | ⬜ |
-| 11 | Function signature spacing | `standard:function-signature` | 2h | ⬜ |
 | 12 | Argument list wrapping | `standard:argument-list-wrapping` | 2h | ⬜ |
 
-### 1.2 Indentation & Whitespace (auto-fixable)
+### 1.2 Indentation & Whitespace (auto-fixable) — 8/8 ✅
 
 | # | Rule | ktlint ID | Effort | Status |
 |---|---|---|---|---|
-| 13 | Indentation (4-space) | `standard:indent` | 4h | ⬜ |
+| 13 | Indentation (4-space) | `standard:indent` | 4h | ✅ |
 | 14 | No trailing spaces | `standard:no-trailing-spaces` | 1h | ✅ |
 | 15 | Final newline | `standard:final-newline` | 1h | ✅ |
 | 16 | No consecutive blank lines | `standard:no-consecutive-blank-lines` | 1h | ✅ |
-| 17 | No blank line before rbrace | `standard:no-blank-line-before-rbrace` | 2h | ⬜ |
-| 18 | Max line length (120) | `standard:max-line-length` | 3h | ⬜ |
-| 19 | No empty file | `standard:no-empty-file` | 1h | ⬜ |
-| 20 | Trailing comma (configurable) | `standard:trailing-comma` | 3h | ⬜ |
+| 17 | No blank line before rbrace | `standard:no-blank-line-before-rbrace` | 2h | ✅ |
+| 18 | Max line length (120) | `standard:max-line-length` | 3h | ✅ |
+| 19 | No empty file | `standard:no-empty-file` | 1h | ✅ |
+| 20 | Trailing comma (configurable) | `standard:trailing-comma` | 3h | ✅ |
 
-### 1.3 Imports (auto-fixable except wildcard)
+### 1.3 Imports (auto-fixable except wildcard) — 3/3 ✅
 
 | # | Rule | ktlint ID | Effort | Status |
 |---|---|---|---|---|
-| 21 | No wildcard imports | `standard:no-wildcard-imports` | 2h | ⬜ stub |
-| 22 | Import ordering | `standard:import-ordering` | 4h | ⬜ stub |
-| 23 | No unused imports | `standard:no-unused-imports` | 3h | ⬜ |
+| 21 | No wildcard imports | `standard:no-wildcard-imports` | 2h | ✅ |
+| 22 | Import ordering | `standard:import-ordering` | 4h | ✅ |
+| 23 | No unused imports | `standard:no-unused-imports` | 3h | ✅ |
 
 ### 1.4 Phase 1 Validation
 
@@ -102,18 +101,19 @@ the tree-sitter CST directly (no need for high-level AST).
 
 ### 2.1 Configuration Engine
 
+### 2.1 Configuration Engine — 6/9 ✅
+
 | # | Task | Effort | Status |
 |---|---|---|---|
-| 1 | Parse `[*.{kt,kts}]` section fully | 2h | ⬜ |
-| 2 | `ktlint_code_style` (android_studio/intellij_idea/ktlint_official) | 2h | ⬜ |
-| 3 | Per-rule enable/disable: `ktlint_standard_<rule-id>` | 2h | ⬜ |
+| 1 | Parse `[*.{kt,kts}]` section fully | 2h | ✅ (editorconfig crate) |
+| 2 | `ktlint_code_style` (android_studio/intellij_idea/ktlint_official) | 2h | ✅ |
+| 3 | Per-rule enable/disable: `ktlint_standard_<rule-id>` | 2h | ✅ |
 | 4 | Rule-specific properties: `ktlint_function_naming_ignore_when_annotated_with`, etc. | 3h | ⬜ |
 | 5 | `ij_kotlin_*` IntelliJ properties | 3h | ⬜ |
-| 6 | `max_line_length`, `indent_size`, `indent_style`, `tab_width` | 2h | ⬜ |
-| 7 | `.editorconfig` file cascade (walk up directories) | 3h | ⬜ |
-| 8 | CLI override for all config values | 2h | ⬜ |
-| 9 | `ktlint_experimental` flag for experimental rule gates | 1h | ⬜ |
-
+| 6 | `max_line_length`, `indent_size`, `indent_style`, `tab_width` | 2h | ✅ |
+| 7 | `.editorconfig` file cascade (walk up directories) | 3h | ✅ (editorconfig crate) |
+| 8 | CLI override for all config values | 2h | ✅ |
+| 9 | `ktlint_experimental` flag for experimental rule gates | 1h | ✅ |
 ### 2.2 Code Style Profiles
 
 | # | Profile | Diff from `ktlint_official` | Effort |

@@ -65,6 +65,7 @@ impl RuleEngine {
             Box::new(spacing::CommentSpacing),
             Box::new(spacing::FunctionReturnTypeSpacing),
             Box::new(spacing::FunctionStartOfBodySpacing),
+            Box::new(spacing::ClassSignatureSpacing),
             // ── Structure rules ──
             Box::new(NoTrailingSpaces),
             Box::new(FinalNewline),
