@@ -9,6 +9,7 @@ pub mod spacing;
 pub mod structure;
 pub mod suppress;
 pub mod wrapping;
+pub mod compat;
 pub mod new_rules;
 pub mod new_rules2;
 pub mod new_rules3;
@@ -49,7 +50,7 @@ impl RuleEngine {
             Box::new(spacing::ArgumentListWrapping),
             Box::new(spacing::BlockCommentStar),
             Box::new(spacing::ClassSignatureSpacing),
-            // disabled-colon
+            Box::new(spacing::ColonSpacing),
             Box::new(spacing::CommaSpacing),
             Box::new(spacing::CommentSpacing),
             Box::new(spacing::CurlySpacing),
@@ -65,12 +66,12 @@ impl RuleEngine {
             // structure
             Box::new(structure::EnumEntry),
             // disabled
-            // indent-disabled
+            Box::new(structure::Indentation::new(config.indent_size)),
             // disabled-p3
             // disabled-p3
             // disabled
             // disabled
-            // disabled-ml
+            Box::new(structure::MaxLineLength),
             // disabled
             // disabled
             // disabled
