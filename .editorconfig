@@ -1,0 +1,46 @@
+# ktlint .editorconfig — Kotlin style configuration
+# https://ktlint.github.io
+
+# ── Root marker ────────────────────────────────────────────────
+root = true
+
+# ── Global (all files) ─────────────────────────────────────────
+[*]
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# ── Kotlin source ──────────────────────────────────────────────
+[*.{kt,kts}]
+# Code style: ktlint_official (default), android_studio, intellij_idea
+ktlint_code_style = ktlint_official
+
+# Enable experimental rules
+# ktlint_experimental = enabled
+
+# Max line length (0 = off)
+max_line_length = 0
+
+# Indentation
+indent_size = 4
+
+# Disable specific rules:
+# ktlint_standard_final_newline = disabled
+# ktlint_standard_no_wildcard_imports = disabled
+# ktlint_standard_import_ordering = disabled
+# ktlint_standard_trailing_comma = disabled
+# ktlint_standard_no_unused_imports = disabled
+
+# Rule-specific properties (examples):
+# ktlint_function_naming_ignore_when_annotated_with = Composable, Test
+# ktlint_class_naming_ignore_when_annotated_with = Serializable
+
+# ── IntelliJ IDEA properties (for compat) ──────────────────────
+# ij_kotlin_allow_trailing_comma = true
+# ij_kotlin_allow_trailing_comma_on_call_site = true
+# ij_kotlin_code_style_defaults = KOTLIN_OFFICIAL
+# ij_kotlin_imports_layout = *, java.**, javax.**, kotlin.**, ^
+# ij_kotlin_name_count_to_use_star_import = 5
+# ij_kotlin_name_count_to_use_star_import_for_members = 3
+# ij_kotlin_packages_to_use_import_on_demand = java.util.*, kotlinx.android.synthetic.**
