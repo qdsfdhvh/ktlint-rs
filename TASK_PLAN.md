@@ -16,16 +16,15 @@ and per-file lint under 5ms.
 **Reference**: Pinterest ktlint v1.8.0 (~80 standard rules, `--format`, `--baseline`, reporters)
 
 **Current State** (2026-07-10):
-- Module skeleton with `cli`, `config`, `discovery`, `parser`, `rules`, `formatter`, `reporter` (production quality)
-- `tree-sitter-kotlin-sg` based parser with CST utilities (CheckContext)
-- **19 rules implemented**: 9 spacing + 7 structure + 3 imports
-- Spacing rules: curly, operator, comma, paren, colon, annotation, comment, func-return-type, func-start-body
-- Structure rules: no-trailing-spaces, final-newline, no-consecutive-blank-lines, no-blank-before-rbrace, indentation, max-line-length, no-empty-file, trailing-comma
-- Import rules: no-wildcard-imports, import-ordering, no-unused-imports
-- Plain, JSON, SARIF reporters
-- Basic auto-fix for structure rules
-- 53 tests, all passing ✅
-
+- **62 rules** (spacing:17, structure:25, imports:4, naming:6, wrapping:7, built-in:4)
+- 10-pass auto-fix engine with 59-71% violation reduction
+- Rayon parallel processing: okhttp 0.34s / 525 files
+- EditorConfig: indent_size, code_style, per-rule enable/disable
+- @Suppress / @SuppressWarnings annotation support
+- Reporters: plain, JSON, SARIF, summary
+- GitHub Actions CI: test, clippy, fmt, self-lint
+- AGENTS.md, .editorconfig, Pi skills
+- **164 tests, all passing** ✅
 ---
 
 ## Phase 0 — Infrastructure & Skeleton ✅
