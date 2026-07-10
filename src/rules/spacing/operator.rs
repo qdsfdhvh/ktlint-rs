@@ -1,21 +1,14 @@
 //! standard:op-spacing — ensures single spaces around operators.
-//!
-//! Checks: `=`, `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `&&`, `||`
-//! Each operator should have exactly one space before and after.
+//! Skips < > when used as generic type brackets.
 
 use crate::rules::{Rule, Violation};
 
 pub struct OperatorSpacing;
 
-// Known operator node kinds in tree-sitter-kotlin-sg
-const OPERATORS: &[&str] = &[
-    "=", "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||",
-];
+const OPERATORS: &[&str] = &["=", "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||"];
 
 impl Rule for OperatorSpacing {
-    fn id(&self) -> &'static str {
-        "standard:op-spacing"
-    }
+    fn id(&self) -> &'static str { "standard:op-spacing" }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
@@ -26,58 +19,46 @@ impl Rule for OperatorSpacing {
 }
 
 impl OperatorSpacing {
-    fn walk_and_check(
-        &self,
-        node: tree_sitter::Node,
-        bytes: &[u8],
-        violations: &mut Vec<Violation>,
-    ) {
+    fn walk_and_check(&self, node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
         let kind = node.kind();
         if OPERATORS.contains(&kind) {
-            // = in parameter default values: `val x: Int = 5` — check context
-            // = in property declarations: check context
-            // All other operators: simple spacing check
-            self.check_operator(&node, bytes, violations);
-        }
-
-        for i in 0..node.child_count() {
-            if let Some(child) = node.child(i) {
-                self.walk_and_check(child, bytes, violations);
+            // Skip < > when used as generic type brackets
+            if (kind == "<" || kind == ">") && self.is_generic_bracket(&node) {
+                // skip
+            } else {
+                self.check_operator(&node, bytes, violations);
             }
+        }
+        for i in 0..node.child_count() {
+            if let Some(child) = node.child(i) { self.walk_and_check(child, bytes, violations); }
         }
     }
 
-    fn check_operator(
-        &self,
-        node: &tree_sitter::Node,
-        bytes: &[u8],
-        violations: &mut Vec<Violation>,
-    ) {
-        let pos = node.start_position();
-        let start_byte = node.start_byte();
-        let end_byte = node.end_byte();
+    fn is_generic_bracket(&self, node: &tree_sitter::Node) -> bool {
+        if let Some(parent) = node.parent() {
+            matches!(parent.kind(), "type_arguments" | "type_parameters" | "type_projection")
+        } else { false }
+    }
 
-        // Check space before
-        if start_byte > 0 && bytes[start_byte - 1] != b' ' {
+    fn check_operator(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+        let pos = node.start_position();
+        let s = node.start_byte();
+        let e = node.end_byte();
+
+        // Space before: skip if preceded by ( (function call) or newline
+        if s > 0 && bytes[s - 1] != b' ' && bytes[s - 1] != b'(' && bytes[s - 1] != b'\n' {
             violations.push(Violation {
-                file: String::new(),
-                line: pos.row + 1,
-                col: pos.column + 1,
-                rule_id: self.id().to_string(),
+                file: String::new(), line: pos.row + 1, col: pos.column + 1,
+                rule_id: self.id().to_string(), auto_fixable: true,
                 message: format!("Missing space before \"{}\"", node.kind()),
-                auto_fixable: true,
             });
         }
-
-        // Check space after
-        if end_byte < bytes.len() && bytes[end_byte] != b' ' && bytes[end_byte] != b'\n' {
+        // Space after: skip if followed by ) or newline
+        if e < bytes.len() && bytes[e] != b' ' && bytes[e] != b')' && bytes[e] != b'\n' {
             violations.push(Violation {
-                file: String::new(),
-                line: pos.row + 1,
-                col: pos.column + 1,
-                rule_id: self.id().to_string(),
+                file: String::new(), line: pos.row + 1, col: pos.column + 1,
+                rule_id: self.id().to_string(), auto_fixable: true,
                 message: format!("Missing space after \"{}\"", node.kind()),
-                auto_fixable: true,
             });
         }
     }
@@ -85,24 +66,13 @@ impl OperatorSpacing {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::parser::KotlinParser;
+    use super::*; use crate::parser::KotlinParser;
+    fn check(s: &str) -> Vec<Violation> { let mut p=KotlinParser::new(); OperatorSpacing.check(&p.parse(s), s) }
 
-    fn check(source: &str) -> Vec<Violation> {
-        let mut parser = KotlinParser::new();
-        let tree = parser.parse(source);
-        OperatorSpacing.check(&tree, source)
-    }
-
-    #[test]
-    fn valid_operator_spacing() {
-        let source = "val x = 1 + 2\n";
-        assert!(check(source).is_empty());
-    }
-
-    #[test]
-    fn missing_space_around_op() {
-        let v = check("val x= 1 + 2\n");
-        assert!(!v.is_empty());
+    #[test] fn valid() { assert!(check("val x = 1 + 2\n").is_empty()); }
+    #[test] fn missing() { assert!(!check("val x= 1 + 2\n").is_empty()); }
+    #[test] fn generic_not_flagged() {
+        assert!(check("val x: List<String> = listOf()\n").is_empty());
+        assert!(check("fun <T> foo(): T\n").is_empty());
     }
 }
