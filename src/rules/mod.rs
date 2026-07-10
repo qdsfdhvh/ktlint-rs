@@ -9,6 +9,7 @@ pub mod spacing;
 pub mod structure;
 pub mod suppress;
 pub mod wrapping;
+pub mod new_rules;
 
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -103,6 +104,10 @@ impl RuleEngine {
             Box::new(wrapping::StringTemplateIndent),
             Box::new(wrapping::TryCatchFinallyWrapping),
             Box::new(wrapping::WhenExpressionLineBreak),
+            Box::new(new_rules::SpacingAroundDot), Box::new(new_rules::SpacingAroundSquareBrackets),
+            Box::new(new_rules::NoBlankLinesInChainedMethodCalls), Box::new(new_rules::NoLineBreakAfterElse),
+            Box::new(new_rules::NoLineBreakBeforeAssignment), Box::new(new_rules::NoConsecutiveComments),
+            Box::new(new_rules::NullableTypeSpacing),
         ];
         Self {
             config: config.clone(),
