@@ -166,6 +166,11 @@ impl RuleEngine {
             Box::new(wrapping::MultilineExpressionWrapping),
             // disabled
             Box::new(wrapping::StringTemplateIndent),
+            Box::new(phase1_rules::WhenEntryBracing),
+            Box::new(phase1_rules::BlankLineBeforeDeclaration),
+            Box::new(phase1_rules::BlankLineBetweenWhenConditions),
+            Box::new(phase1_rules::TrailingCommaOnCallSite),
+            Box::new(phase1_rules::SpacingBetweenDeclarationsWithComments),
             Box::new(wrapping::TryCatchFinallyWrapping),
             Box::new(wrapping::WhenExpressionLineBreak),
             // disabled // disabled
@@ -307,3 +312,4 @@ impl Rule for NoWildcardImports {
             .collect()
     }
 }
+pub mod phase1_rules;
