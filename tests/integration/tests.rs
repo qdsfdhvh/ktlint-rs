@@ -169,4 +169,174 @@ mod integration_tests {
         config.indent_style = crate::config::IndentStyle::Tab;
         assert_eq!(config.indent_string(), "\t");
     }
+
+    // ── Real-world project smoke tests ──
+    //
+    // androidx and compose-samples are multi-project collections.
+    // We traverse first-level subdirectories (each is a self-contained
+    // Gradle project) rather than checking the root directly.
+
+    /// Returns first-level subdirs of `parent` that contain at least one .kt file.
+    fn kt_subdirs(parent: &PathBuf) -> Vec<PathBuf> {
+        let mut dirs = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(parent) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    // Skip non-project dirs
+                    if name.starts_with('.') || name == "docs" || name == "gradle"
+                        || name == "buildSrc" || name == "scripts" || name == "readme"
+                    {
+                        continue;
+                    }
+                    // Quick check: does this dir have .kt files?
+                    let has_kt = std::fs::read_dir(&path)
+                        .map(|mut rd| rd.any(|e| {
+                            e.map(|f| {
+                                f.file_name()
+                                    .to_str()
+                                    .map(|s| s.ends_with(".kt"))
+                                    .unwrap_or(false)
+                            })
+                            .unwrap_or(false)
+                        }))
+                        .unwrap_or(false);
+                    if has_kt {
+                        dirs.push(path);
+                    } else {
+                        // Deeper check — walk one level
+                        if let Ok(sub) = std::fs::read_dir(&path) {
+                            let found = sub.flatten().any(|e| {
+                                let p = e.path();
+                                p.is_dir()
+                                    && std::fs::read_dir(&p)
+                                        .map(|mut rd| {
+                                            rd.any(|f| {
+                                                f.map(|x| {
+                                                    x.file_name()
+                                                        .to_str()
+                                                        .map(|s| s.ends_with(".kt"))
+                                                        .unwrap_or(false)
+                                                })
+                                                .unwrap_or(false)
+                                            })
+                                        })
+                                        .unwrap_or(false)
+                            });
+                            if found {
+                                dirs.push(path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        dirs.sort();
+        dirs
+    }
+
+    // ── compose-samples: all 6 sample projects ──
+
+    #[test]
+    fn real_compose_samples_smoke() {
+        ensure_built();
+        let base = fixtures_dir("compose-samples");
+        let dirs = kt_subdirs(&base);
+        assert!(!dirs.is_empty(), "Expected compose-samples subdirs with Kotlin files");
+
+        for dir in &dirs {
+            let name = dir.file_name().unwrap().to_str().unwrap();
+            let output = Command::new(ktlint_bin())
+                .arg(dir)
+                .output()
+                .expect(&format!("ktlint failed to run on compose-samples/{}", name));
+
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            // ktlint should not crash or report internal errors
+            assert!(
+                !stderr.contains("thread 'main' panicked")
+                    && !stderr.contains("Error: Failed")
+                    && !stderr.contains("fatal runtime error"),
+                "compose-samples/{}: ktlint crashed:\n{}",
+                name, stderr
+            );
+
+            eprintln!(
+                "compose-samples/{}: exit={}, stdout_lines={}, stderr_lines={}",
+                name,
+                output.status.code().unwrap_or(-1),
+                String::from_utf8_lossy(&output.stdout).lines().count(),
+                stderr.lines().count()
+            );
+        }
+    }
+
+    // ── androidx: selected smaller modules (skip compose/ 6.6K files — too slow for CI) ──
+
+    /// androidx modules suitable for quick smoke testing (<1000 .kt files each)
+    const ANDROIDX_SMOKE_DIRS: &[&str] = &[
+        "activity",
+        "annotation",
+        "autofill",
+        "biometric",
+        "browser",
+        "collection",
+        "concurrent",
+        "datastore",
+        "documentfile",
+        "drawerlayout",
+        "emoji",
+        "fragment",
+        "graphics",
+        "gridlayout",
+        "loader",
+        "palette",
+        "preference",
+        "print",
+        "savedstate",
+        "slidingpanelayout",
+        "startup",
+        "swiperefreshlayout",
+        "transition",
+        "vectordrawable",
+        "viewpager",
+        "viewpager2",
+    ];
+
+    #[test]
+    fn real_androidx_smoke() {
+        ensure_built();
+        let base = fixtures_dir("androidx");
+
+        for dir_name in ANDROIDX_SMOKE_DIRS {
+            let dir = base.join(dir_name);
+            if !dir.exists() {
+                eprintln!("androidx/{}: directory not found, skipping", dir_name);
+                continue;
+            }
+
+            let output = Command::new(ktlint_bin())
+                .arg(&dir)
+                .output()
+                .expect(&format!("ktlint failed to run on androidx/{}", dir_name));
+
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            assert!(
+                !stderr.contains("thread 'main' panicked")
+                    && !stderr.contains("Error: Failed")
+                    && !stderr.contains("fatal runtime error"),
+                "androidx/{}: ktlint crashed:\n{}",
+                dir_name, stderr
+            );
+
+            eprintln!(
+                "androidx/{}: exit={}, stdout_lines={}, stderr_lines={}",
+                dir_name,
+                output.status.code().unwrap_or(-1),
+                String::from_utf8_lossy(&output.stdout).lines().count(),
+                stderr.lines().count()
+            );
+        }
+    }
 }
