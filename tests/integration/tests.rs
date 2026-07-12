@@ -341,4 +341,46 @@ mod integration_tests {
             );
         }
     }
+    // ── New editorconfig fixtures ──
+
+    #[test]
+    fn editorconfig_profile_android_studio_disables_rules() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .arg(fixtures_dir("editorconfig_profile"))
+            .output()
+            .expect("ktlint failed");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            !stdout.contains("standard:no-empty-first-line-in-class-body"),
+            "android_studio should disable no-empty-first-line-in-class-body: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn editorconfig_sections_parses_kt_kts() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .arg(fixtures_dir("editorconfig_sections"))
+            .output()
+            .expect("ktlint failed");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(!stdout.contains("standard:no-wildcard-imports"));
+        assert!(!stdout.contains("standard:curly-spacing"));
+        assert!(!stdout.contains("standard:colon-spacing"));
+    }
+
+    #[test]
+    fn editorconfig_mixed_ij_props() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .arg(fixtures_dir("editorconfig_mixed"))
+            .output()
+            .expect("ktlint failed");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(!stdout.contains("standard:no-wildcard-imports"));
+        assert!(stdout.contains("should be 2") || stdout.contains("multiple of 2"));
+    }
+
 }

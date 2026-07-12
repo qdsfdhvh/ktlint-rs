@@ -124,24 +124,21 @@ fn find_editorconfig(file_path: &Path) -> Option<PathBuf> {
 }
 
 /// Parse ktlint-specific properties from a raw `.editorconfig` file.
-/// The `editorconfig` crate strips non-standard keys, so we parse them ourselves.
-fn parse_ktlint_properties(ec_path: &Path) -> HashMap<String, String> {
+/// `file_path` is the Kotlin file being linted — used to match the right section.
+fn parse_ktlint_properties(ec_path: &Path, file_path: &Path) -> HashMap<String, String> {
     let mut props = HashMap::new();
     let content = match std::fs::read_to_string(ec_path) {
         Ok(c) => c,
         Err(_) => return props,
     };
 
-    // Simple INI parser: find [*.kt] or [*.kts] or [*] section, then read key=value.
-    let mut in_kt_section = false;
-    let mut in_glob_section = false;
-    let file_ext = ec_path
-        .parent()
-        .and_then(|_| {
-            // We don't have the file extension here, so collect all sections
-            None::<&str>
-        });
+    // Determine file extension for section matching.
+    let ext = file_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
 
+    let mut in_section = false;
     for line in content.lines() {
         let trimmed = line.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
@@ -149,11 +146,15 @@ fn parse_ktlint_properties(ec_path: &Path) -> HashMap<String, String> {
         }
         if trimmed.starts_with('[') && trimmed.ends_with(']') {
             let section = &trimmed[1..trimmed.len() - 1];
-            in_kt_section = section == "*.kt" || section == "*.kts" || section.contains(".kt");
-            in_glob_section = section == "*";
+            // Match: * or *.kt or *.{kt,kts} or {*.kt,*.kts}
+            in_section = section == "*"
+                || section == &format!("*.{}", ext)
+                || section.contains(&format!("{{{}}}", ext))
+                || section.contains(&format!(".{}, ", ext))
+                || section.contains(&format!("*.{}", ext));
             continue;
         }
-        if !in_kt_section && !in_glob_section {
+        if !in_section {
             continue;
         }
         if let Some((key, value)) = trimmed.split_once('=') {
@@ -201,7 +202,7 @@ impl KtlintConfig {
             config.apply_editorconfig(&map);
             // Also parse ktlint-specific properties not returned by editorconfig crate.
             if let Some(ec_file) = find_editorconfig(&ec_lookup_path) {
-                let ktlint_props = parse_ktlint_properties(&ec_file);
+                let ktlint_props = parse_ktlint_properties(&ec_file, &ec_lookup_path);
                 config.apply_editorconfig(&ktlint_props);
             }
             if let Some(ref ec_path) = cli.editorconfig {
@@ -244,7 +245,7 @@ impl KtlintConfig {
         // ktlint-specific properties (code_style, rule enable/disable, etc.)
         // Not returned by the editorconfig crate — we parse them directly.
         if let Some(ec_file) = find_editorconfig(&abs_path) {
-            let ktlint_props = parse_ktlint_properties(&ec_file);
+            let ktlint_props = parse_ktlint_properties(&ec_file, &abs_path);
             config.apply_editorconfig(&ktlint_props);
         }
 
