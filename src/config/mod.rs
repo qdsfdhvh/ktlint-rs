@@ -197,6 +197,20 @@ impl KtlintConfig {
                         })
                         .enabled = enabled;
                 }
+                key if key.starts_with("ij_kotlin_") => {
+                    // IntelliJ properties: ij_kotlin_allow_trailing_comma, etc.
+                    self.rules
+                        .entry("ij_kotlin_properties".to_string())
+                        .or_insert_with(|| RuleConfig { enabled: true, properties: HashMap::new() })
+                        .properties.insert(key.to_string(), v.to_string());
+                }
+                key if key.contains("_ignore_when_annotated_with") => {
+                    // Rule-specific: ktlint_function_naming_ignore_when_annotated_with=Composable
+                    self.rules
+                        .entry(key.to_string())
+                        .or_insert_with(|| RuleConfig { enabled: true, properties: HashMap::new() })
+                        .properties.insert("annotated_with".to_string(), v.to_string());
+                }
                 _ => {}
             }
         }
