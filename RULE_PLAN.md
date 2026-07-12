@@ -480,10 +480,10 @@ These exist in rs but not as separate JVM rules (subset, combined, or internal):
 | detekt libraries | 3 | 0 | 0 | 3 |
 | detekt naming | 21 | 0 | 0 | 21 |
 | detekt performance | 10 | 0 | 0 | 10 |
-| detekt potential-bugs | 39 | 0 | 0 | 39 |
+| detekt potential-bugs | 37 | 0 | 0 | 37 |
 | detekt ruleauthors | 2 | 0 | 0 | 2 |
-| detekt style | 88 | ~5 | 0 | ~83 |
-| **Total** | **349** | **~84** | **3** | **~262** |
+| detekt style | 81 | ~5 | 0 | ~76 |
+| **Total** | **340** | **~84** | **3** | **~253** |
 
 > Note: detekt `formatting` and `ktlint` rule sets excluded (ktlint wrappers).
 > ~8 detekt rules overlap with ktlint-rs (MaxLineLength, NoWildcardImports, etc.).

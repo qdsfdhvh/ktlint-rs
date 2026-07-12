@@ -44,6 +44,29 @@ find_ktlint_cmd() {
 
 KTLINT_JVM_CMD=$(find_ktlint_cmd)
 run_jvm() { $KTLINT_JVM_CMD "$@"; }
+# ── detekt (optional) ──
+find_detekt_cmd() {
+  if [[ -x /opt/homebrew/bin/detekt ]]; then
+    echo /opt/homebrew/bin/detekt
+    return
+  fi
+  # jar download
+  local jar
+  jar=$(ls -1t "$REPO_ROOT/.ktlint/detekt-cli-"*.jar 2>/dev/null | head -1 || true)
+  if [[ -n "$jar" ]]; then
+    echo "java -jar $jar"
+    return
+  fi
+  echo ""
+}
+DETEKT_CMD=$(find_detekt_cmd)
+run_detekt() {
+  if [[ -z "$DETEKT_CMD" ]]; then
+    echo "(detekt not installed)" >&2
+    return 1
+  fi
+  $DETEKT_CMD "$@" 2>&1 || true
+}
 # ── Versions ──
 echo "ktlint-rs: $($KTLINT_RS --version 2>&1 | head -1)"
 echo "ktlint JVM: $(run_jvm --version 2>&1 | head -1)"
@@ -158,7 +181,7 @@ exit_code_of() {
 # ── CSV/TSV output file ──
 BENCH_OUT="$REPO_ROOT/bench_results.tsv"
 {
-  printf "project\tfiles\tlines\trs_violations\tjvm_violations\trs_rules\tjvm_rules\trs_files_hit\tjvm_files_hit\trs_time\tjvm_time\trs_exit\tjvm_exit\n"
+  printf "project\tfiles\tlines\trs_violations\tjvm_violations\tdetekt_violations\trs_rules\tjvm_rules\tdetekt_rules\trs_files_hit\tjvm_files_hit\trs_time\tjvm_time\tdetekt_time\trs_exit\tjvm_exit\tdetekt_exit\n"
 } > "$BENCH_OUT"
 
 echo "======= Benchmarks ======="
@@ -189,6 +212,7 @@ for fixture_path in "${!PROJECTS[@]}"; do
   # ── Run lint once per tool, capture all output ──
   rs_out=$("$KTLINT_RS" "${dirs[@]}" 2>&1) || true
   jvm_out=$(run_jvm "${dirs[@]}" 2>&1) || true
+  detekt_out=$(run_detekt --input "${full_path}" 2>&1) || true
 
   # ── Derive metrics ──
   rs_v=$(echo "$rs_out"  | extract_violations | wc -l | tr -d ' ')
