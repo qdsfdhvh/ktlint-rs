@@ -15,16 +15,38 @@ and per-file lint under 5ms.
 
 **Reference**: Pinterest ktlint v1.8.0 (~80 standard rules, `--format`, `--baseline`, reporters)
 
-**Current State** (2026-07-10):
+**Current State** (2026-07-11):
 - **62 rules** (spacing:17, structure:25, imports:4, naming:6, wrapping:7, built-in:4)
 - 10-pass auto-fix engine with 59-71% violation reduction
-- Rayon parallel processing: okhttp 0.34s / 525 files
-- EditorConfig: indent_size, code_style, per-rule enable/disable
+- Rayon parallel processing: 17-25x faster than JVM ktlint (see Performance below)
+- EditorConfig: indent_size, code_style, per-rule enable/disable (see parity gaps)
 - @Suppress / @SuppressWarnings annotation support
 - Reporters: plain, JSON, SARIF, summary
 - GitHub Actions CI: test, clippy, fmt, self-lint
-- AGENTS.md, .editorconfig, Pi skills
-- **164 tests, all passing** ✅
+- AGENTS.md, .editorconfig, Pi skills, bench script
+- **167 tests, all passing** ✅
+
+### Performance (release build, Apple M2)
+
+| Project | Files | Lines | Violations (rs / JVM) | ktlint-rs | ktlint (JVM) |
+|---|---|---|---:|---:|---:|
+| nowinandroid | 350 | 31,021 | 8,622 / 1,038 | **0.58s** | 10.1s |
+| compose-samples (6 apps) | 380 | 46,586 | 8,458 / 13 | **0.61s** | 11.3s |
+| okhttp | 569 | 131,098 | 31,531 / 18 | **0.87s** | 19.6s |
+| androidx (26 modules) | 1,271 | 266,549 | 72,558 / 33,731 | **0.86s** | 21.9s |
+
+### Known Parity Gaps
+
+| Dimension | Status | Detail |
+|---|---|---|
+| Violation per-rule counts | ❌ | ktlint-rs enables all rules; JVM uses `android_studio` defaults → huge gap |
+| Code style profiles | ❌ | `android_studio` / `intellij_idea` rule enable/disable not wired to engine |
+| Per-rule enable/disable | ❌ | `ktlint_standard_<rule-id>` parsed but not applied |
+| Suppress comments | ❓ | `ktlint-disable` region suppression not verified |
+| Auto-fix output parity | ❓ | `--format` output not diffed against JVM |
+| Reporter JSON format | ❓ | Structure differs from JVM ktlint JSON |
+| Exit codes | ✅ | Match JVM |
+| File discovery | ✅ | Same `.kt`/`.kts` extensions |
 ---
 
 ## Phase 0 — Infrastructure & Skeleton ✅
@@ -99,32 +121,19 @@ the tree-sitter CST directly (no need for high-level AST).
 
 ---
 
-## Phase 2 — .editorconfig & Config Parity
-
-**Hours**: ~15 | **Target**: full `.editorconfig` compatibility with ktlint
-
-### 2.1 Configuration Engine
-
-### 2.1 Configuration Engine — 6/9 ✅
-
-| # | Task | Effort | Status |
-|---|---|---|---|
-| 1 | Parse `[*.{kt,kts}]` section fully | 2h | ✅ (editorconfig crate) |
-| 2 | `ktlint_code_style` (android_studio/intellij_idea/ktlint_official) | 2h | ✅ |
-| 3 | Per-rule enable/disable: `ktlint_standard_<rule-id>` | 2h | ✅ |
-| 4 | Rule-specific properties: `ktlint_function_naming_ignore_when_annotated_with`, etc. | 3h | ⬜ |
-| 5 | `ij_kotlin_*` IntelliJ properties | 3h | ⬜ |
-| 6 | `max_line_length`, `indent_size`, `indent_style`, `tab_width` | 2h | ✅ |
-| 7 | `.editorconfig` file cascade (walk up directories) | 3h | ✅ (editorconfig crate) |
-| 8 | CLI override for all config values | 2h | ✅ |
-| 9 | `ktlint_experimental` flag for experimental rule gates | 1h | ✅ |
 ### 2.2 Code Style Profiles
 
-| # | Profile | Diff from `ktlint_official` | Effort |
-|---|---|---|---|
-| 1 | `android_studio` | Disables ~5 rules, changes trailing-comma | 2h |
-| 2 | `intellij_idea` | Disables ~3 rules | 2h |
-| 3 | `ktlint_official` | Default, enables all rules | 1h |
+| # | Profile | Diff from `ktlint_official` | Effort | Status |
+|---|---|---|---|---|
+| 1 | `android_studio` | Disables ~5 rules, changes trailing-comma | 2h | ⬜ NOT WIRED |
+| 2 | `intellij_idea` | Disables ~3 rules | 2h | ⬜ NOT WIRED |
+| 3 | `ktlint_official` | Default, enables all rules | 1h | ⬜ NOT WIRED |
+
+> **Parity gap #1**: `code_style` and per-rule enable/disable are PARSED from `.editorconfig`
+> but NOT wired to `RuleEngine::new()`. The engine always builds ALL rules regardless of config.
+> This is why ktlint-rs finds 8,622 violations on nowinandroid while JVM finds 1,038 —
+> JVM honors `android_studio` which disables many spacing rules by default.
+> **Fix**: `RuleEngine::new(&config)` must check `config.is_enabled(rule_id)` per rule.
 
 ---
 
@@ -277,6 +286,24 @@ the tree-sitter CST directly (no need for high-level AST).
 | 3 | CI benchmark pipeline (publish results) | 2h |
 
 ---
+
+### 6.3 Parity Verification
+
+Automated comparison against JVM ktlint across all diagnostic dimensions:
+
+| # | Task | Script | Effort | Status |
+|---|---|---|---|---|
+| 1 | Per-rule violation breakdown (rs vs JVM) | `scripts/bench.sh` | done | ✅ |
+| 2 | Summary table (files, lines, violations, time) | `scripts/bench.sh` | done | ✅ |
+| 3 | Exit code parity | `scripts/bench.sh` | done | ✅ |
+| 4 | File-set parity (same files discovered?) | TBD | 1h | ⬜ |
+| 5 | Suppress comment parity (`ktlint-disable`) | TBD | 2h | ⬜ |
+| 6 | Auto-fix diff test (same output after `--format`?) | TBD | 3h | ⬜ |
+| 7 | Reporter JSON structure parity | TBD | 2h | ⬜ |
+| 8 | `.editorconfig` property parity (all props read?) | TBD | 2h | ⬜ |
+
+> Parity target: ktlint-rs and JVM should produce identical Violations under `android_studio`.
+> Run `./scripts/bench.sh --release` to generate the current parity report.
 
 ## Phase 7 — Distribution & Docs
 
