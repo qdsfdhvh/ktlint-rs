@@ -7,3 +7,6 @@
 [submodule "tests/fixtures/androidx"]
 	path = tests/fixtures/androidx
 	url = https://github.com/androidx/androidx.git
+[submodule "tests/fixtures/okhttp"]
+	path = tests/fixtures/okhttp
+	url = https://github.com/square/okhttp.git
