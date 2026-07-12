@@ -73,6 +73,8 @@ impl RuleEngine {
             // old-kdoc
             Box::new(naming::Filename),
             Box::new(structure::NoBlankLineBeforeRbrace),
+            Box::new(structure::BlankLineBeforeDeclaration),
+            Box::new(structure::NoBlankLineInList),
             // disabled-p3
             Box::new(structure::NoEmptyFirstLineInClassBody),
             // too-broad-list
