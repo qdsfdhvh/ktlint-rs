@@ -4,22 +4,19 @@
 set -euo pipefail
 
 # The homebrew rustup proxy loses argv[0]; use the real binary.
+# Rustup Homebrew workaround
 RUSTUP_BIN="/opt/homebrew/Cellar/rustup/1.29.0_2/libexec/bin/rustup"
 RUSTUP_ENV="RUSTUP_OVERRIDE_UNIX_FALLBACK_SETTINGS=/opt/homebrew/etc/rustup/settings.toml"
 
+# ktlint JVM (download if missing)
 KTLINT_JAR="$REPO_ROOT/.ktlint/ktlint-1.5.0.jar"
-KTLINT_JVM="java -jar $KTLINT_JAR"
-RUSTUP_ENV="RUSTUP_OVERRIDE_UNIX_FALLBACK_SETTINGS=/opt/homebrew/etc/rustup/settings.toml"
-
-if $RELEASE; then
-  echo "Building ktlint-rs (release)..."
-  env $RUSTUP_ENV "$RUSTUP_BIN" run stable cargo build --release --manifest-path "$REPO_ROOT/Cargo.toml" 2>/dev/null
-else
-  echo "Building ktlint-rs (debug)..."
-  env $RUSTUP_ENV "$RUSTUP_BIN" run stable cargo build --manifest-path "$REPO_ROOT/Cargo.toml" 2>/dev/null
-  KTLINT_RS="$REPO_ROOT/target/debug/ktlint-rs"
+if [[ ! -f "$KTLINT_JAR" ]]; then
+  echo "Downloading ktlint JVM..."
+  bash "$REPO_ROOT/scripts/get-ktlint.sh"
 fi
+KTLINT_JVM="java -jar $KTLINT_JAR"
 
+# Build ktlint-rs
 echo "ktlint-rs: $($KTLINT_RS --version 2>&1 | head -1)"
 echo "ktlint JVM: $($KTLINT_JVM --version 2>&1 | head -1)"
 echo ""

@@ -46,7 +46,9 @@ Rules total: 35  ✓ matched: 14  ~ diff: 6  rs-only: 10  jvm-only: 5
 
 ## Prerequisites
 
-- `ktlint` JVM CLI installed (`brew install ktlint`)
+- `java` (JRE) for ktlint JVM comparison
+- `./scripts/get-ktlint.sh` (downloads ktlint 1.5.0 jar)
+- `./scripts/setup-fixtures.sh` (shallow-clones test repos)
 - `./scripts/setup-fixtures.sh` (shallow clones into `tests/fixtures/`)
 - For AndroidX: 26 selected first-level modules (see `ANDROIDX_DIRS` in script)
 
