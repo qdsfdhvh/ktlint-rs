@@ -22,7 +22,7 @@ impl KtlintCompatEngine {
             "standard:no-blank-line-before-rbrace",
             "standard:max-line-length",
             "standard:no-empty-file",
-            "standard:trailing-comma",
+            
             "standard:no-wildcard-imports",
             "standard:import-ordering",
             "standard:no-unused-imports",
@@ -46,7 +46,6 @@ impl KtlintCompatEngine {
             "standard:kdoc",
             "standard:argument-list-wrapping",
             "standard:parameter-list-wrapping",
-            "standard:trailing-comma-on-call-site",
             "standard:no-empty-file-body",
             "standard:spacing-between-declarations-with-comments",
             "standard:annotation",
