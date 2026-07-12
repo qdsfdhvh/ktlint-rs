@@ -112,17 +112,7 @@ val x = "a very long string..."
 | Wrapping | 7 | chain, multiline-if-else, try-catch, when-expression |
 | KDoc | 3 | formatting, no-empty, no-trailing |
 
-## Performance
-
-**Benchmarks** (release build, Apple M2, rayon parallel):
-
-| Project | Files | Lines | Time (rs / JVM) |
-|---|---|---|---|
-| nowinandroid | 350 | 31K | **0.26s** / 6.71s (26x) |
-| compose-samples | 380 | 47K | **0.30s** / 7.96s (27x) |
-| okhttp | 569 | 131K | **1.19s** / 11.5s (10x) |
-| androidx (26 modules) | 1,271 | 267K | **1.07s** / 10.6s (10x) |
-
+## Anti-patterns
 ## Anti-patterns
 
 - **Don't** use JVM ktlint for speed-critical linting — ktlint-rs is 10-27x faster.
