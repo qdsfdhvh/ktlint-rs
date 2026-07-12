@@ -62,7 +62,11 @@ impl ParenSpacing {
         let start_byte = node.start_byte();
         let pos = node.start_position();
 
-        if start_byte > 1 && bytes[start_byte - 1] == b' ' && bytes[start_byte - 2] != b' ' && bytes[start_byte - 2] != b'\n' {
+        if start_byte > 1
+            && bytes[start_byte - 1] == b' '
+            && bytes[start_byte - 2] != b' '
+            && bytes[start_byte - 2] != b'\n'
+        {
             // Don't flag if the space is part of an aligned parameter list
             // (this is a simplification — real ktlint checks for alignment)
             violations.push(Violation {

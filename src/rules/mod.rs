@@ -3,17 +3,17 @@
 use crate::config::KtlintConfig;
 use tree_sitter::Tree;
 
+pub mod compat;
 pub mod imports;
 pub mod naming;
-pub mod spacing;
-pub mod structure;
-pub mod suppress;
-pub mod wrapping;
-pub mod compat;
 pub mod new_rules;
 pub mod new_rules2;
 pub mod new_rules3;
 pub mod new_rules4;
+pub mod spacing;
+pub mod structure;
+pub mod suppress;
+pub mod wrapping;
 
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -327,8 +327,8 @@ impl Rule for NoWildcardImports {
             .collect()
     }
 }
-pub mod phase1_rules;
 pub mod phase1_more;
+pub mod phase1_rules;
 pub mod phase3b_rules;
 pub use phase3b_rules::*;
 pub use phase3b_rules::*;

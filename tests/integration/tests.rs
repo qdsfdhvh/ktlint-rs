@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod integration_tests {
-    use std::process::Command;
     use std::path::PathBuf;
+    use std::process::Command;
 
     fn ktlint_bin() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("target/debug/ktlint")
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/ktlint")
     }
 
     fn fixtures_dir(name: &str) -> PathBuf {
@@ -39,8 +38,11 @@ mod integration_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
         // 2-space indentation should NOT trigger indent violations
-        assert!(!stdout.contains("standard:indent"),
-            "2-space indent should not cause violations:\n{}", stderr);
+        assert!(
+            !stdout.contains("standard:indent"),
+            "2-space indent should not cause violations:\n{}",
+            stderr
+        );
     }
 
     #[test]
@@ -52,8 +54,10 @@ mod integration_tests {
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
         // android_studio disables final-newline
-        assert!(!stdout.contains("standard:final-newline"),
-            "android_studio should disable final-newline");
+        assert!(
+            !stdout.contains("standard:final-newline"),
+            "android_studio should disable final-newline"
+        );
     }
 
     #[test]
@@ -65,11 +69,19 @@ mod integration_tests {
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
         // These rules are disabled in .editorconfig
-        assert!(!stdout.contains("standard:no-wildcard-imports"), "wildcard-imports should be disabled");
-        assert!(!stdout.contains("standard:curly-spacing"), "curly-spacing should be disabled");
+        assert!(
+            !stdout.contains("standard:no-wildcard-imports"),
+            "wildcard-imports should be disabled"
+        );
+        assert!(
+            !stdout.contains("standard:curly-spacing"),
+            "curly-spacing should be disabled"
+        );
         // But other rules still work
-        assert!(stdout.contains("standard:op-spacing") || stdout.contains("standard:colon"),
-            "Other rules should still work");
+        assert!(
+            stdout.contains("standard:op-spacing") || stdout.contains("standard:colon"),
+            "Other rules should still work"
+        );
     }
 
     #[test]
@@ -81,8 +93,11 @@ mod integration_tests {
             .expect("ktlint failed");
         let stderr = String::from_utf8_lossy(&output.stderr);
         // Tab indent should be loaded from .editorconfig
-        assert!(!stderr.contains("Failed") && !stderr.contains("error"),
-            "Tab indent .editorconfig should load without errors: {}", stderr);
+        assert!(
+            !stderr.contains("Failed") && !stderr.contains("error"),
+            "Tab indent .editorconfig should load without errors: {}",
+            stderr
+        );
     }
 
     // ── CLI tests ──
@@ -106,7 +121,7 @@ mod integration_tests {
         let src = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("tests/fixtures/editorconfig_rules/src/Code.kt");
         let original = std::fs::read_to_string(&src).unwrap();
-        
+
         // Run format
         Command::new(ktlint_bin())
             .args(["--format"])
@@ -117,7 +132,7 @@ mod integration_tests {
         let formatted = std::fs::read_to_string(&src).unwrap();
         // Restore original
         std::fs::write(&src, original.as_bytes()).unwrap();
-        
+
         assert_ne!(original, formatted, "Format should modify the file");
     }
 
@@ -130,7 +145,6 @@ mod integration_tests {
             .expect("ktlint failed");
         assert!(output.status.success(), "--version should succeed");
     }
-
 
     // ── Real-world project smoke tests ──
     //
@@ -147,22 +161,28 @@ mod integration_tests {
                 if path.is_dir() {
                     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                     // Skip non-project dirs
-                    if name.starts_with('.') || name == "docs" || name == "gradle"
-                        || name == "buildSrc" || name == "scripts" || name == "readme"
+                    if name.starts_with('.')
+                        || name == "docs"
+                        || name == "gradle"
+                        || name == "buildSrc"
+                        || name == "scripts"
+                        || name == "readme"
                     {
                         continue;
                     }
                     // Quick check: does this dir have .kt files?
                     let has_kt = std::fs::read_dir(&path)
-                        .map(|mut rd| rd.any(|e| {
-                            e.map(|f| {
-                                f.file_name()
-                                    .to_str()
-                                    .map(|s| s.ends_with(".kt"))
-                                    .unwrap_or(false)
+                        .map(|mut rd| {
+                            rd.any(|e| {
+                                e.map(|f| {
+                                    f.file_name()
+                                        .to_str()
+                                        .map(|s| s.ends_with(".kt"))
+                                        .unwrap_or(false)
+                                })
+                                .unwrap_or(false)
                             })
-                            .unwrap_or(false)
-                        }))
+                        })
                         .unwrap_or(false);
                     if has_kt {
                         dirs.push(path);
@@ -205,7 +225,10 @@ mod integration_tests {
         ensure_built();
         let base = fixtures_dir("compose-samples");
         let dirs = kt_subdirs(&base);
-        assert!(!dirs.is_empty(), "Expected compose-samples subdirs with Kotlin files");
+        assert!(
+            !dirs.is_empty(),
+            "Expected compose-samples subdirs with Kotlin files"
+        );
 
         for dir in &dirs {
             let name = dir.file_name().unwrap().to_str().unwrap();
@@ -221,7 +244,8 @@ mod integration_tests {
                     && !stderr.contains("Error: Failed")
                     && !stderr.contains("fatal runtime error"),
                 "compose-samples/{}: ktlint crashed:\n{}",
-                name, stderr
+                name,
+                stderr
             );
 
             eprintln!(
@@ -289,7 +313,8 @@ mod integration_tests {
                     && !stderr.contains("Error: Failed")
                     && !stderr.contains("fatal runtime error"),
                 "androidx/{}: ktlint crashed:\n{}",
-                dir_name, stderr
+                dir_name,
+                stderr
             );
 
             eprintln!(

@@ -13,9 +13,9 @@ use cli::Cli;
 use config::KtlintConfig;
 use discovery::FileCollector;
 use parser::KotlinParser;
+use rayon::prelude::*;
 use reporter::DiagnosticReporter;
 use rules::{RuleEngine, Violation};
-use rayon::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -31,11 +31,14 @@ fn main() -> anyhow::Result<()> {
             let source = std::fs::read_to_string(path).unwrap_or_default();
             let mut parser = KotlinParser::new();
             let tree = parser.parse(&source);
-            let config = KtlintConfig::load_for_file(path)
-                .unwrap_or_else(|_| default_config.clone());
+            let config =
+                KtlintConfig::load_for_file(path).unwrap_or_else(|_| default_config.clone());
             let violations = if use_compat {
-                rules::compat::KtlintCompatEngine::new(&config)
-                    .check(&path.to_string_lossy(), &tree, &source)
+                rules::compat::KtlintCompatEngine::new(&config).check(
+                    &path.to_string_lossy(),
+                    &tree,
+                    &source,
+                )
             } else {
                 let engine = RuleEngine::new(&config);
                 engine.check(&path.to_string_lossy(), &tree, &source)

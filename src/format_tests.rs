@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod format_tests {
-    use crate::parser::KotlinParser;
-    use crate::rules::{RuleEngine, Violation};
     use crate::config::KtlintConfig;
     use crate::formatter;
-    use tempfile::NamedTempFile;
+    use crate::parser::KotlinParser;
+    use crate::rules::{RuleEngine, Violation};
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     fn lint_and_fix(source: &str, tmp: &tempfile::NamedTempFile) -> (Vec<Violation>, String) {
         let mut parser = KotlinParser::new();
@@ -33,8 +33,19 @@ mod format_tests {
         // Round 2: lint → format on the already-formatted file
         let (v2, after2) = lint_and_fix(&after1, &f);
         // After format, most spacing violations should be gone
-        let spacing_remain: Vec<_> = v2.iter().filter(|v| v.rule_id.contains("spacing") || v.rule_id.contains("curly")).collect();
-        assert!(spacing_remain.len() <= 5, "Format should fix most spacing violations, got {}: {:?}", spacing_remain.len(), spacing_remain.iter().map(|v| &v.rule_id).collect::<Vec<_>>());
+        let spacing_remain: Vec<_> = v2
+            .iter()
+            .filter(|v| v.rule_id.contains("spacing") || v.rule_id.contains("curly"))
+            .collect();
+        assert!(
+            spacing_remain.len() <= 5,
+            "Format should fix most spacing violations, got {}: {:?}",
+            spacing_remain.len(),
+            spacing_remain
+                .iter()
+                .map(|v| &v.rule_id)
+                .collect::<Vec<_>>()
+        );
 
         // Should be idempotent (no further changes after second format)
         assert_eq!(after1.trim(), after2.trim(), "Format should be idempotent");
@@ -61,6 +72,11 @@ mod format_tests {
         let tree2 = parser.parse(&after_source);
         let after = engine.check("test.kt", &tree2, &after_source).len();
 
-        assert!(after < before, "Format should reduce violations: {} → {}", before, after);
+        assert!(
+            after < before,
+            "Format should reduce violations: {} → {}",
+            before,
+            after
+        );
     }
 }
