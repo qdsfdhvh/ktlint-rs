@@ -30,6 +30,21 @@ pub struct Cli {
     #[arg(long)]
     pub baseline: Option<String>,
 
+    /// Generate a baseline file from current violations
+    #[arg(long)]
+    pub create_baseline: bool,
+
+    /// Install a git pre-commit hook that runs ktlint-rs
+    #[arg(long)]
+    pub install_git_hook: bool,
+
+    /// Install a git pre-commit hook (uninstall)
+    #[arg(long)]
+    pub uninstall_git_hook: bool,
+
+    /// Path to YAML config file (detekt-style)
+    #[arg(long)]
+    pub config: Option<String>,
     /// Maximum number of errors to show
     #[arg(long)]
     pub limit: Option<usize>,
@@ -42,7 +57,7 @@ pub struct Cli {
     #[arg(long)]
     pub color: bool,
 
-    /// Reporter to use: plain, json, sarif, checkstyle, html, plain-summary
+    /// Reporter to use: plain, json, sarif, checkstyle, html, markdown, plain-summary
     #[arg(long, default_value = "plain")]
     pub reporter: String,
 

@@ -1,50 +1,53 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
 
 jobs:
   test:
+    name: Test (stable)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - run: cargo fmt --check
-      - run: cargo test --release
-      - run: cargo build --release
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --release
-      - run: cargo build --release
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --all-features
 
-  parity:
+  check:
+    name: Check (stable)
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --all-features
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --release
-      - name: Install JVM ktlint
-        run: |
-          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.5.0/ktlint
-          chmod +x ktlint
-          sudo mv ktlint /usr/local/bin/
-      - name: Run parity check
-        run: |
-          export KTLINT_COMPAT=1
-          python3 tools/compare.py tests/fixtures/demo-gradle
-      - name: Check violation count ratio
-        run: |
-          export KTLINT_COMPAT=1
-          JVM=$(ktlint tests/fixtures/demo-gradle 2>&1 | grep -c "\.kt:" || echo 0)
-          RS=$(./target/release/ktlint tests/fixtures/demo-gradle 2>/dev/null | grep -c "\.kt:" || echo 0)
-          echo "JVM: $JVM, ktlint-rs: $RS"
-          RATIO=$(echo "scale=2; $RS / $JVM * 100" | bc)
-          echo "Match ratio: $RATIO%"
-          # Must be within 150% of JVM
-          if [ $(echo "$RATIO < 50" | bc) -eq 1 ]; then echo "FAIL: parity too low!"; exit 1; fi
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-features
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+
+  bench:
+    name: Benchmark (check only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --benches

@@ -50,18 +50,22 @@ impl Rule for Indentation {
                 continue;
             }
 
-            // Expected indent = top of stack, or 0 if stack empty
-            let expected = stack.last().copied().unwrap_or(0);
-
-            // --- Closing brace ---
-            if trimmed == "}" {
-                // Closing brace: indent at the level BEFORE the matching {, not current
+            // Expected indent = top of stack, or 0 if stack empty.
+            // Re-evaluated after combo-brace handling (stack may change).
+            // --- Combo closing + opening brace (e.g. "} else {", "} catch(") ---
+            // Handle closing brace first, then fall through for the opening brace.
+            let has_closing = trimmed.starts_with("}");
+            let is_pure_close = trimmed == "}";
+            if has_closing {
                 let parent = stack.last().copied().unwrap_or(0).saturating_sub(is);
                 if spaces != parent {
                     violations.push(violation(self.id(), i + 1, spaces, parent));
                 }
                 stack.pop();
-                continue;
+                if is_pure_close {
+                    continue;
+                }
+                // Fall through: process opening-brace part (e.g. " else {")
             }
 
             // --- Opening brace ---
@@ -69,15 +73,14 @@ impl Rule for Indentation {
                 && !trimmed.ends_with("${")      // skip string templates
                 && !trimmed.starts_with("//"); // skip comments
 
+            // Re-evaluate expected indent AFTER combo-brace stack adjustment
+            let expected = stack.last().copied().unwrap_or(0);
             // --- Indent check for non-brace, non-closing lines ---
-            // Only flag if indent doesn't match expected and isn't a continuation
-            if spaces != expected {
-                // Allow continuation: deeper indent that's a multiple of indent_size
-                let is_continuation = spaces % is == 0;
-
-                if !is_continuation {
-                    violations.push(violation(self.id(), i + 1, spaces, expected));
-                }
+            // JVM-compatible: only flag under-indented lines inside blocks.
+            // Over-indented lines are accepted as continuations (wrapped params, chains).
+            // Lines outside any block are not checked (JVM doesn't either).
+            if !stack.is_empty() && spaces < expected {
+                violations.push(violation(self.id(), i + 1, spaces, expected));
             }
 
             // After processing this line, if it opens a block, push expected indent

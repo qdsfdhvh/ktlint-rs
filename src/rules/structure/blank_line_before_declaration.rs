@@ -62,7 +62,12 @@ impl Rule for BlankLineBeforeDeclaration {
                 || trimmed.starts_with("public fun ");
 
             // Only top-level declarations (indent == 0) require a blank line.
-            if is_decl && current_indent == 0 && prev_indent == 0 && !prev_line_is_empty {
+            if is_decl
+                && current_indent == 0
+                && prev_indent == 0
+                && !prev_line_is_empty
+                && prev_line_is_decl
+            {
                 // Check if this is the first thing after an opening brace or
                 // a comment; if so, don't flag.
                 if !trimmed.is_empty() && !trimmed.starts_with("//") && !trimmed.starts_with("/*") {
