@@ -36,7 +36,11 @@ impl Rule for KdocFormatting {
                 if trimmed.ends_with("*/") && trimmed.len() > 4 {
                     // Single-line /** ... */ — check location
                     if is_inside_block(&lines, i) {
-                        violations.push(kdoc_violation(self.id(), i + 1, "KDoc is not allowed here"));
+                        violations.push(kdoc_violation(
+                            self.id(),
+                            i + 1,
+                            "KDoc is not allowed here",
+                        ));
                     }
                     in_kdoc = false;
                 }

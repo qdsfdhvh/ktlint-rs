@@ -30,7 +30,6 @@ pub struct Cli {
     #[arg(long)]
     pub baseline: Option<String>,
 
-
     /// Maximum number of errors to show
     #[arg(long)]
     pub limit: Option<usize>,

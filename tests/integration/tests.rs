@@ -242,7 +242,9 @@ mod integration_tests {
             let output = Command::new(ktlint_bin())
                 .arg(dir)
                 .output()
-                .unwrap_or_else(|e| panic!("ktlint failed to run on compose-samples/{}: {}", name, e));
+                .unwrap_or_else(|e| {
+                    panic!("ktlint failed to run on compose-samples/{}: {}", name, e)
+                });
 
             let stderr = String::from_utf8_lossy(&output.stderr);
             assert!(
@@ -377,5 +379,4 @@ mod integration_tests {
         assert!(!stdout.contains("(standard:no-wildcard-imports)"));
         assert!(stdout.contains("should be 2") || stdout.contains("multiple of 2"));
     }
-
 }
