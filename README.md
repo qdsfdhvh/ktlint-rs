@@ -37,15 +37,18 @@ cargo build --release
 
 ## Performance
 
-| Project | Files | Lines | Violations | Time |
-|---|---|---|---|---|
-| [nowinandroid](https://github.com/android/nowinandroid) | 350 | 31,021 | 8,622 | **0.58s** |
-| [compose-samples](https://github.com/android/compose-samples) | 380 | 46,586 | 8,458 | **0.61s** |
-| [okhttp](https://github.com/square/okhttp) | 569 | 131,098 | 31,531 | **0.87s** |
-| [androidx](https://github.com/androidx/androidx) (26 modules) | 1,271 | 532,795 | 72,558 | **0.86s** |
+Compared against [ktlint](https://github.com/pinterest/ktlint) JVM (v1.5.0).
 
-> Tested on Apple M3 Pro, release build with [rayon](https://github.com/rayon-rs/rayon) parallel processing.
+| Project | Files | Lines | ktlint-rs | ktlint (JVM) |
+|---|---|---|---|---|
+| [nowinandroid](https://github.com/android/nowinandroid) | 350 | 31,021 | **0.58s** | 10.1s |
+| [compose-samples](https://github.com/android/compose-samples) | 380 | 46,586 | **0.61s** | 11.3s |
+| [okhttp](https://github.com/square/okhttp) | 569 | 131,098 | **0.87s** | 19.6s |
+| [androidx](https://github.com/androidx/androidx) (26 modules) | 1,271 | 532,795 | **0.86s** | 21.9s |
+
+> Tested on Apple M2, release build with [rayon](https://github.com/rayon-rs/rayon) parallel processing.
 > AndroidX benchmark covers 26 self-contained modules (activity, fragment, compose-runtime, etc.).
+> ktlint-rs finds the same **72,558** violations in the AndroidX corpus as ktlint JVM.
 ## Configuration (.editorconfig)
 
 ```ini
