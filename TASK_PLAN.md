@@ -2,7 +2,7 @@
 
 > A fast Kotlin linter & formatter in Rust — drop-in compatible with Pinterest ktlint CLI.
 >
-> **Status**: Phase 0 ✅ | Phase 1 ✅ | Phase 2 🟡 | Phase 3 ⬜ | Phase 4 ⬜
+> **Status**: Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ | Phase 3 ⬜ | Phase 4 ⬜
 
 ---
 
