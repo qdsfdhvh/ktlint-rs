@@ -16,7 +16,8 @@ impl KtlintCompatEngine {
         // Everything NOT in this list gets disabled for exact CLI match.
         let jvm_rules = [
             "standard:indent",
-            "standard:no-trailing-spaces",
+            "standard:trailing-comma-on-call-site", "standard:trailing-comma-on-declaration-site",
+        "standard:no-trailing-spaces",
             "standard:final-newline",
             "standard:no-consecutive-blank-lines",
             "standard:no-blank-line-before-rbrace",
