@@ -16,6 +16,7 @@ pub mod spacing;
 pub mod structure;
 pub mod suppress;
 pub mod wrapping;
+pub mod detekt;
 pub use phase3b_rules::*;
 pub mod final_rules;
 pub use final_rules::*;
@@ -116,6 +117,21 @@ impl RuleEngine {
             Box::new(wrapping::StringTemplateIndent),
             Box::new(wrapping::TryCatchFinallyWrapping),
             Box::new(wrapping::WhenExpressionLineBreak),
+            // --- detekt empty-blocks rules ---
+            Box::new(detekt::empty_blocks::EmptyFunctionBlock),
+            Box::new(detekt::empty_blocks::EmptyClassBlock),
+            Box::new(detekt::empty_blocks::EmptyInitBlock),
+            Box::new(detekt::empty_blocks::EmptyDefaultConstructor),
+            Box::new(detekt::empty_blocks::EmptySecondaryConstructor),
+            Box::new(detekt::empty_blocks::EmptyIfBlock),
+            Box::new(detekt::empty_blocks::EmptyWhenBlock),
+            Box::new(detekt::empty_blocks::EmptyTryBlock),
+            Box::new(detekt::empty_blocks::EmptyCatchBlock),
+            Box::new(detekt::empty_blocks::EmptyFinallyBlock),
+            Box::new(detekt::empty_blocks::EmptyWhileBlock),
+            Box::new(detekt::empty_blocks::EmptyDoWhileBlock),
+            Box::new(detekt::empty_blocks::EmptyForBlock),
+            Box::new(detekt::empty_blocks::EmptyStructBlock),
             // ── Phase 1 rules (unique IDs) ────────────────────────────
             Box::new(phase1_rules::WhenEntryBracing),
             Box::new(phase1_rules::BlankLineBetweenWhenConditions),

@@ -35,6 +35,18 @@ impl ColonSpacing {
         }
     }
 
+    fn is_in_annotation_context(&self, node: &tree_sitter::Node) -> bool {
+        // Check if this `:` is inside an annotation (e.g., @get:Rule, @file:Suppress)
+        let mut current = node.parent();
+        while let Some(parent) = current {
+            if parent.kind() == "annotation" {
+                return true;
+            }
+            current = parent.parent();
+        }
+        false
+    }
+
     fn is_in_type_context(&self, node: &tree_sitter::Node) -> bool {
         // Check parent to determine context
         if let Some(parent) = node.parent() {
@@ -65,6 +77,11 @@ impl ColonSpacing {
             return;
         }
         if start_byte > 0 && bytes[start_byte - 1] == b':' {
+            return;
+        }
+
+        // Skip annotation target colons (e.g., @get:Rule, @file:Suppress)
+        if self.is_in_annotation_context(node) {
             return;
         }
 

@@ -5,10 +5,10 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 
 [![Rust](https://img.shields.io/badge/rust-1.85+-orange.svg)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![ktlint](https://img.shields.io/badge/ktlint-1.6.0-green.svg)](https://github.com/pinterest/ktlint)
+[![ktlint](https://img.shields.io/badge/ktlint-1.8.0-green.svg)](https://github.com/pinterest/ktlint)
 [![Rules](https://img.shields.io/badge/rules-78-blue.svg)](https://github.com/qdsfdhvh/ktlint-rs)
-[![Rule Plan](https://img.shields.io/badge/rule%20plan-340%20tracked-blue.svg)](docs/RULE_PLAN.md)
-[![Tests](https://img.shields.io/badge/tests-179+-green.svg)](https://github.com/qdsfdhvh/ktlint-rs)
+[![Tests](https://img.shields.io/badge/tests-193-green.svg)](https://github.com/qdsfdhvh/ktlint-rs)
+[![CI](https://github.com/qdsfdhvh/ktlint-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/qdsfdhvh/ktlint-rs/actions)
 
 ## Why
 
@@ -40,6 +40,22 @@ ktlint-rs --reporter=json **/*.kt
 | demo-gradle | 8 | 9ms / 2.11s | **235×** |
 
 > Full per-project breakdown: **[docs/PERFORMANCE.md](docs/PERFORMANCE.md)** — violations, rules, files hit, throughput, detekt comparison.
+
+## Advanced Features
+
+### Baselines
+Suppress known violations in legacy projects:
+```bash
+ktlint-rs --create-baseline --baseline baseline.xml  # generate
+ktlint-rs --baseline baseline.xml                     # lint with suppression
+```
+
+### Git Hooks
+Auto-lint staged files before each commit:
+```bash
+ktlint-rs --install-git-hook    # install pre-commit hook
+ktlint-rs --uninstall-git-hook  # remove it
+```
 
 ## Rule Coverage
 
