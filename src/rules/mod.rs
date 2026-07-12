@@ -204,6 +204,11 @@ impl RuleEngine {
             Box::new(phase3b_rules::FunctionExpressionBody),
             Box::new(phase3b_rules::KeywordSpacing),
             Box::new(phase3b_rules::ParameterListSpacingRule),
+            Box::new(final_rules::TypeArgumentListSpacing),
+            Box::new(final_rules::SpacingAroundAngleBrackets),
+            Box::new(final_rules::EnumWrapping),
+            Box::new(final_rules::TrailingCommaOnDeclarationSite),
+            Box::new(final_rules::TrailingCommaOnCallSite),
         ];
         Self {
             config: config.clone(),
@@ -327,3 +332,5 @@ pub mod phase1_more;
 pub mod phase3b_rules;
 pub use phase3b_rules::*;
 pub use phase3b_rules::*;
+pub mod final_rules;
+pub use final_rules::*;
