@@ -1,5 +1,4 @@
-//! standard:indent — JVM ktlint parity. Checks indent is multiple of indent_size
-//! and detects missing indentation inside blocks.
+//! standard:indent — JVM ktlint parity.
 use crate::rules::{Rule, Violation};
 
 pub struct Indentation { indent_size: usize }
@@ -13,30 +12,20 @@ impl Rule for Indentation {
         let indent_size = self.indent_size;
         let lines: Vec<&str> = source.lines().collect();
         let mut expected_indent = 0usize;
+        let mut prev_was_close_brace = false;
 
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
             if trimmed.is_empty() { continue; }
-
             let spaces = line.len() - trimmed.len();
 
-            // Tab indentation
             if line.starts_with('\t') {
                 violations.push(Violation{file:String::new(),line:i+1,col:1,rule_id:self.id().into(),
                     message:"Unexpected tab character(s)".into(),auto_fixable:true});
                 continue;
             }
 
-            // If line opens a block, increase expected indent for next line
-            if trimmed.ends_with('{') || trimmed == "{" {
-                expected_indent += indent_size;
-            }
-            // If line closes a block, decrease expected indent
-            if trimmed.starts_with('}') {
-                expected_indent = expected_indent.saturating_sub(indent_size);
-            }
-
-            // Check current indent
+            // Check indent of current line using expected_indent from PREVIOUS block level
             if spaces > 0 && spaces % indent_size != 0 {
                 violations.push(Violation{file:String::new(),line:i+1,col:1,rule_id:self.id().into(),
                     message:format!("Unexpected indentation ({}) — should be a multiple of {}", spaces, indent_size),
@@ -45,6 +34,14 @@ impl Rule for Indentation {
                 violations.push(Violation{file:String::new(),line:i+1,col:1,rule_id:self.id().into(),
                     message:format!("Unexpected indentation (0) (should be {})", expected_indent),
                     auto_fixable:true});
+            }
+
+            // Adjust block level for NEXT line
+            if trimmed == "}" {
+                expected_indent = expected_indent.saturating_sub(indent_size);
+            }
+            if trimmed.ends_with('{') {
+                expected_indent += indent_size;
             }
         }
         violations
