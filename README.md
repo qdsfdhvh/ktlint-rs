@@ -41,9 +41,9 @@ ktlint-rs --reporter=json **/*.kt
 
 | Project | Files | Lines | Violations (rs / JVM) | Time (rs / JVM) | Speedup |
 |---|---|---|---:|---:|---:|
-| nowinandroid | 350 | 31,021 | 5,062 / 1,038 | 0.23s / 6.94s | **30x** |
-| compose-samples (6 apps) | 380 | 46,586 | 5,258 / 13 | 0.31s / 6.93s | **22x** |
-| okhttp | 569 | 131,098 | 33,001 / 18 | 1.25s / 8.16s | **7x** |
+| nowinandroid | 350 | 31,021 | 5,401 / 1,038 | 0.23s / 6.94s | **30x** |
+| compose-samples (6 apps) | 380 | 46,586 | 7,593 / 13 | 0.31s / 6.93s | **22x** |
+| okhttp | 569 | 131,098 | 33,309 / 18 | 1.25s / 8.16s | **7x** |
 | androidx (26 modules) | 1,271 | 266,549 | 86,591 / 33,731 | 1.07s / 10.6s | **10x** |
 | demo-gradle | 8 | 162 | 81 / 167 | 0.01s / 1.85s | **155x** |
 
