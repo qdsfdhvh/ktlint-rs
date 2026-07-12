@@ -50,15 +50,14 @@ fn main() -> anyhow::Result<()> {
                 KtlintConfig::load_for_file(path).unwrap_or_else(|_| default_config.clone());
             // Apply YAML config overrides to per-file config
             if let Some(ref config_path) = cli.config {
-                if let Err(e) = yaml_config::load_and_apply(
-                    &mut config,
-                    std::path::Path::new(config_path),
-                ) {
+                if let Err(e) =
+                    yaml_config::load_and_apply(&mut config, std::path::Path::new(config_path))
+                {
                     log::warn!("Failed to apply YAML config for {}: {}", path.display(), e);
                 }
             }
             let engine = RuleEngine::new(&config);
-                KtlintConfig::load_for_file(path).unwrap_or_else(|_| default_config.clone());
+            KtlintConfig::load_for_file(path).unwrap_or_else(|_| default_config.clone());
             let engine = RuleEngine::new(&config);
             let violations = engine.check(&path.to_string_lossy(), &tree, &source);
             rules::suppress::filter_suppressed(violations, &source)
@@ -68,10 +67,7 @@ fn main() -> anyhow::Result<()> {
     // Generate baseline if --create-baseline (uses ALL violations, before filtering)
     if cli.create_baseline {
         let xml = baseline::Baseline::generate(&all_violations);
-        let output_path = cli
-            .baseline
-            .as_deref()
-            .unwrap_or("baseline.xml");
+        let output_path = cli.baseline.as_deref().unwrap_or("baseline.xml");
         std::fs::write(output_path, &xml)?;
         eprintln!("Baseline written to: {}", output_path);
     }

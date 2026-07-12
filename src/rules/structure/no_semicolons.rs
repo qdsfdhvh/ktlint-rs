@@ -41,5 +41,5 @@ impl Rule for NoSemicolons {
         }
 
         violations
-}
+    }
 }

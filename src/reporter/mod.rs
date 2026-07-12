@@ -170,8 +170,11 @@ impl<'a> DiagnosticReporter<'a> {
         } else {
             html.push_str(&format!("<p>{} violations found.</p>\n", violations.len()));
             // Summary table
-            let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
-            for v in violations { *counts.entry(&v.rule_id).or_default() += 1; }
+            let mut counts: std::collections::HashMap<&str, usize> =
+                std::collections::HashMap::new();
+            for v in violations {
+                *counts.entry(&v.rule_id).or_default() += 1;
+            }
             let mut sorted: Vec<_> = counts.into_iter().collect();
             sorted.sort_by(|a, b| b.1.cmp(&a.1));
             html.push_str("<table class=\"summary\"><tr><th>Rule</th><th>Count</th></tr>\n");
@@ -194,15 +197,22 @@ impl<'a> DiagnosticReporter<'a> {
         html.push_str("</body></html>\n");
         println!("{}", html);
         self.print_summary(violations);
-        if violations.is_empty() { 0 } else { 1 }
+        if violations.is_empty() {
+            0
+        } else {
+            1
+        }
     }
 
     fn report_checkstyle_xml(&self, violations: &[Violation]) -> i32 {
         let mut xml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.push_str("<checkstyle version=\"1.0\">\n");
         // Group by file
-        let mut files: std::collections::HashMap<&str, Vec<&Violation>> = std::collections::HashMap::new();
-        for v in violations { files.entry(&v.file).or_default().push(v); }
+        let mut files: std::collections::HashMap<&str, Vec<&Violation>> =
+            std::collections::HashMap::new();
+        for v in violations {
+            files.entry(&v.file).or_default().push(v);
+        }
         let mut file_names: Vec<&&str> = files.keys().collect();
         file_names.sort();
         for file_name in file_names {
@@ -211,7 +221,8 @@ impl<'a> DiagnosticReporter<'a> {
                 xml.push_str(&format!(
                     "<error line=\"{}\" column=\"{}\" severity=\"error\" \
                      message=\"{}\" source=\"{}\"/>\n",
-                    v.line, v.col,
+                    v.line,
+                    v.col,
                     xml_attr_escape(&v.message),
                     xml_attr_escape(&v.rule_id)
                 ));
@@ -221,7 +232,11 @@ impl<'a> DiagnosticReporter<'a> {
         xml.push_str("</checkstyle>\n");
         println!("{}", xml);
         self.print_summary(violations);
-        if violations.is_empty() { 0 } else { 1 }
+        if violations.is_empty() {
+            0
+        } else {
+            1
+        }
     }
 
     fn report_markdown(&self, violations: &[Violation]) -> i32 {
@@ -231,8 +246,11 @@ impl<'a> DiagnosticReporter<'a> {
         } else {
             md.push_str(&format!("**{} violations** found.\n\n", violations.len()));
             md.push_str("| Rule | Count |\n|------|-------|\n");
-            let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
-            for v in violations { *counts.entry(&v.rule_id).or_default() += 1; }
+            let mut counts: std::collections::HashMap<&str, usize> =
+                std::collections::HashMap::new();
+            for v in violations {
+                *counts.entry(&v.rule_id).or_default() += 1;
+            }
             let mut sorted: Vec<_> = counts.into_iter().collect();
             sorted.sort_by(|a, b| b.1.cmp(&a.1));
             for (rule, count) in &sorted {
@@ -249,7 +267,11 @@ impl<'a> DiagnosticReporter<'a> {
         }
         println!("{}", md);
         self.print_summary(violations);
-        if violations.is_empty() { 0 } else { 1 }
+        if violations.is_empty() {
+            0
+        } else {
+            1
+        }
     }
 }
 

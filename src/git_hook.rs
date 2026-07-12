@@ -34,7 +34,10 @@ echo "$FILES" | xargs "$KTLINT"
 pub fn install_git_hook(repo_root: &Path) -> anyhow::Result<()> {
     let git_dir = repo_root.join(".git");
     if !git_dir.exists() {
-        anyhow::bail!("No .git directory found at {}. Are you in a git repository?", repo_root.display());
+        anyhow::bail!(
+            "No .git directory found at {}. Are you in a git repository?",
+            repo_root.display()
+        );
     }
 
     let hooks_dir = git_dir.join("hooks");
@@ -46,16 +49,25 @@ pub fn install_git_hook(repo_root: &Path) -> anyhow::Result<()> {
     if hook_path.exists() {
         let existing = fs::read_to_string(&hook_path)?;
         if existing.contains("ktlint-rs") {
-            eprintln!("ktlint-rs pre-commit hook is already installed at {}", hook_path.display());
+            eprintln!(
+                "ktlint-rs pre-commit hook is already installed at {}",
+                hook_path.display()
+            );
             return Ok(());
         }
         // Append to existing hook
         let combined = format!("{}\n# --- ktlint-rs ---\n{}", existing, HOOK_SCRIPT);
         fs::write(&hook_path, combined)?;
-        eprintln!("Appended ktlint-rs to existing pre-commit hook at {}", hook_path.display());
+        eprintln!(
+            "Appended ktlint-rs to existing pre-commit hook at {}",
+            hook_path.display()
+        );
     } else {
         fs::write(&hook_path, HOOK_SCRIPT)?;
-        eprintln!("Installed ktlint-rs pre-commit hook at {}", hook_path.display());
+        eprintln!(
+            "Installed ktlint-rs pre-commit hook at {}",
+            hook_path.display()
+        );
     }
 
     // Make executable
@@ -85,7 +97,10 @@ pub fn uninstall_git_hook(repo_root: &Path) -> anyhow::Result<()> {
         if content.trim() == HOOK_SCRIPT.trim() {
             // This is a pure ktlint-rs hook — just remove it
             fs::remove_file(&hook_path)?;
-            eprintln!("Removed ktlint-rs pre-commit hook from {}", hook_path.display());
+            eprintln!(
+                "Removed ktlint-rs pre-commit hook from {}",
+                hook_path.display()
+            );
         } else {
             // Remove only the ktlint-rs portion
             let cleaned = content
@@ -95,7 +110,10 @@ pub fn uninstall_git_hook(repo_root: &Path) -> anyhow::Result<()> {
                 .join("\n");
             fs::write(&hook_path, cleaned.trim_end())?;
             fs::write(&hook_path, format!("{}\n", cleaned.trim_end()))?;
-            eprintln!("Removed ktlint-rs portion from pre-commit hook at {}", hook_path.display());
+            eprintln!(
+                "Removed ktlint-rs portion from pre-commit hook at {}",
+                hook_path.display()
+            );
         }
     } else {
         eprintln!("ktlint-rs hook not found in {}", hook_path.display());

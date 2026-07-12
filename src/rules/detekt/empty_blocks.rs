@@ -59,7 +59,14 @@ fn check_empty_blocks(
 ) -> Vec<Violation> {
     let mut violations = Vec::new();
     let bytes = source.as_bytes();
-    walk_for_empty(rule_id, tree.root_node(), bytes, node_kind, body_kinds, &mut violations);
+    walk_for_empty(
+        rule_id,
+        tree.root_node(),
+        bytes,
+        node_kind,
+        body_kinds,
+        &mut violations,
+    );
     violations
 }
 
@@ -93,8 +100,12 @@ fn walk_for_empty(
 macro_rules! impl_empty_block_rule {
     ($name:ident, $id:literal, $node:literal, $body:expr) => {
         impl Rule for $name {
-            fn id(&self) -> &'static str { $id }
-            fn auto_fixable(&self) -> bool { false }
+            fn id(&self) -> &'static str {
+                $id
+            }
+            fn auto_fixable(&self) -> bool {
+                false
+            }
             fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
                 check_empty_blocks($id, tree, source, $node, $body)
             }
@@ -102,15 +113,60 @@ macro_rules! impl_empty_block_rule {
     };
 }
 
-impl_empty_block_rule!(EmptyFunctionBlock, "detekt:empty-blocks:EmptyFunctionBlock", "function_declaration", &["function_body"]);
-impl_empty_block_rule!(EmptyClassBlock, "detekt:empty-blocks:EmptyClassBlock", "class_declaration", &["class_body"]);
-impl_empty_block_rule!(EmptyInitBlock, "detekt:empty-blocks:EmptyInitBlock", "init_block", &["function_body"]);
-impl_empty_block_rule!(EmptyIfBlock, "detekt:empty-blocks:EmptyIfBlock", "if_expression", &["control_structure_body"]);
-impl_empty_block_rule!(EmptyWhenBlock, "detekt:empty-blocks:EmptyWhenBlock", "when_entry", &["control_structure_body"]);
-impl_empty_block_rule!(EmptyWhileBlock, "detekt:empty-blocks:EmptyWhileBlock", "while_statement", &["control_structure_body"]);
-impl_empty_block_rule!(EmptyDoWhileBlock, "detekt:empty-blocks:EmptyDoWhileBlock", "while_statement", &["control_structure_body"]);
-impl_empty_block_rule!(EmptyForBlock, "detekt:empty-blocks:EmptyForBlock", "for_statement", &["control_structure_body"]);
-impl_empty_block_rule!(EmptyFinallyBlock, "detekt:empty-blocks:EmptyFinallyBlock", "finally_block", &["statements"]);
+impl_empty_block_rule!(
+    EmptyFunctionBlock,
+    "detekt:empty-blocks:EmptyFunctionBlock",
+    "function_declaration",
+    &["function_body"]
+);
+impl_empty_block_rule!(
+    EmptyClassBlock,
+    "detekt:empty-blocks:EmptyClassBlock",
+    "class_declaration",
+    &["class_body"]
+);
+impl_empty_block_rule!(
+    EmptyInitBlock,
+    "detekt:empty-blocks:EmptyInitBlock",
+    "init_block",
+    &["function_body"]
+);
+impl_empty_block_rule!(
+    EmptyIfBlock,
+    "detekt:empty-blocks:EmptyIfBlock",
+    "if_expression",
+    &["control_structure_body"]
+);
+impl_empty_block_rule!(
+    EmptyWhenBlock,
+    "detekt:empty-blocks:EmptyWhenBlock",
+    "when_entry",
+    &["control_structure_body"]
+);
+impl_empty_block_rule!(
+    EmptyWhileBlock,
+    "detekt:empty-blocks:EmptyWhileBlock",
+    "while_statement",
+    &["control_structure_body"]
+);
+impl_empty_block_rule!(
+    EmptyDoWhileBlock,
+    "detekt:empty-blocks:EmptyDoWhileBlock",
+    "while_statement",
+    &["control_structure_body"]
+);
+impl_empty_block_rule!(
+    EmptyForBlock,
+    "detekt:empty-blocks:EmptyForBlock",
+    "for_statement",
+    &["control_structure_body"]
+);
+impl_empty_block_rule!(
+    EmptyFinallyBlock,
+    "detekt:empty-blocks:EmptyFinallyBlock",
+    "finally_block",
+    &["statements"]
+);
 
 // try/catch require special handling (their AST differs from if/for/while)
 fn walk_try_nodes(
@@ -164,8 +220,12 @@ fn walk_try_nodes(
 }
 
 impl Rule for EmptyTryBlock {
-    fn id(&self) -> &'static str { "detekt:empty-blocks:EmptyTryBlock" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:empty-blocks:EmptyTryBlock"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
     fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
@@ -175,8 +235,12 @@ impl Rule for EmptyTryBlock {
 }
 
 impl Rule for EmptyCatchBlock {
-    fn id(&self) -> &'static str { "detekt:empty-blocks:EmptyCatchBlock" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:empty-blocks:EmptyCatchBlock"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
     fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
@@ -186,8 +250,12 @@ impl Rule for EmptyCatchBlock {
 }
 
 impl Rule for EmptyDefaultConstructor {
-    fn id(&self) -> &'static str { "detekt:empty-blocks:EmptyDefaultConstructor" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:empty-blocks:EmptyDefaultConstructor"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
     fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
@@ -196,10 +264,14 @@ impl Rule for EmptyDefaultConstructor {
             if child.kind() == "class_declaration" {
                 for i in 0..child.child_count() {
                     if let Some(c) = child.child(i) {
-                        if c.kind() == "constructor_invocation" || c.kind() == "secondary_constructor" {
+                        if c.kind() == "constructor_invocation"
+                            || c.kind() == "secondary_constructor"
+                        {
                             for j in 0..c.child_count() {
                                 if let Some(body) = c.child(j) {
-                                    if body.kind() == "function_body" && is_empty_block(&body, bytes) {
+                                    if body.kind() == "function_body"
+                                        && is_empty_block(&body, bytes)
+                                    {
                                         violations.push(violation(self.id(), &body));
                                     }
                                 }
@@ -214,16 +286,24 @@ impl Rule for EmptyDefaultConstructor {
 }
 
 impl Rule for EmptySecondaryConstructor {
-    fn id(&self) -> &'static str { "detekt:empty-blocks:EmptySecondaryConstructor" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:empty-blocks:EmptySecondaryConstructor"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
     fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         EmptyDefaultConstructor.check(tree, source)
     }
 }
 
 impl Rule for EmptyStructBlock {
-    fn id(&self) -> &'static str { "detekt:empty-blocks:EmptyStructBlock" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:empty-blocks:EmptyStructBlock"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
     fn check(&self, _tree: &Tree, _source: &str) -> Vec<Violation> {
         Vec::new()
     }
@@ -271,7 +351,10 @@ mod tests {
 
     #[test]
     fn empty_catch() {
-        let violations = check_rule(&EmptyCatchBlock, "fun f() { try { x() } catch(e: Exception) {} }");
+        let violations = check_rule(
+            &EmptyCatchBlock,
+            "fun f() { try { x() } catch(e: Exception) {} }",
+        );
         assert_eq!(violations.len(), 1);
     }
 
