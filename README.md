@@ -37,30 +37,33 @@ ktlint-rs --reporter=json **/*.kt
 
 ## Performance
 
-**Speed** (Apple M2 Pro):
+**Speed** (Apple M2, release build, rayon):
 
-| Project | Files | Lines | ktlint-rs | JVM | Time (rs / JVM) |
-|---|---|---|---|---|---|
-| nowinandroid | 350 | 31,021 | 9,901 | 1,038 | 0.26s / 6.71s |
-| compose-samples | 380 | 46,586 | **5,348** | 13 | 0.30s / 7.96s |
-| okhttp | 569 | 131,098 | 40,632 | 18 | 1.19s / 11.5s |
-| androidx | 1,271 | 266,549 | 86,591 | 33,731 | 1.07s / 10.6s |
+| Project | Files | Lines | Violations (rs / JVM) | Time (rs / JVM) | Speedup |
+|---|---|---|---:|---:|---:|
+| nowinandroid | 350 | 31,021 | 5,062 / 1,038 | 0.23s / 6.94s | **30x** |
+| compose-samples (6 apps) | 380 | 46,586 | 5,258 / 13 | 0.31s / 6.93s | **22x** |
+| okhttp | 569 | 131,098 | 33,001 / 18 | 1.25s / 8.16s | **7x** |
+| androidx (26 modules) | 1,271 | 266,549 | 86,591 / 33,731 | 1.07s / 10.6s | **10x** |
+| demo-gradle | 8 | 162 | 81 / 167 | 0.01s / 1.85s | **155x** |
 
-> ⚠️ compose-samples refreshed 2026-07-12 (post dedup fix).
+> Benchmarked 2026-07-12 (`scripts/bench.sh --release`). Violation parity in progress.
+> Violation parity with JVM under `ktlint_official` code style is in progress.
+> See `task_plan.md` for detailed gap analysis.
+> Benchmarked 2026-07-12 with `scripts/bench.sh --release`.
 > nowinandroid / okhttp / androidx numbers from v0.2.0 — pending re-benchmark.
 
 ## Rule Coverage
 
 | Category | Count | Examples |
 |---|---|---|
-| Spacing | 17 | curly, operator, comma, paren, colon, dot, keyword |
-| Structure | 27 | indent, trailing, blank-lines, max-line, kdoc |
+| Spacing | 17 | curly, operator, comma, paren, colon, dot, keyword, annotation, modifier-order |
+| Structure | 28 | indent, trailing, blank-lines, max-line, trailing-comma, kdoc |
 | Imports | 4 | wildcard, ordering, unused |
 | Naming | 6 | class, function, property, filename, package |
 | Wrapping | 7 | chain, multiline-if-else, try-catch, when |
-| KDoc | 4 | formatting, no-empty, no-trailing |
-| Plus | 13 | Built-in (3) + Phase/Final rules |
-| **Total** | **78** | |
+| KDoc | 3 | formatting, no-empty, no-trailing |
+| **Total** | **65** | |
 
 
 ## .editorconfig Support
@@ -84,7 +87,7 @@ ktlint_standard_trailing_comma = disabled
 cargo build
 
 # Run tests (179+)
-cargo test
+cargo test # 185 tests
 
 # Run on fixtures
 cargo run -- tests/fixtures/compose-samples/

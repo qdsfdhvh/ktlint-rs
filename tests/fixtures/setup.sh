@@ -12,15 +12,13 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FIXTURES_DIR="$REPO_ROOT/tests/fixtures"
 
-# ── Registry: name → repo URL, options ──
-# Key: fixture directory name
-# Value: "url [sparse_paths...]"
-declare -A FIXTURES=(
-  ["nowinandroid"]="https://github.com/android/nowinandroid.git"
-  ["compose-samples"]="https://github.com/android/compose-samples.git"
-  ["okhttp"]="https://github.com/square/okhttp.git"
-  ["androidx"]="https://github.com/androidx/androidx.git"
-)
+# ── Registry: loaded from fixtures.conf ──
+declare -A FIXTURES
+while IFS='|' read -r name url subdirs; do
+  [[ -z "$name" || "$name" == \#* ]] && continue
+  [[ "$url" == "n/a" ]] && continue  # skip local fixtures
+  FIXTURES["$name"]="$url $subdirs"
+done < "$REPO_ROOT/tests/fixtures/fixtures.conf"
 
 # ── Clone helper ──
 

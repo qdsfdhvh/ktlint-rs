@@ -116,7 +116,7 @@ printf "%-35s %7s %10s %10s %10s %10s %8s %8s\n" \
 printf "%s\n" "$(printf '%.0s-' {1..110})"
 
 for fixture_path in "${!PROJECTS[@]}"; do
-  name="${PROJECTS[$fixture_path]}"
+  name="${DISPLAY_NAMES[$fixture_path]:-${PROJECTS[$fixture_path]}}"
   full_path="$REPO_ROOT/$fixture_path"
 
   if [[ "$fixture_path" == *"androidx"* ]]; then
