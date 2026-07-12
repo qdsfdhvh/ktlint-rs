@@ -31,10 +31,7 @@ Working on Kotlin code linting/formatting?
    ├─ Auto-fix spacing / formatting issues → ktlint-rs --format <path>
    ├─ Machine-readable output for tooling → ktlint-rs --reporter json|sarif <path>
    ├─ Quick summary of violations by rule → ktlint-rs --reporter plain-summary <path>
-   ├─ Disable specific rules for a file → @Suppress("ktlint:standard:<rule-id>")
-   ├─ JVM ktlint parity check → ktlint-rs --compat <path>
    ├─ Custom code style (android_studio / intellij_idea) → --code-style android_studio
-   └─ Benchmark / compare vs JVM ktlint → time ktlint-rs <path> && time java -jar ktlint <path>
 ```
 
 ## How it saves tokens vs manual review
@@ -111,15 +108,6 @@ ktlint-rs --reporter json --reporter-output lint-results.json src/
 ktlint-rs --limit 20 src/
 ```
 
-### JVM ktlint compatibility mode
-
-```bash
-# Disable ktlint-rs-only rules for parity comparison
-ktlint-rs --compat src/
-
-# Or via environment variable
-KTLINT_COMPAT=1 ktlint-rs src/
-```
 
 ### Code style presets
 
@@ -216,7 +204,6 @@ val x = "a very long string that exceeds the configured max line length"
 
 - **Don't** use a JVM-based ktlint for speed-critical linting — ktlint-rs is 17-25x faster.
 - **Don't** read files and manually review style when `ktlint-rs <path>` gives exact line:col violations.
-- **Don't** manually fix spacing issues one by one — `ktlint-rs --format` handles 10 categories in one pass.
 - **Don't** omit `--limit` on large projects — thousands of violations can flood output.
 
 ## Reporting pain points
