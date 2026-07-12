@@ -10,26 +10,20 @@ support, with startup under 50ms and per-file lint under 5ms.
 
 ```
 ktlint-rs/
-├── src/
-│   ├── main.rs          # Entry point: parse CLI → load config → discover → lint → report
-│   ├── cli/mod.rs       # clap-based argument parsing (drop-in compat with ktlint)
-│   ├── config/mod.rs    # .editorconfig loading + ktlint-specific properties
-│   ├── discovery/mod.rs # File walker (respects .gitignore, .ktlintignore)
-│   ├── parser/
-│   │   ├── mod.rs       # KotlinParser: wraps tree-sitter-kotlin-sg
-│   │   └── cst.rs       # CheckContext: offset→line:col, whitespace inspection
-│   ├── rules/
-│   │   ├── mod.rs       # Rule trait, RuleEngine, built-in simple rules
-│   │   ├── spacing/     # Whitespace rules (curly, operator, comma, paren, colon, ...)
-│   │   ├── structure/   # Indent, trailing space, blank lines, max-line-length, ...
-│   │   ├── imports/     # Import ordering, no-wildcard, no-unused
-│   │   ├── wrapping/    # Chain wrapping, argument wrapping (Phase 3)
-│   │   └── naming/      # Class, function, property naming (Phase 3)
-│   ├── formatter/mod.rs # Auto-fix engine (line-based, will extend to CST)
-│   └── reporter/mod.rs  # Plain, JSON, SARIF, summary reporters
-├── TASK_PLAN.md         # Detailed project plan with phases
+├── src/                    # Source code (see Architecture below)
+├── tests/
+│   ├── fixtures/           # Real-world Kotlin projects (cloned via scripts/setup-fixtures.sh)
+│   └── integration/        # Integration test binary
+├── scripts/
+│   ├── bench.sh            # Performance benchmark + parity report
+│   └── setup-fixtures.sh   # Shallow-clone test repos
+├── skills/ktlint-rs/       # Published skill (npx skills add)
+├── .agents/skills/         # Dev-time skill symlinked → skills/ktlint-rs/
+├── task_plan.md            # Project plan (Phase status, parity gaps, priorities)
+├── findings.md             # Research discoveries and root cause analysis
+├── progress.md             # Session log
+├── AGENTS.md               # This file
 └── Cargo.toml
-```
 
 ## Key Design Decisions
 
@@ -159,18 +153,20 @@ impl Rule for MyRule {
 - **Integration test**: Run on real Kotlin project (kataris-app, 1377 files)
 - **Benchmarks**: `cargo bench` for per-rule micro-benchmarks
 
-## Current Status (2026-07-10)
-- **Phase 0**: ✅ Infrastructure & skeleton (CLI, parser, config, discovery, reporters)
-- **Phase 1**: 🟡 In progress (spacing: 9 rules ✅, structure: 7 rules ✅, imports: 3 rules ✅)
-- **Phase 2**: ⬜ .editorconfig parity
-- **Phase 3**: ⬜ Remaining rules (wrapping, naming)
-- **Phase 4**: ⬜ Formatter & auto-fix engine
-- **Phase 5**: ⬜ Advanced features (baselines, patterns, git hooks)
-- **Phase 6**: ⬜ Testing & benchmarking
+## Current Status (2026-07-12)
+- **Phase 0**: ✅ Infrastructure & skeleton
+- **Phase 1**: ✅ Core rules — 65 rules across all categories
+- **Phase 2**: 🟡 .editorconfig (code_style ✅, per-rule disable ⚠ pending wiring)
+- **Phase 3**: 🟡 Parity tuning (indent, blank-line-before-declaration, etc.)
+- **Phase 4**: ✅ Formatter & auto-fix engine
+- **Phase 5**: ⬜ Advanced features
+- **Phase 6**: 🟡 Testing & benchmarking (185 tests, parity analysis in progress)
 - **Phase 7**: ⬜ Distribution & docs
 
+See `task_plan.md` for detailed gap analysis and priority path.
+
 ## Dependencies
-- `tree-sitter` 0.24 — CST parsing
+- `tree-sitter` 0.26 — CST parsing
 - `tree-sitter-kotlin-sg` 0.4 — Kotlin grammar
 - `clap` 4 — CLI argument parsing
 - `editorconfig` 1 — .editorconfig parsing
@@ -180,7 +176,18 @@ impl Rule for MyRule {
 - `anyhow` — error handling
 - `log`/`env_logger` — logging
 
-## Performance Targets
-- Startup: <50ms
-- Per-file lint: <5ms
-- Full Kataris project (1377 files): <3s with `--format`
+## Performance (Apple M2, release)
+
+| Project | Files | Lines | Time (rs / JVM) |
+|---|---|---|---|
+| nowinandroid | 350 | 31K | 0.26s / 6.71s (26x) |
+| compose-samples | 380 | 47K | 0.30s / 7.96s (27x) |
+| okhttp | 569 | 131K | 1.19s / 11.5s (10x) |
+| androidx (26 mods) | 1,271 | 267K | 1.07s / 10.6s (10x) |
+
+> Rayon parallel processing. Startup <2ms (debug).
+
+## Skills
+
+- `skills/ktlint-rs/SKILL.md` — Published skill for external users (`npx skills add`)
+- `.agents/skills/ktlint-rs` — Symlink → `skills/ktlint-rs/`, for local dev-time agent context
