@@ -363,9 +363,9 @@ mod integration_tests {
             .output()
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(!stdout.contains("(standard:no-wildcard-imports)"));
-        assert!(!stdout.contains("(standard:curly-spacing)"));
-        assert!(!stdout.contains("(standard:colon-spacing)"));
+        assert!(!stdout.contains("(standard:no-wildcard-imports)"), "unexpected no-wildcard-imports violation:\n{}", stdout);
+        assert!(!stdout.contains("(standard:curly-spacing)"), "unexpected curly-spacing violation:\n{}", stdout);
+        assert!(!stdout.contains("(standard:colon-spacing)"), "unexpected colon-spacing violation:\n{}", stdout);
     }
 
     #[test]
@@ -376,7 +376,7 @@ mod integration_tests {
             .output()
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(!stdout.contains("(standard:no-wildcard-imports)"));
-        assert!(stdout.contains("should be 2") || stdout.contains("multiple of 2"));
+        assert!(!stdout.contains("(standard:no-wildcard-imports)"), "unexpected no-wildcard-imports violation:\n{}", stdout);
+        assert!(stdout.contains("should be 2") || stdout.contains("multiple of 2"), "missing indent violation message:\n{}", stdout);
     }
 }
