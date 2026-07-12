@@ -161,7 +161,13 @@ impl KtlintConfig {
     /// Load config for a specific file path (multi-project support).
     pub fn load_for_file(file_path: &Path) -> anyhow::Result<Self> {
         let mut config = Self::default();
-        if let Ok(ec_map) = editorconfig::get_config(file_path) {
+        // Ensure absolute path so editorconfig::get_config resolves correctly.
+        let abs_path = if file_path.is_absolute() {
+            file_path.to_path_buf()
+        } else {
+            std::env::current_dir()?.join(file_path)
+        };
+        if let Ok(ec_map) = editorconfig::get_config(&abs_path) {
             let map: std::collections::HashMap<String, String> = ec_map.into_iter().collect();
             config.apply_editorconfig(&map);
         }

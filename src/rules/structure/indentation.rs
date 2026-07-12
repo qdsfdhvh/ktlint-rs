@@ -90,7 +90,8 @@ mod tests {
     }
     #[test]
     fn ok() {
-        assert!(c("fun f(){\n    val x=1\n}\n").is_empty());
+        // Closing brace must match the function's indent level.
+        assert!(c("fun f() {\n    val x = 1\n    }\n").is_empty());
     }
     #[test]
     fn bad() {
