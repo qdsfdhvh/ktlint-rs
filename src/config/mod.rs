@@ -24,6 +24,7 @@ pub struct KtlintConfig {
     pub max_line_length: usize,
     pub insert_final_newline: bool,
     pub trim_trailing_whitespace: bool,
+    pub compat_mode: bool,
 }
 
 impl Default for KtlintConfig {
@@ -40,6 +41,7 @@ impl Default for KtlintConfig {
             max_line_length: 0,
             insert_final_newline: true,
             trim_trailing_whitespace: true,
+            compat_mode: false,
         }
     }
 }

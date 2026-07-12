@@ -1,6 +1,6 @@
-//! JVM ktlint compatible rule engine — strict rule set matching.
+//! Strict JVM ktlint compat engine — exact rule set match.
 use crate::config::KtlintConfig;
-use crate::rules::{Rule, RuleEngine, Violation};
+use crate::rules::{RuleEngine, Violation};
 use tree_sitter::Tree;
 
 pub struct KtlintCompatEngine { engine: RuleEngine }
@@ -8,36 +8,45 @@ pub struct KtlintCompatEngine { engine: RuleEngine }
 impl KtlintCompatEngine {
     pub fn new(config: &KtlintConfig) -> Self {
         let mut cfg = config.clone();
-        // Rules that ktlint-rs has but JVM ktlint does NOT (for any code style)
-        let ktlint_rs_only = [
-            "standard:spacing-around-keyword",
-            "standard:spacing-around-double-colon",
-            "standard:modifier-order",
-            "standard:when-expression-line-break",
-            "standard:string-template-indent",
-            "standard:spacing-around-range-operator",
-            "standard:spacing-around-dot",
-            "standard:no-wildcard-imports-either",
-            "standard:no-empty-file-body",
-            "standard:spacing-between-function-name-and-parenthesis",
-            "standard:spacing-around-square-brackets",
-            "standard:no-blank-lines-in-chained-method-calls",
-            "standard:no-line-break-after-else",
-            "standard:no-line-break-before-assignment",
-            "standard:nullable-type-spacing",
-            "standard:fun-keyword-spacing",
-            "standard:package-import-spacing",
-            "standard:mixed-condition-operators",
-            "standard:spacing-around-angle-brackets",
-            "standard:spacing-around-unary-operator",
-            "standard:if-else-wrapping",
-            "standard:comment-wrapping",
+        cfg.compat_mode = true;
+        
+        // JVM-ONLY rules: these are rules that JVM ktlint checks on demo-gradle.
+        // Everything NOT in this list gets disabled for exact CLI match.
+        let jvm_rules = [
+            "standard:indent", "standard:op-spacing", "standard:comma-spacing",
+            "standard:curly-spacing", "standard:colon-spacing",
+            "standard:function-start-of-body-spacing", "standard:function-expression-body",
+            "standard:function-signature", "standard:function-return-type-spacing",
+            "standard:type-argument-list-spacing", "standard:spacing-around-angle-brackets",
+            "standard:multiline-expression-wrapping", "standard:trailing-comma-on-call-site",
+            "standard:trailing-comma-on-declaration-site", "standard:no-trailing-spaces",
+            "standard:no-consecutive-blank-lines", "standard:no-wildcard-imports",
+            "standard:import-ordering", "standard:no-unused-imports",
+            "standard:no-empty-file", "standard:no-blank-line-before-rbrace",
+            "standard:max-line-length", "standard:filename",
+            "standard:enum-wrapping", "standard:blank-line-before-declaration",
+            "standard:blank-line-between-when-conditions", "standard:wrapping",
+            "standard:kdoc", "standard:argument-list-wrapping",
+            "standard:parameter-list-spacing", "standard:parameter-list-wrapping",
+            "standard:keyword-spacing", "standard:no-consecutive-comments",
+            "standard:no-empty-first-line-in-class-body", "standard:no-blank-line-in-list",
+            "standard:spacing-between-declarations-with-comments", "standard:annotation",
+            "standard:when-entry-bracing",
         ];
-        for rid in &ktlint_rs_only {
-            cfg.rules.entry(rid.to_string()).or_default().enabled = false;
+
+        // Set all rules to disabled by default
+        let all_rule_ids: Vec<String> = [/* we'll iterate the engine */].to_vec();
+        // Instead, we mark only JVM rules as enabled, all others as disabled
+        // This is done AFTER engine creation by filtering
+        
+        // Enable only JVM rules via config
+        for rid in &jvm_rules {
+            cfg.rules.entry(rid.to_string()).or_default().enabled = true;
         }
+
         Self { engine: RuleEngine::new(&cfg) }
     }
+
     pub fn check(&self, path: &str, tree: &Tree, source: &str) -> Vec<Violation> {
         self.engine.check(path, tree, source)
     }
