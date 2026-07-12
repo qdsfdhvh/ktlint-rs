@@ -39,11 +39,13 @@ cargo build --release
 
 | Project | Files | Lines | Time |
 |---|---|---|---|
-| okhttp | 525 | 128,987 | **0.34s** |
-| sample (5 files) | 5 | ~150 | **<10ms** |
+| nowinandroid | 350 | 31,021 | **0.58s** |
+| compose-samples | 380 | 46,586 | **0.61s** |
+| okhttp | 569 | 131,098 | **0.87s** |
+| androidx (26 modules) | 1,271 | 532,795 | **0.86s** |
 
-> Tested on Apple M-series, release build with rayon parallel processing.
-
+> Tested on Apple M3 Pro, release build with [rayon](https://github.com/rayon-rs/rayon) parallel processing.
+> AndroidX benchmark covers 26 self-contained modules (activity, fragment, compose-runtime, etc.).
 ## Configuration (.editorconfig)
 
 ```ini
