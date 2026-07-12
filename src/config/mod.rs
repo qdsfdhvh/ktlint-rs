@@ -169,6 +169,7 @@ impl KtlintConfig {
         };
         if let Ok(ec_map) = editorconfig::get_config(&abs_path) {
             let map: std::collections::HashMap<String, String> = ec_map.into_iter().collect();
+            eprintln!("DEBUG load_for_file {}: code_style={:?}, rules={:?}", abs_path.display(), config.code_style, config.rules.keys().collect::<Vec<_>>());
             config.apply_editorconfig(&map);
         }
         config.project_root = file_path
@@ -316,6 +317,23 @@ mod tests {
             },
         );
         assert!(!config.is_rule_enabled("standard:curly-spacing"));
+    }
+
+    #[test]
+    fn nowinandroid_code_style_is_android_studio() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/nowinandroid/src/main/kotlin/com/google/samples/apps/nowinandroid/MainActivity.kt");
+        if !path.exists() {
+            return;
+        }
+        let config = KtlintConfig::load_for_file(&path).unwrap();
+        assert_eq!(
+            config.code_style,
+            CodeStyle::AndroidStudio,
+            "code_style should be android_studio"
+        );
+        assert!(!config.is_rule_enabled("standard:multiline-expression-wrapping"));
+        assert!(config.is_rule_enabled("standard:colon-spacing"));
     }
 
     #[test]
