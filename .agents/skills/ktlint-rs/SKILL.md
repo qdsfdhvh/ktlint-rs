@@ -12,13 +12,13 @@ and comments), then checks 78 rules across spacing, structure, imports,
 naming, wrapping, and KDoc categories.  Auto-fix handles spacing violations;
 parallel processing via rayon delivers 17-25x speedups over the JVM version.
 
-Build from source before first use:
+## Installation
 
 ```bash
-cd ktlint-rs && cargo build --release
+cargo install ktlint-rs
 ```
 
-The binary lives at `target/release/ktlint-rs`.
+The binary will be available as `ktlint-rs`.
 
 ## When to use ktlint-rs
 
@@ -206,10 +206,10 @@ val x = "a very long string that exceeds the configured max line length"
 
 | Project | Files | Lines | Time (ktlint-rs / JVM) |
 |---|---|---|---|
-| nowinandroid | 350 | 31,021 | **0.58s** / 10.1s (17x) |
-| compose-samples | 380 | 46,586 | **0.61s** / 11.3s (18x) |
-| okhttp | 569 | 131,098 | **0.87s** / 19.6s (22x) |
-| androidx (26 modules) | 1,271 | 266,549 | **0.86s** / 21.9s (25x) |
+| compose-samples | 380 | 46,586 | **0.30s** / 7.96s (26x) |
+| nowinandroid | 350 | 31,021 | **0.26s** / 6.71s (25x) |
+| okhttp | 569 | 131,098 | **1.19s** / 11.5s (10x) |
+| androidx | 1,271 | 266,549 | **1.07s** / 10.6s (10x) |
 
 
 ## Anti-patterns
@@ -218,8 +218,6 @@ val x = "a very long string that exceeds the configured max line length"
 - **Don't** read files and manually review style when `ktlint-rs <path>` gives exact line:col violations.
 - **Don't** manually fix spacing issues one by one — `ktlint-rs --format` handles 10 categories in one pass.
 - **Don't** omit `--limit` on large projects — thousands of violations can flood output.
-- **Don't** confuse `--compat` mode with full JVM parity — it only disables ktlint-rs–specific rules; per-rule counts still differ because JVM's `android_studio` preset is stricter.
-- **Don't** forget to build after pulling — run `cargo build --release` or CI will use the stale binary.
 
 ## Reporting pain points
 
