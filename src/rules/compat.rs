@@ -25,9 +25,9 @@ impl KtlintCompatEngine {
             "standard:spacing-around-angle-brackets", "standard:spacing-around-unary-operator",
             "standard:block-comment-initial-star-blank-line",
             // Disabled for now — too noisy on compose-samples
-            "standard:multiline-expression-wrapping", "standard:no-empty-first-line-in-class-body",
-            "standard:argument-list-wrapping", "standard:no-consecutive-comments",
-            "standard:blank-line-between-when-conditions", "standard:when-entry-bracing", "standard:enum-entry", "standard:annotation-spacing", "standard:comment-spacing", "standard:annotation", "standard:trailing-comma", "standard:indent", "standard:max-line-length", "standard:colon-spacing",
+            
+            
+             "standard:enum-entry", "standard:annotation-spacing", "standard:comment-spacing", "standard:annotation", "standard:trailing-comma", 
         ];
         for rid in &ktlint_rs_only {
             cfg.rules.entry(rid.to_string()).or_default().enabled = false;
