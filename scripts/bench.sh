@@ -9,11 +9,11 @@ RUSTUP_BIN="/opt/homebrew/Cellar/rustup/1.29.0_2/libexec/bin/rustup"
 RUSTUP_ENV="RUSTUP_OVERRIDE_UNIX_FALLBACK_SETTINGS=/opt/homebrew/etc/rustup/settings.toml"
 
 # ktlint JVM (download if missing)
-KTLINT_JAR="$REPO_ROOT/.ktlint/ktlint-1.5.0.jar"
-if [[ ! -f "$KTLINT_JAR" ]]; then
+if ! ls "$REPO_ROOT/.ktlint/ktlint-"*.jar >/dev/null 2>&1; then
   echo "Downloading ktlint JVM..."
   bash "$REPO_ROOT/scripts/get-ktlint.sh"
 fi
+KTLINT_JAR=$(ls "$REPO_ROOT/.ktlint/ktlint-"*.jar | sort -V | tail -1)
 KTLINT_JVM="java -jar $KTLINT_JAR"
 
 # Build ktlint-rs
