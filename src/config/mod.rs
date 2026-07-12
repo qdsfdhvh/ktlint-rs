@@ -105,6 +105,68 @@ pub struct RuleConfig {
     pub properties: HashMap<String, String>,
 }
 
+/// Walk up from a file path to find the nearest `.editorconfig` file.
+fn find_editorconfig(file_path: &Path) -> Option<PathBuf> {
+    let mut current = if file_path.is_dir() {
+        file_path.to_path_buf()
+    } else {
+        file_path.parent()?.to_path_buf()
+    };
+    loop {
+        let candidate = current.join(".editorconfig");
+        if candidate.exists() {
+            return Some(candidate);
+        }
+        if !current.pop() {
+            return None;
+        }
+    }
+}
+
+/// Parse ktlint-specific properties from a raw `.editorconfig` file.
+/// The `editorconfig` crate strips non-standard keys, so we parse them ourselves.
+fn parse_ktlint_properties(ec_path: &Path) -> HashMap<String, String> {
+    let mut props = HashMap::new();
+    let content = match std::fs::read_to_string(ec_path) {
+        Ok(c) => c,
+        Err(_) => return props,
+    };
+
+    // Simple INI parser: find [*.kt] or [*.kts] or [*] section, then read key=value.
+    let mut in_kt_section = false;
+    let mut in_glob_section = false;
+    let file_ext = ec_path
+        .parent()
+        .and_then(|_| {
+            // We don't have the file extension here, so collect all sections
+            None::<&str>
+        });
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
+            continue;
+        }
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            let section = &trimmed[1..trimmed.len() - 1];
+            in_kt_section = section == "*.kt" || section == "*.kts" || section.contains(".kt");
+            in_glob_section = section == "*";
+            continue;
+        }
+        if !in_kt_section && !in_glob_section {
+            continue;
+        }
+        if let Some((key, value)) = trimmed.split_once('=') {
+            let key = key.trim();
+            let value = value.trim();
+            if key.starts_with("ktlint_") || key.starts_with("ij_kotlin_") {
+                props.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+    props
+}
+
 impl KtlintConfig {
     /// Load config from .editorconfig and CLI flags.
     pub fn load(cli: &Cli) -> anyhow::Result<Self> {
@@ -137,6 +199,11 @@ impl KtlintConfig {
         if let Ok(ec_map) = editorconfig::get_config(&ec_lookup_path) {
             let map: HashMap<String, String> = ec_map.into_iter().collect();
             config.apply_editorconfig(&map);
+            // Also parse ktlint-specific properties not returned by editorconfig crate.
+            if let Some(ec_file) = find_editorconfig(&ec_lookup_path) {
+                let ktlint_props = parse_ktlint_properties(&ec_file);
+                config.apply_editorconfig(&ktlint_props);
+            }
             if let Some(ref ec_path) = cli.editorconfig {
                 if let Ok(named) =
                     editorconfig::get_config_conffile(&ec_lookup_path, ec_path.as_str())
@@ -167,11 +234,20 @@ impl KtlintConfig {
         } else {
             std::env::current_dir()?.join(file_path)
         };
+
+        // Standard EditorConfig properties (indent_size, indent_style, etc.)
         if let Ok(ec_map) = editorconfig::get_config(&abs_path) {
             let map: std::collections::HashMap<String, String> = ec_map.into_iter().collect();
-            eprintln!("DEBUG load_for_file {}: code_style={:?}, rules={:?}", abs_path.display(), config.code_style, config.rules.keys().collect::<Vec<_>>());
             config.apply_editorconfig(&map);
         }
+
+        // ktlint-specific properties (code_style, rule enable/disable, etc.)
+        // Not returned by the editorconfig crate — we parse them directly.
+        if let Some(ec_file) = find_editorconfig(&abs_path) {
+            let ktlint_props = parse_ktlint_properties(&ec_file);
+            config.apply_editorconfig(&ktlint_props);
+        }
+
         config.project_root = file_path
             .parent()
             .unwrap_or(std::path::Path::new("."))
