@@ -14,7 +14,7 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms. Drop-in compatible with the JVM ktlint CLI.
 
 - **78 rules** covering spacing, structure, imports, naming, wrapping, and KDoc
-- **26x faster** than JVM ktlint (0.30s vs 7.96s on 380 files)
+- **Drop-in CLI** compatible with JVM ktlint
 - **4 reporters**: plain, JSON, SARIF, summary
 - **`.editorconfig`** support with ktlint properties
 - **Auto-fix** for fixable violations (`--format`)
