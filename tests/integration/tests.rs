@@ -59,7 +59,7 @@ mod integration_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         // android_studio disables final-newline
         assert!(
-            !stdout.contains("standard:final-newline"),
+            !stdout.contains("(standard:final-newline)"),
             "android_studio should disable final-newline"
         );
     }
@@ -74,11 +74,11 @@ mod integration_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         // These rules are disabled in .editorconfig
         assert!(
-            !stdout.contains("standard:no-wildcard-imports"),
+            !stdout.contains("(standard:no-wildcard-imports)"),
             "wildcard-imports should be disabled"
         );
         assert!(
-            !stdout.contains("standard:curly-spacing"),
+            !stdout.contains("(standard:curly-spacing)"),
             "curly-spacing should be disabled"
         );
         // But other rules still work
@@ -352,7 +352,7 @@ mod integration_tests {
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
-            !stdout.contains("standard:no-empty-first-line-in-class-body"),
+            !stdout.contains("(standard:no-empty-first-line-in-class-body)"),
             "android_studio should disable no-empty-first-line-in-class-body: {}",
             stdout
         );
@@ -366,9 +366,9 @@ mod integration_tests {
             .output()
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(!stdout.contains("standard:no-wildcard-imports"));
-        assert!(!stdout.contains("standard:curly-spacing"));
-        assert!(!stdout.contains("standard:colon-spacing"));
+        assert!(!stdout.contains("(standard:no-wildcard-imports)"));
+        assert!(!stdout.contains("(standard:curly-spacing)"));
+        assert!(!stdout.contains("(standard:colon-spacing)"));
     }
 
     #[test]
@@ -379,7 +379,7 @@ mod integration_tests {
             .output()
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(!stdout.contains("standard:no-wildcard-imports"));
+        assert!(!stdout.contains("(standard:no-wildcard-imports)"));
         assert!(stdout.contains("should be 2") || stdout.contains("multiple of 2"));
     }
 

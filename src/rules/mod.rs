@@ -14,6 +14,12 @@ pub mod spacing;
 pub mod structure;
 pub mod suppress;
 pub mod wrapping;
+pub mod phase1_more;
+pub mod phase1_rules;
+pub mod phase3b_rules;
+pub use phase3b_rules::*;
+pub mod final_rules;
+pub use final_rules::*;
 
 #[derive(Debug, Clone)]
 pub struct Violation {
@@ -41,11 +47,11 @@ pub struct RuleEngine {
 impl RuleEngine {
     pub fn new(config: &KtlintConfig) -> Self {
         let rules: Vec<Box<dyn Rule>> = vec![
+            // ── Built-in ─────────────────────────────────────────────
             Box::new(NoTrailingSpaces),
             Box::new(FinalNewline),
             Box::new(NoConsecutiveBlankLines),
-            Box::new(NoWildcardImports),
-            // spacing
+            // ── Spacing (17 rules) ───────────────────────────────────
             Box::new(spacing::AnnotationSpacing),
             Box::new(spacing::ArgumentListWrapping),
             Box::new(spacing::BlockCommentStar),
@@ -63,149 +69,67 @@ impl RuleEngine {
             Box::new(spacing::ParenSpacing),
             Box::new(spacing::RangeOperatorSpacing),
             Box::new(spacing::SpacingAroundKeyword),
-            // structure
-            Box::new(structure::EnumEntry),
-            // disabled
-            Box::new(structure::Indentation::new(config.indent_size)),
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
+            // ── Structure (27 rules) ──────────────────────────────────
             Box::new(structure::BlankLineBeforeDeclaration),
-            Box::new(structure::NoBlankLineInList),
-            // disabled-p3
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
+            Box::new(structure::EnumEntry),
+            Box::new(structure::IJTrailingComma),
+            Box::new(structure::Indentation::new(config.indent_size)),
+            Box::new(structure::KdocFormatting),
             Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
-            // disabled
-            // disabled
+            Box::new(structure::KdocNoTrailingSpace),
+            Box::new(structure::LambdaParen),
             Box::new(structure::MaxLineLength),
-            // disabled
-            // disabled
-            // disabled
-            // disabled
+            Box::new(structure::NoBlankAfterKdoc),
+            Box::new(structure::NoBlankBeforeListClose),
+            Box::new(structure::NoBlankLineBeforeRbrace),
+            Box::new(structure::NoBlankLineInList),
             Box::new(structure::NoEmptyClassBody),
+            Box::new(structure::NoEmptyFile),
+            Box::new(structure::NoEmptyFileBody),
             Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
-            // disabled
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
-            // disabled
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
-            // disabled
-            // disabled
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
+            Box::new(structure::NoLeadingEmptyLinesInMethod),
+            Box::new(structure::NoMultiSpaces),
+            Box::new(structure::NoSemicolons),
+            Box::new(structure::NoSingleExpressionBody),
+            Box::new(structure::NoTrailingSpacesInString),
+            Box::new(structure::ParameterListSpacing),
+            Box::new(structure::SpacingBetweenDeclarations),
             Box::new(structure::TrailingComma),
-            // disabled
-            // disabled
-            // imports
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
+            Box::new(structure::TrailingSpacesInComment),
+            Box::new(structure::UnnecessaryParenBeforeLambda),
+            // ── Imports (4 rules) ─────────────────────────────────────
+            Box::new(NoWildcardImports),
+            Box::new(imports::ImportOrdering),
+            Box::new(imports::NoUnusedImports),
+            Box::new(imports::NoWildcardImportsEither),
+            // ── Naming (6 rules) ──────────────────────────────────────
+            Box::new(naming::BackingPropertyNaming),
+            Box::new(naming::ClassNaming),
             Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            // too-broad-list
-            Box::new(structure::KdocNoEmptyFirstLine),
-            // old-kdoc
-            Box::new(naming::Filename),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            // disabled-p3
-            // naming
-            // disabled-bp
-            // disabled-cn
-            // disabled-fn2
-            // disabled-fn
-            // disabled-pkg
-            // disabled-pn
-            // wrapping
+            Box::new(naming::FunctionNaming),
+            Box::new(naming::PackageName),
+            Box::new(naming::PropertyNaming),
+            // ── Wrapping (7 rules) ────────────────────────────────────
             Box::new(wrapping::ChainWrapping),
             Box::new(wrapping::GeneralWrapping),
             Box::new(wrapping::MultilineExpressionWrapping),
-            // disabled
+            Box::new(wrapping::MultilineIfElse),
             Box::new(wrapping::StringTemplateIndent),
+            Box::new(wrapping::TryCatchFinallyWrapping),
+            Box::new(wrapping::WhenExpressionLineBreak),
+            // ── Phase 1 rules (unique IDs) ────────────────────────────
             Box::new(phase1_rules::WhenEntryBracing),
-            // too-broad-decl
             Box::new(phase1_rules::BlankLineBetweenWhenConditions),
-            Box::new(phase1_rules::TrailingCommaOnCallSite),
             Box::new(phase1_rules::SpacingBetweenDeclarationsWithComments),
+            // ── Phase 1 more (unique IDs) ─────────────────────────────
             Box::new(phase1_more::KtlintAnnotation),
             Box::new(phase1_more::KtlintWrapping),
             Box::new(phase1_more::KtlintNoConsecutiveComments),
-            Box::new(phase1_more::KtlintArgumentListWrapping),
-            Box::new(phase1_more::KtlintFilename),
-            Box::new(wrapping::TryCatchFinallyWrapping),
-            Box::new(wrapping::WhenExpressionLineBreak),
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled
-            // disabled: Box::new(new_rules2::AnnotationRule), // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled: Box::new(new_rules4::KdocWrappingRule),
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled // disabled
-            // disabled
-            // disabled
-            Box::new(phase3b_rules::NoEmptyFile),
+            // ── Phase 3b (unique IDs) ─────────────────────────────────
             Box::new(phase3b_rules::FunctionSignatureSpacing),
             Box::new(phase3b_rules::FunctionExpressionBody),
             Box::new(phase3b_rules::KeywordSpacing),
-            Box::new(phase3b_rules::ParameterListSpacingRule),
+            // ── Final rules ───────────────────────────────────────────
             Box::new(final_rules::TypeArgumentListSpacing),
             Box::new(final_rules::SpacingAroundAngleBrackets),
             Box::new(final_rules::EnumWrapping),
@@ -234,7 +158,8 @@ impl RuleEngine {
     }
 }
 
-// Built-in simple rules
+// ── Built-in simple rules ────────────────────────────────────────────
+
 pub struct NoTrailingSpaces;
 impl Rule for NoTrailingSpaces {
     fn id(&self) -> &'static str {
@@ -329,10 +254,28 @@ impl Rule for NoWildcardImports {
             .collect()
     }
 }
-pub mod phase1_more;
-pub mod phase1_rules;
-pub mod phase3b_rules;
-pub use phase3b_rules::*;
-pub use phase3b_rules::*;
-pub mod final_rules;
-pub use final_rules::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_trailing_spaces_detects() {
+        let rule = NoTrailingSpaces;
+        let violations = rule.check(
+            &crate::parser::KotlinParser::new().parse("fun test() \n"),
+            "fun test() \n",
+        );
+        assert!(!violations.is_empty());
+    }
+
+    #[test]
+    fn final_newline_missing() {
+        let rule = FinalNewline;
+        let v = rule.check(
+            &crate::parser::KotlinParser::new().parse("fun a() {}"),
+            "fun a() {}",
+        );
+        assert!(!v.is_empty());
+    }
+}
