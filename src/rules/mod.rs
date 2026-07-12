@@ -320,3 +320,5 @@ impl Rule for NoWildcardImports {
 pub mod phase1_rules;
 pub mod phase1_more;
 pub mod phase3b_rules;
+pub use phase3b_rules::*;
+pub use phase3b_rules::*;
