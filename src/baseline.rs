@@ -66,11 +66,18 @@ impl Baseline {
     /// Check if a violation is in the baseline.
     pub fn contains(&self, file: &str, line: usize, col: usize, rule_id: &str) -> bool {
         // Try exact match first
-        if self.entries.contains(&(file.to_string(), line, col, rule_id.to_string())) {
+        if self
+            .entries
+            .contains(&(file.to_string(), line, col, rule_id.to_string()))
+        {
             return true;
         }
         // Try matching without column (some baselines use col=0)
-        if col > 0 && self.entries.contains(&(file.to_string(), line, 0, rule_id.to_string())) {
+        if col > 0
+            && self
+                .entries
+                .contains(&(file.to_string(), line, 0, rule_id.to_string()))
+        {
             return true;
         }
         false
@@ -200,16 +207,14 @@ mod tests {
 
     #[test]
     fn generate_baseline() {
-        let violations = vec![
-            Violation {
-                file: "test.kt".into(),
-                line: 10,
-                col: 1,
-                rule_id: "standard:indent".into(),
-                message: "bad indent".into(),
-                auto_fixable: true,
-            },
-        ];
+        let violations = vec![Violation {
+            file: "test.kt".into(),
+            line: 10,
+            col: 1,
+            rule_id: "standard:indent".into(),
+            message: "bad indent".into(),
+            auto_fixable: true,
+        }];
         let xml = Baseline::generate(&violations);
         assert!(xml.contains("test.kt"));
         assert!(xml.contains(r#"line="10""#));
