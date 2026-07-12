@@ -13,7 +13,7 @@ if $RELEASE; then
 else
   echo "Building ktlint-rs (debug)..."
   env $RUSTUP_ENV "$RUSTUP_BIN" run stable cargo build --manifest-path "$REPO_ROOT/Cargo.toml" 2>/dev/null
-  KTLINT_RS="$REPO_ROOT/target/debug/ktlint"
+  KTLINT_RS="$REPO_ROOT/target/debug/ktlint-rs"
 fi
 
 echo "ktlint-rs: $($KTLINT_RS --version 2>&1 | head -1)"
