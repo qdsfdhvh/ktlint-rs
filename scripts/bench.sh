@@ -51,20 +51,26 @@ echo ""
 
 # ── Project definitions ──
 declare -A DISPLAY_NAMES=()  # optional overrides; falls through to PROJECTS names
-declare -A PROJECTS=(
-  ["tests/fixtures/demo-gradle"]="demo-gradle"
-  ["tests/fixtures/nowinandroid"]="nowinandroid"
-  ["tests/fixtures/compose-samples"]="compose-samples (6 apps)"
-  ["tests/fixtures/okhttp"]="okhttp"
-  ["tests/fixtures/androidx"]="androidx (26 modules)"
-)
+# ── Load fixtures from fixtures.conf ──
+# Format: name|url
+declare -A PROJECTS=()
+ANDROIDX_DIRS=(activity annotation autofill biometric browser collection concurrent datastore documentfile drawerlayout emoji fragment graphics gridlayout loader palette preference print savedstate slidingpanelayout startup swiperefreshlayout transition vectordrawable viewpager viewpager2)
 
-ANDROIDX_DIRS=(
-  activity annotation autofill biometric browser collection concurrent
-  datastore documentfile drawerlayout emoji fragment graphics gridlayout
-  loader palette preference print savedstate slidingpanelayout startup
-  swiperefreshlayout transition vectordrawable viewpager viewpager2
-)
+CONF="$REPO_ROOT/tests/fixtures/fixtures.conf"
+if [[ ! -f "$CONF" ]]; then
+  echo "Error: $CONF not found" >&2
+  exit 1
+fi
+
+while IFS='|' read -r name url rest; do
+  name="${name// /}"
+  [[ -z "$name" || "$name" == \#* ]] && continue
+  PROJECTS["tests/fixtures/$name"]="$name"
+  case "$name" in
+    compose-samples) DISPLAY_NAMES["tests/fixtures/$name"]="compose-samples (6 apps)" ;;
+    androidx)        DISPLAY_NAMES["tests/fixtures/$name"]="androidx (26 modules)" ;;
+  esac
+done < "$CONF"
 
 # ── Helpers ──
 

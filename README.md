@@ -41,18 +41,19 @@ ktlint-rs --reporter=json **/*.kt
 
 | Project | Files | Lines | Violations(rs/jvm) | Rules(rs/jvm) | FilesHit(rs/jvm) | Time(rs/jvm) | Speedup |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| demo-gradle | 8 | 162 | 81 / 167 | 17 / 18 | 6 / 6 | 0.01s / 1.75s | **194x** |
-| nowinandroid | 350 | 31,021 | 4,419 / 1,038 | 40 / 21 | 310 / 206 | 0.17s / 3.37s | **20x** |
-| compose-samples (6 apps) | 380 | 46,586 | 4,937 / 13 | 34 / 10 | 355 / 7 | 0.21s / 5.11s | **25x** |
-| okhttp | 569 | 131,098 | 26,261 / 18 | 45 / 14 | 524 / 8 | 0.58s / 7.23s | **12x** |
-| androidx (26 modules) | 1,271 | 266,549 | 49,009 / 33,731 | 53 / 45 | 1,271 / 1,052 | 1.11s / 10.70s | **10x** |
+| demo-gradle | 8 | 162 | 81 / 167 | 17 / 18 | 6 / 6 | 0.01s / 1.87s | **208x** |
+| nowinandroid | 350 | 31,021 | 4,419 / 1,038 | 40 / 21 | 310 / 206 | 0.19s / 3.48s | **18x** |
+| compose-samples (6 apps) | 380 | 46,586 | 4,937 / 13 | 34 / 10 | 355 / 7 | 0.19s / 3.66s | **20x** |
+| okhttp | 569 | 131,098 | 26,261 / 18 | 45 / 14 | 524 / 8 | 0.62s / 6.20s | **10x** |
+| androidx (26 modules) | 1,271 | 266,549 | 49,009 / 33,731 | 53 / 45 | 1,271 / 1,052 | 0.84s / 9.16s | **11x** |
+| ktor | 2,478 | 273,869 | 48,367 / 355 | 47 / 27 | 2,307 / 80 | 2.57s / 9.42s | **4x** |
 
 | Metric | ktlint-rs | ktlint JVM |
 |---|---|---|
-| **Total violations** | 84,707 | 34,967 |
-| **Unique rules triggered** | 71 | 54 |
-| **Total files with violations** | 2,460 | 1,273 |
-| **Total time** | 2.08s | 28.16s |
+| **Total violations** | 133,074 | 35,322 |
+| **Unique rules triggered** | 74 | 54 |
+| **Total files with violations** | 4,773 | 1,358 |
+| **Total time** | 4.41s | 33.77s |
 
 > Benchmarked 2026-07-12 with `scripts/bench.sh --release`. Raw data in `bench_results.tsv`.
 
