@@ -183,149 +183,307 @@ These exist in rs but not as separate JVM rules (subset, combined, or internal):
 
 ---
 
-## Part 3: detekt Static Analysis Rules (Phase 8-9)
+## Part 3: detekt Native Rules — Full Inventory (226 rules)
 
-> detekt wraps ktlint via `detekt-rules-ktlint-wrapper` for formatting.
-> Below are detekt's NATIVE rules (code quality, not formatting).
+> Source: [detekt 2.0.0-alpha.0 docs](https://detekt.dev/docs/2.0.0-alpha.0/rules/)
+> **Excluded**: `formatting` and `ktlint` rule sets — these are ktlint wrappers, already covered by Part 1.
+> **Overlap**: ~8 rules already ✅ in ktlint-rs (MaxLineLength, NoWildcardImports, NoSemicolons, Filename, etc.)
 
-### style (~45 rules)
+### comments (9 rules)
 
-| Rule ID | Priority | Notes |
+| Rule ID | Active | Type Resolution |
 |---|---|---|
-| `MagicNumber` | High | CST-based (detect literal numbers) |
-| `UseCheckOrError` | High | `throw IllegalStateException` → `error()` |
-| `UseRequire` | High | `throw IllegalArgumentException` → `require()` |
-| `CollapsibleIfStatements` | Medium | Nested if → combined condition |
-| `DataClassShouldBeImmutable` | Medium | Detect `var` in data classes |
-| `UnnecessaryAbstractClass` | Medium | No abstract members → concrete |
-| `CanBeNonNullable` | Medium | Redundant nullability |
-| `RedundantExplicitType` | Medium | Needs type resolution ❗ |
-| `UnnecessaryFullyQualifiedName` | Low | Needs type resolution ❗ |
-| `NoTabs` | Low | Already partly covered by spacing rules |
-| `ForbiddenComment` | Low | Pattern match |
-| `LoopWithTooManyJumpStatements` | Low | Control flow analysis |
-| `MaxLineLength` | — | Already ✅ in ktlint-rs |
-| `NoWildcardImports` | — | Already ✅ in ktlint-rs |
-| `NoUnusedImports` | — | Already ✅ in ktlint-rs |
-| `NoSemicolons` | — | Already ✅ in ktlint-rs |
-| `Filename` | — | Already ✅ in ktlint-rs |
-| _...remaining ~30 style rules_ | TBD | Needs full rule list extraction |
+| `AbsentOrWrongFileLicense` | No | — |
+| `CommentOverPrivateFunction` | No | — |
+| `DeprecatedBlockTag` | No | — |
+| `EndOfSentenceFormat` | No | — |
+| `KDocReferencesNonPublicProperty` | No | ❗ |
+| `OutdatedDocumentation` | No | ❗ |
+| `UndocumentedPublicClass` | No | ❗ |
+| `UndocumentedPublicFunction` | No | ❗ |
+| `UndocumentedPublicProperty` | No | ❗ |
 
-### complexity (~10 rules)
+### complexity (15 rules)
 
-| Rule ID | Priority | Notes |
+| Rule ID | Active | Type Resolution |
 |---|---|---|
-| `CognitiveComplexMethod` | Medium | Needs control flow graph |
-| `LongMethod` | Medium | LOC count |
-| `LargeClass` | Medium | Member count |
-| `NestedBlockDepth` | Medium | AST depth count |
-| `CyclomaticComplexity` | Medium | Branch count |
-| `LongParameterList` | Medium | Parameter count |
-| `ComplexCondition` | Low | Boolean expression complexity |
-| `StringLiteralDuplication` | Low | String comparison |
-| `TooManyFunctions` | Low | Function count per file/class |
-| `ComplexInterface` | Low | Method count |
+| `CognitiveComplexMethod` | Yes | — |
+| `ComplexCondition` | Yes | — |
+| `ComplexInterface` | Yes | — |
+| `CyclomaticComplexMethod` | Yes | — |
+| `LabeledExpression` | No | — |
+| `LargeClass` | Yes | — |
+| `LongMethod` | Yes | — |
+| `LongParameterList` | Yes | ❗ |
+| `MethodOverloading` | Yes | — |
+| `NamedArguments` | No | ❗ |
+| `NestedBlockDepth` | Yes | — |
+| `NestedScopeFunctions` | No | — |
+| `ReplaceSafeCallChainWithRun` | No | — |
+| `StringLiteralDuplication` | Yes | — |
+| `TooManyFunctions` | Yes | ❗ |
 
-### exceptions (~12 rules)
+### coroutines (8 rules)
 
-| Rule ID | Priority | Notes |
+| Rule ID | Active | Type Resolution |
 |---|---|---|
-| `TooGenericExceptionCaught` | High | Catch `Exception` / `Throwable` |
-| `SwallowedException` | Medium | Empty catch with no logging |
-| `ThrowingExceptionsWithoutOrCause` | Medium | Re-throw without wrapping |
-| `InstanceOfCheckForException` | Low | |
-| `NotImplementedDeclaration` | Low | `TODO()` body |
-| _...remaining ~7 rules_ | TBD | |
+| `CoroutineLaunchedInTestWithoutRunTest` | Yes | ❗ |
+| `GlobalCoroutineUsage` | Yes | ❗ |
+| `InjectDispatcher` | No | — |
+| `RedundantSuspendModifier` | Yes | ❗ |
+| `SleepInsteadOfDelay` | Yes | ❗ |
+| `SuspendFunSwallowedCancellation` | Yes | ❗ |
+| `SuspendFunWithCoroutineScopeReceiver` | No | ❗ |
+| `SuspendFunWithFlowReturnType` | No | ❗ |
 
-### naming (~15 rules)
+### empty-blocks (14 rules)
 
-| Rule ID | Priority | Notes |
+| Rule ID | Active | Type Resolution |
 |---|---|---|
-| `BooleanPropertyNaming` | Medium | `is`/`has` prefix |
-| `MatchingDeclarationName` | Medium | Class name ≠ file name |
-| `VariableNaming` | Medium | Pattern-based |
-| `FunctionParameterNaming` | Low | |
-| `ObjectPropertyNaming` | Low | |
-| `TopLevelPropertyNaming` | Low | |
-| _...remaining ~9 rules_ | TBD | |
+| `EmptyCatchBlock` | Yes | — |
+| `EmptyClassBlock` | Yes | — |
+| `EmptyDoWhileBlock` | Yes | — |
+| `EmptyElseBlock` | Yes | — |
+| `EmptyFinallyBlock` | Yes | — |
+| `EmptyForBlock` | Yes | — |
+| `EmptyFunctionBlock` | Yes | — |
+| `EmptyIfBlock` | Yes | — |
+| `EmptyInitBlock` | Yes | — |
+| `EmptyKtFile` | Yes | — |
+| `EmptySecondaryConstructor` | Yes | — |
+| `EmptyTryBlock` | Yes | — |
+| `EmptyWhenBlock` | Yes | — |
+| `EmptyWhileBlock` | Yes | — |
 
-### performance (~7 rules)
+### exceptions (17 rules)
 
-| Rule ID | Priority | Notes |
+| Rule ID | Active | Type Resolution |
 |---|---|---|
-| `ArrayPrimitive` | Medium | `Array<Int>` → `IntArray` |
-| `SpreadOperator` | Medium | `*array` performance |
-| `UnnecessaryTemporaryInstantiation` | Low | |
-| _...remaining ~4 rules_ | TBD | |
+| `ErrorUsageWithThrowable` | Yes | — |
+| `ExceptionRaisedInCurrentContext` | Yes | ❗ |
+| `ExceptionRaisedInUnexpectedLocation` | No | ❗ |
+| `InstanceOfCheckForException` | Yes | ❗ |
+| `NotImplementedDeclaration` | Yes | — |
+| `ObjectExtendsThrowable` | Yes | — |
+| `PrintStackTrace` | Yes | — |
+| `RethrowCaughtException` | Yes | ❗ |
+| `ReturnFromFinally` | Yes | — |
+| `SwallowedException` | Yes | ❗ |
+| `ThrowingExceptionFromFinally` | Yes | — |
+| `ThrowingExceptionInMain` | No | — |
+| `ThrowingExceptionsWithoutOrCause` | Yes | ❗ |
+| `ThrowingNewInstanceOfSameException` | Yes | ❗ |
+| `TooGenericExceptionCaught` | Yes | ❗ |
+| `TooGenericExceptionThrown` | Yes | ❗ |
+| `UnusedProcessNextRuntimeException` | Yes | ❗ |
 
-### comments (~5 rules)
+### libraries (3 rules)
 
-| Rule ID | Priority | Notes |
+| Rule ID | Active | Type Resolution |
 |---|---|---|
-| `AbsentOrWrongFileLicense` | Low | Pattern match |
-| `EndOfSentenceFormat` | Low | KDoc sentence ending |
-| _...remaining ~3 rules_ | TBD | |
+| `ForbiddenPublicDataClass` | No | ❗ |
+| `LibraryCodeMustSpecifyReturnType` | No | ❗ |
+| `LibraryEntitiesShouldNotBePublic` | Yes | ❗ |
 
-### coroutines (~7 rules)
+### naming (21 rules)
 
-| Rule ID | Priority | Notes |
+| Rule ID | Active | Type Resolution |
 |---|---|---|
-| `GlobalCoroutineUsage` | High | `GlobalScope.*` detection |
-| `RedundantSuspendModifier` | Medium | No suspend calls in body |
-| `SuspendFunSwallowedCancellation` | Medium | |
-| _...remaining ~4 rules_ | TBD | |
+| `BooleanPropertyNaming` | No | — |
+| `ClassNaming` | Yes | — |
+| `ConstructorParameterNaming` | No | — |
+| `EnumNaming` | Yes | — |
+| `ForbiddenClassName` | No | — |
+| `FunctionMaxLength` | No | — |
+| `FunctionMinLength` | No | — |
+| `FunctionNaming` | Yes | — |
+| `FunctionParameterNaming` | No | — |
+| `InvalidPackageDeclaration` | Yes | — |
+| `LambdaParameterNaming` | No | — |
+| `MatchingDeclarationName` | No | — |
+| `MemberNameEqualsClassName` | No | ❗ |
+| `NoNameShadowing` | Yes | ❗ |
+| `NonBooleanPropertyPrefixedWithIs` | No | — |
+| `ObjectPropertyNaming` | No | — |
+| `PackageNaming` | Yes | — |
+| `TopLevelPropertyNaming` | No | — |
+| `VariableMaxLength` | No | — |
+| `VariableMinLength` | No | — |
+| `VariableNaming` | No | — |
 
-### empty-blocks (~4 rules)
+### performance (10 rules)
 
-| Rule ID | Priority | Notes |
+| Rule ID | Active | Type Resolution |
 |---|---|---|
-| `EmptyCatchBlock` | High | CST-based |
-| `EmptyFunctionBlock` | Medium | CST-based |
-| `EmptyIfBlock` | Medium | CST-based |
-| `EmptyElseBlock` | Medium | CST-based |
+| `ArrayPrimitive` | Yes | ❗ |
+| `CouldBeSequence` | No | ❗ |
+| `DoubleMutabilityForCollection` | No | — |
+| `ForEachOnRange` | Yes | ❗ |
+| `HashtableSize` | No | ❗ |
+| `SpreadOperator` | Yes | ❗ |
+| `UnnecessaryPartOfBinaryExpression` | Yes | — |
+| `UnnecessaryTemporaryInstantiation` | Yes | ❗ |
+| `UnnecessaryTypeCasting` | No | ❗ |
+| `UnnecessaryToString` | No | ❗ |
 
----
+### potential-bugs (39 rules)
 
-## Part 4: Implementation Priority Path
+| Rule ID | Active | Type Resolution |
+|---|---|---|
+| `AvoidDirectByteBuffer` | Yes | ❗ |
+| `AvoidReferentialEquality` | No | ❗ |
+| `AvoidUsingVolatile` | No | — |
+| `CastDueToProgressionResolution` | Yes | ❗ |
+| `CastNullableToNonNullableType` | Yes | ❗ |
+| `CastToNotNullableType` | Yes | ❗ |
+| `Deprecation` | Yes | ❗ |
+| `DontDowncastCollectionTypes` | Yes | ❗ |
+| `ElseCaseInsteadOfExhaustiveWhen` | No | — |
+| `EqualsAlwaysReturnsTrueOrFalse` | Yes | ❗ |
+| `EqualsWithHashCodeExist` | Yes | ❗ |
+| `ExitOutsideMain` | Yes | — |
+| `ExplicitGarbageCollectionCall` | Yes | — |
+| `ExpressionBodySyntax` | No | ❗ |
+| `HasPlatformType` | Yes | ❗ |
+| `IgnoredReturnValue` | Yes | ❗ |
+| `ImplicitDefaultLocale` | Yes | ❗ |
+| `ImplicitUnitReturnType` | No | ❗ |
+| `InvalidRange` | Yes | — |
+| `IteratorHasNextCallsNextMethod` | Yes | — |
+| `IteratorNotThrowingNoSuchElementException` | Yes | — |
+| `LateinitUsage` | No | — |
+| `MapGetWithNotNullAssertionOperator` | Yes | ❗ |
+| `MapOperationGrouping` | No | ❗ |
+| `MissingPackageDeclaration` | Yes | — |
+| `NullCheckOnMutableProperty` | Yes | — |
+| `NullableToStringCall` | Yes | ❗ |
+| `PropertyUsedBeforeDeclaration` | No | — |
+| `RedundantElseInWhen` | Yes | — |
+| `UnconditionalJumpStatementInLoop` | No | — |
+| `UnreachableCatchBlock` | Yes | ❗ |
+| `UnreachableCode` | Yes | — |
+| `UnsafeCallOnNullableType` | Yes | — |
+| `UnsafeCast` | Yes | — |
+| `UnusedUnaryOperator` | Yes | ❗ |
+| `UselessPostfixExpression` | Yes | ❗ |
+| `WrongEqualsTypeParameter` | Yes | ❗ |
 
-### Phase 3 (current) — ktlint parity tuning
-1. 🟡 `indentation` — fix context-aware indent (6,948 → ~15)
-2. 🟡 `blank-line-before-declaration` — top-level only
-3. ❌ `spacing-between-declarations-with-annotations`
-4. ❌ `no-consecutive-comments`
+### ruleauthors (2 rules)
 
-### Phase 5 (advanced features)
-- Baselines
-- Git hooks
+| Rule ID | Active | Type Resolution |
+|---|---|---|
+| `ForbiddenSuppress` | No | — |
+| `UseEntityAtCurrentDirectory` | No | — |
 
-### Phase 6 (testing)
-- Parity regression tests
-- Benchmark suite
+### style (88 rules)
 
-### Phase 8 — High-value detekt rules (no type resolution needed)
-1. `MagicNumber`
-2. `UseCheckOrError` / `UseRequire`
-3. `CollapsibleIfStatements`
-4. `EmptyCatchBlock` / `EmptyFunctionBlock` / `EmptyIfBlock`
-5. `TooGenericExceptionCaught`
-6. `GlobalCoroutineUsage`
-7. `DataClassShouldBeImmutable`
+| Rule ID | Active | Type Resolution |
+|---|---|---|
+| `AbstractClassCanBeConcreteClass` | Yes | ❗ |
+| `AlsoCouldBeApply` | No | — |
+| `BracesOnIfStatements` | No | — |
+| `BracesOnWhenStatements` | No | — |
+| `CanBeNonNullable` | Yes | ❗ |
+| `CascadingCallWrapping` | No | — |
+| `ClassOrdering` | No | ❗ |
+| `CollapsibleIfStatements` | Yes | — |
+| `ConstructorParameterOrdering` | No | — |
+| `DataClassContainsFunctions` | Yes | ❗ |
+| `DataClassShouldBeImmutable` | No | ❗ |
+| `DestructuringDeclarationWithTooManyEntries` | Yes | — |
+| `DoubleNegativeLambda` | No | ❗ |
+| `EqualsNullCall` | No | — |
+| `EqualsOnSignatureLine` | No | — |
+| `ExplicitCollectionElementAccessMethod` | No | ❗ |
+| `ExplicitItLambdaParameter` | No | — |
+| `ExpressionBodySyntax` | No | ❗ |
+| `ForbiddenAnnotation` | No | ❗ |
+| `ForbiddenComment` | No | — |
+| `ForbiddenImport` | No | — |
+| `ForbiddenMethodCall` | No | ❗ |
+| `ForbiddenSuppress` | No | — |
+| `ForbiddenVoid` | Yes | — |
+| `FunctionOnlyReturningConstant` | Yes | ❗ |
+| `LoopWithTooManyJumpStatements` | Yes | — |
+| `MagicNumber` | Yes | ❗ |
+| `Mandelbrot` | No | — |
+| `MaxChainedCallsOnSameLine` | No | — |
+| `MayBeConst` | No | ❗ |
+| `ModifierOrder` | No | ❗ |
+| `MultilineLambdaItParameter` | No | — |
+| `MultilineRawStringIndentation` | No | — |
+| `NewLineAtEndOfFile` | Yes | — |
+| `NoTabs` | No | — |
+| `NullableBooleanProperty` | No | — |
+| `ObjectLiteralToLambda` | No | ❗ |
+| `OptionalAbstractKeyword` | No | — |
+| `OptionalUnit` | No | — |
+| `OptionalWhenBraces` | No | — |
+| `PreferToOverPairSyntax` | No | ❗ |
+| `ProtectedMemberInFinalClass` | Yes | ❗ |
+| `RedundantVisibilityModifierRule` | No | ❗ |
+| `ReturnCount` | No | — |
+| `SerialVersionUIDInSerializableClass` | No | ❗ |
+| `SpacingBetweenPackageAndImports` | No | — |
+| `ThrowsCount` | No | — |
+| `TrailingWhitespace` | No | — |
+| `TrimMultilineRawString` | No | — |
+| `UnderscoresInNumericLiterals` | No | — |
+| `UnnecessaryAnnotationUseSiteTarget` | No | — |
+| `UnnecessaryApply` | No | ❗ |
+| `UnnecessaryBackticks` | No | — |
+| `UnnecessaryBracesInTrailingLambda` | No | — |
+| `UnnecessaryFilter` | No | ❗ |
+| `UnnecessaryInnerClass` | No | ❗ |
+| `UnnecessaryLet` | No | ❗ |
+| `UnnecessaryMixIn` | No | ❗ |
+| `UnnecessaryStringReplaceAll` | No | ❗ |
+| `UntilInsteadOfRangeTo` | No | ❗ |
+| `UnusedParameter` | No | ❗ |
+| `UnusedPrivateClass` | Yes | ❗ |
+| `UnusedPrivateFunction` | No | ❗ |
+| `UnusedPrivateProperty` | Yes | ❗ |
+| `UseAnyOrNoneInsteadOfFind` | No | ❗ |
+| `UseArrayLiteralsInAnnotations` | Yes | — |
+| `UseCheckNotNull` | No | ❗ |
+| `UseCheckOrError` | Yes | ❗ |
+| `UseChunkedInsteadOfWindowedWithSameParam` | No | ❗ |
+| `UseDataClass` | No | ❗ |
+| `UseEmptyCounterpart` | No | — |
+| `UseEmptyRequestBody` | No | ❗ |
+| `UseIfInsteadOfWhen` | No | — |
+| `UseIsNullOrEmpty` | Yes | ❗ |
+| `UseLet` | No | ❗ |
+| `UseOrEmpty` | No | ❗ |
+| `UseRequire` | Yes | ❗ |
+| `UseRequireNotNull` | Yes | ❗ |
+| `UseSumOfInsteadOfFlatMapSize` | No | ❗ |
+| `UtilityClassWithPublicConstructor` | Yes | — |
+| `VarCouldBeVal` | Yes | ❗ |
 
-### Phase 9 — Harder detekt rules (type resolution / control flow)
-- `RedundantExplicitType`, `UnnecessaryFullyQualifiedName`
-- `CognitiveComplexMethod`, `CyclomaticComplexity`
-- `BooleanPropertyNaming`, `VariableNaming`
-
-> ⚠️ **Major risk**: Many detekt rules require Kotlin compiler type resolution (Detekt 2.0+). Pure Rust implementation may need alternative approaches or FFI bindings.
+> ⚠️ **Type Resolution requirement**: 116/226 rules (~51%) need Kotlin compiler type resolution.
+> Pure Rust implementation may need alternative approaches or FFI bindings for these.
 
 ---
 
 ## Summary
 
-| Layer | Total | ✅ Done | 🟡 Needs Tuning | ❌ Missing |
+| Layer | Total | ✅ Done | 🟡 Needs Tuning | ❌ Missing
 |---|---|---|---|---|
 | ktlint standard (JVM) | 105 | 61 | 3 | 41 |
 | ktlint-rs-only | 18 | 18 | 0 | 0 |
-| detekt style | ~45 | ~5 | 0 | ~40 |
-| detekt other | ~60 | 0 | 0 | ~60 |
-| **Total** | **~228** | **84** | **3** | **~141** |
+| detekt comments | 9 | 0 | 0 | 9 |
+| detekt complexity | 15 | 0 | 0 | 15 |
+| detekt coroutines | 8 | 0 | 0 | 8 |
+| detekt empty-blocks | 14 | 0 | 0 | 14 |
+| detekt exceptions | 17 | 0 | 0 | 17 |
+| detekt libraries | 3 | 0 | 0 | 3 |
+| detekt naming | 21 | 0 | 0 | 21 |
+| detekt performance | 10 | 0 | 0 | 10 |
+| detekt potential-bugs | 39 | 0 | 0 | 39 |
+| detekt ruleauthors | 2 | 0 | 0 | 2 |
+| detekt style | 88 | ~5 | 0 | ~83 |
+| **Total** | **349** | **~84** | **3** | **~262** |
+
+> Note: detekt `formatting` and `ktlint` rule sets excluded (ktlint wrappers).
+> ~8 detekt rules overlap with ktlint-rs (MaxLineLength, NoWildcardImports, etc.).
