@@ -199,6 +199,11 @@ impl RuleEngine {
             // disabled // disabled
             // disabled
             // disabled
+            Box::new(phase3b_rules::NoEmptyFile),
+            Box::new(phase3b_rules::FunctionSignatureSpacing),
+            Box::new(phase3b_rules::FunctionExpressionBody),
+            Box::new(phase3b_rules::KeywordSpacing),
+            Box::new(phase3b_rules::ParameterListSpacingRule),
         ];
         Self {
             config: config.clone(),
