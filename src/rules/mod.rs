@@ -3,7 +3,6 @@
 use crate::config::KtlintConfig;
 use tree_sitter::Tree;
 
-pub mod compat;
 pub mod imports;
 pub mod naming;
 pub mod new_rules;

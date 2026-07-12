@@ -24,7 +24,6 @@ pub struct KtlintConfig {
     pub max_line_length: usize,
     pub insert_final_newline: bool,
     pub trim_trailing_whitespace: bool,
-    pub compat_mode: bool,
 }
 
 impl Default for KtlintConfig {
@@ -41,7 +40,6 @@ impl Default for KtlintConfig {
             max_line_length: 0,
             insert_final_newline: true,
             trim_trailing_whitespace: true,
-            compat_mode: false,
         }
     }
 }
@@ -255,12 +253,6 @@ impl KtlintConfig {
             .to_path_buf();
         Ok(config)
     }
-    /// Load config for a specific file with compat mode.
-    pub fn load_for_file_compat(file_path: &Path, compat: bool) -> anyhow::Result<Self> {
-        let mut config = Self::load_for_file(file_path)?;
-        config.compat_mode = compat;
-        Ok(config)
-    }
 
     fn apply_editorconfig(&mut self, map: &HashMap<String, String>) {
         for (key, value) in map.iter() {
@@ -328,18 +320,11 @@ impl KtlintConfig {
 
     /// Check whether a rule is enabled.
     pub fn is_rule_enabled(&self, rule_id: &str) -> bool {
-        if self.compat_mode {
-            // In compat mode: code_style still applies, then whitelist
-            if self.code_style.is_rule_disabled(rule_id) {
-                return false;
-            }
-            return self.rules.get(rule_id).map(|r| r.enabled).unwrap_or(false);
+        if self.code_style.is_rule_disabled(rule_id) {
+            return false;
         }
         if let Some(rule_config) = self.rules.get(rule_id) {
             return rule_config.enabled;
-        }
-        if self.code_style.is_rule_disabled(rule_id) {
-            return false;
         }
         true
     }

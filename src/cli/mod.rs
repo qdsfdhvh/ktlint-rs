@@ -30,9 +30,6 @@ pub struct Cli {
     #[arg(long)]
     pub baseline: Option<String>,
 
-    /// JVM ktlint compatibility mode (disables ktlint-rs-only rules)
-    #[arg(long)]
-    pub compat: bool,
 
     /// Maximum number of errors to show
     #[arg(long)]

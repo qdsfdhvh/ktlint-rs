@@ -23,8 +23,6 @@ fn main() -> anyhow::Result<()> {
     let default_config = KtlintConfig::load(&cli)?;
     let files = FileCollector::new(&cli, &default_config).collect()?;
 
-    let use_compat = cli.compat || std::env::var("KTLINT_COMPAT").is_ok();
-
     let all_violations: Vec<Violation> = files
         .par_iter()
         .flat_map(|path| {
@@ -32,17 +30,9 @@ fn main() -> anyhow::Result<()> {
             let mut parser = KotlinParser::new();
             let tree = parser.parse(&source);
             let config =
-                KtlintConfig::load_for_file_compat(path, use_compat).unwrap_or_else(|_| default_config.clone());
-            let violations = if use_compat {
-                rules::compat::KtlintCompatEngine::new(&config).check(
-                    &path.to_string_lossy(),
-                    &tree,
-                    &source,
-                )
-            } else {
-                let engine = RuleEngine::new(&config);
-                engine.check(&path.to_string_lossy(), &tree, &source)
-            };
+                KtlintConfig::load_for_file(path).unwrap_or_else(|_| default_config.clone());
+            let engine = RuleEngine::new(&config);
+            let violations = engine.check(&path.to_string_lossy(), &tree, &source);
             rules::suppress::filter_suppressed(violations, &source)
         })
         .collect();
