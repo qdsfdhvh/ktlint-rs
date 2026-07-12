@@ -37,17 +37,17 @@ ktlint --reporter=json **/*.kt
 
 ## Performance
 
-**Speed** (Apple M2 Pro, 380 Kotlin files, 46,586 lines — Google compose-samples):
+**Speed** (Apple M2 Pro):
 
-| Metric | ktlint-rs | JVM ktlint |
-|---|---|---|
-| Time | **0.30s** | 7.96s (26⨉ slower) |
-| Startup | <50ms | ~2s |
-| Violations | **5,348** | 13 |
-| Rules active | **78** | ~80 |
+| Project | Files | Lines | ktlint-rs | JVM | Time (rs / JVM) |
+|---|---|---|---|---|---|
+| nowinandroid | 350 | 31,021 | 9,901 | 1,038 | 0.26s / 6.71s |
+| compose-samples | 380 | 46,586 | **5,348** | 13 | 0.30s / 7.96s |
+| okhttp | 569 | 131,098 | 40,632 | 18 | 1.19s / 11.5s |
+| androidx | 1,271 | 266,549 | 86,591 | 33,731 | 1.07s / 10.6s |
 
-> ⚠️ ktlint-rs reports more violations because many newly-registered rules are strict
-> by default. Tune via `.editorconfig`: `ktlint_standard_<id> = disabled`.
+> ⚠️ compose-samples refreshed 2026-07-12 (post dedup fix).
+> nowinandroid / okhttp / androidx numbers from v0.2.0 — pending re-benchmark.
 
 ## Rule Coverage
 
