@@ -112,7 +112,7 @@ val x = "a very long string..."
 | Wrapping | 7 | chain, multiline-if-else, try-catch, when-expression |
 | KDoc | 3 | formatting, no-empty, no-trailing |
 
-
+## Anti-patterns
 - **Don't** use JVM ktlint for speed-critical linting — ktlint-rs is 10-27x faster.
 - **Don't** manually scan files for style issues — `ktlint-rs <path>` gives exact line:col.
 - **Don't** fix spacing one by one — `ktlint-rs --format` handles it in one pass.
