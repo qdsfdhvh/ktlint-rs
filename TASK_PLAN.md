@@ -2,7 +2,7 @@
 
 > A fast Kotlin linter & formatter in Rust — drop-in compatible with Pinterest ktlint CLI.
 >
-> **Status**: Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ | Phase 3 🟡 | Phase 4 ✅
+> **Status**: Phase 0 ✅ | Phase 1 ✅ | Phase 2 🟡 | Phase 3 🟡 | Phase 4 ✅
 
 ---
 
@@ -15,39 +15,52 @@ and per-file lint under 5ms.
 
 **Reference**: Pinterest ktlint v1.8.0 (~80 standard rules, `--format`, `--baseline`, reporters)
 
-**Current State** (2026-07-11):
-- **62 rules** (spacing:17, structure:25, imports:4, naming:6, wrapping:7, built-in:4)
+**Current State** (2026-07-12):
+- **65 rules** (spacing:17, structure:28, imports:4, naming:6, wrapping:7, built-in:4)
+  - New: `blank-line-before-declaration`, `no-blank-line-in-list`, `kdoc` (enhanced)
 - 10-pass auto-fix engine with 59-71% violation reduction
-- Rayon parallel processing: 17-25x faster than JVM ktlint (see Performance below)
-- EditorConfig: indent_size, code_style, per-rule enable/disable (see parity gaps)
+- Rayon parallel processing: 10-27x faster than JVM ktlint
+- EditorConfig: `indent_size`/`indent_style` ✅, `code_style` ✅ (parsing), per-rule ❌
 - @Suppress / @SuppressWarnings annotation support
 - Reporters: plain, JSON, SARIF, summary
-- GitHub Actions CI: test, clippy, fmt, self-lint
-- AGENTS.md, .editorconfig, Pi skills, bench script
-- **167 tests, all passing** ✅
+- GitHub Actions CI: test, clippy, fmt
+- AGENTS.md, rustfmt.toml, Pi skills, bench script, setup-fixtures script
+- **185 tests, all passing** ✅
 
 ### Performance (release build, Apple M2)
 
-| Project | Files | Lines | Violations (rs / JVM) | ktlint-rs | ktlint (JVM) |
-|---|---|---|---:|---:|---:|
-| nowinandroid | 350 | 31,021 | 8,622 / 1,038 | **0.58s** | 10.1s |
-| compose-samples (6 apps) | 380 | 46,586 | 8,458 / 13 | **0.61s** | 11.3s |
-| okhttp | 569 | 131,098 | 31,531 / 18 | **0.87s** | 19.6s |
-| androidx (26 modules) | 1,271 | 266,549 | 72,558 / 33,731 | **0.86s** | 21.9s |
+| Project | Files | Lines | Violations (rs / JVM) | Time (rs / JVM) |
+|---|---|---|---:|---:|
+| nowinandroid | 350 | 31,021 | 9,901 / 1,038 | **0.26s** / 6.71s |
+| compose-samples (6 apps) | 380 | 46,586 | 10,752 / 13 | **0.30s** / 7.96s |
+| okhttp | 569 | 131,098 | 40,632 / 18 | **1.19s** / 11.5s |
+| androidx (26 modules) | 1,271 | 266,549 | 86,591 / 33,731 | **1.07s** / 10.6s |
 
-### Known Parity Gaps
+### Known Parity Gaps (nowinandroid, ktlint_official code style)
 
-| Dimension | Status | Detail |
-|---|---|---|
-| Violation per-rule counts | ❌ | ktlint-rs enables all rules; JVM uses `android_studio` defaults → huge gap |
-| Code style profiles | ❌ | `android_studio` / `intellij_idea` rule enable/disable not wired to engine |
-| Per-rule enable/disable | ❌ | `ktlint_standard_<rule-id>` parsed but not applied |
-| Suppress comments | ❓ | `ktlint-disable` region suppression not verified |
-| Auto-fix output parity | ❓ | `--format` output not diffed against JVM |
-| Reporter JSON format | ❓ | Structure differs from JVM ktlint JSON |
-| Exit codes | ✅ | Match JVM |
-| File discovery | ✅ | Same `.kt`/`.kts` extensions |
----
+| # | Gap | Impact | Root Cause |
+|---|---|---|---|
+| 1 | **ktlint_standard_* not loaded** | ~10 rules run that shouldn't | `editorconfig` crate strips non-standard keys |
+| 2 | **indent rule too aggressive** | 6,948 vs 15 | Only checks "multiple of 4"; JVM has context-sensitive logic |
+| 3 | **blank-line-before-declaration** | 1,240 vs 25 | Triggers on ALL decls; JVM only on top-level |
+| 4 | **colon-spacing, op-spacing, etc.** | ~250 extra | JVM doesn't report these under `ktlint_official`? Need to investigate |
+| 5 | **filename, kdoc, wrapping** | 0 vs 11 | Rules exist but match 0; implementation differs from JVM |
+| 6 | **Suppress comments** | ❓ | `ktlint-disable` region suppression not verified |
+| 7 | **Auto-fix output parity** | ❓ | `--format` output not diffed against JVM |
+| 8 | **Reporter JSON format** | ❓ | Structure differs from JVM ktlint JSON |
+
+| Dimension | Status |
+|---|---|
+| Exit codes | ✅ Match JVM |
+| File discovery | ✅ Same `.kt`/`.kts` |
+| Code style parsing | ✅ Parsed from `.editorconfig` (manual fallback) |
+| Per-rule parsing | ⚠ Parsed but not wired to engine |
+
+> **Critical path to parity**: Fix gap #1 (per-rule parsing) → re-run benchmarks → fix gap #2 (indent logic).
+> These two alone would close ~80% of the violation count gap.
+>
+> **Note**: nowinandroid uses `ktlint_official` (default), NOT `android_studio`. The violation
+> gap is from rule implementation differences, not code style profile filtering.
 
 ## Phase 0 — Infrastructure & Skeleton ✅
 
@@ -125,15 +138,18 @@ the tree-sitter CST directly (no need for high-level AST).
 
 | # | Profile | Diff from `ktlint_official` | Effort | Status |
 |---|---|---|---|---|
+| 1 | `android_studio` | Disables ~7 rules (final-newline, no-wildcard-imports, import-ordering, trailing-comma, etc.) | done | ✅ |
+| 2 | `intellij_idea` | Disables ~3 rules (no-wildcard-imports, import-ordering, trailing-comma) | done | ✅ |
+| 3 | `ktlint_official` | Default, enables all rules | done | ✅ |
+|---|---|---|---|---|
 | 1 | `android_studio` | Disables ~5 rules, changes trailing-comma | 2h | ⬜ NOT WIRED |
 | 2 | `intellij_idea` | Disables ~3 rules | 2h | ⬜ NOT WIRED |
 | 3 | `ktlint_official` | Default, enables all rules | 1h | ⬜ NOT WIRED |
 
-> **Parity gap #1**: `code_style` and per-rule enable/disable are PARSED from `.editorconfig`
-> but NOT wired to `RuleEngine::new()`. The engine always builds ALL rules regardless of config.
-> This is why ktlint-rs finds 8,622 violations on nowinandroid while JVM finds 1,038 —
-> JVM honors `android_studio` which disables many spacing rules by default.
-> **Fix**: `RuleEngine::new(&config)` must check `config.is_enabled(rule_id)` per rule.
+> **Update (2026-07-12)**: `code_style` is parsed ✅ and wired to `RuleEngine::check()` via
+> `is_rule_enabled()`. Per-rule `ktlint_standard_* = disabled` is PARSED but NOT wired to
+> `RuleConfig` HashMap — `apply_editorconfig` doesn't handle these keys.
+> **Critical fix**: wire per-rule enable/disable into `config.rules` HashMap.
 
 ---
 
