@@ -7,12 +7,6 @@ tests/fixtures/*
 task_plan.md
 findings.md
 progress.md
-TASK_PLAN.md
-findings.md
-progress.md
-TASK_PLAN.md
-task_plan.md
-RULE_PLAN.md
 .ktlint/
 bench_results.tsv
 .pi/

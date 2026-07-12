@@ -44,6 +44,48 @@ find_ktlint_cmd() {
 
 KTLINT_JVM_CMD=$(find_ktlint_cmd)
 run_jvm() { $KTLINT_JVM_CMD "$@"; }
+# ── detekt (optional) ──
+find_detekt_cmd() {
+  if [[ -x /opt/homebrew/bin/detekt ]]; then
+    echo /opt/homebrew/bin/detekt
+    return
+  fi
+  # jar download
+  local jar
+  jar=$(ls -1t "$REPO_ROOT/.ktlint/detekt-cli-"*.jar 2>/dev/null | head -1 || true)
+  if [[ -n "$jar" ]]; then
+    echo "java -jar $jar"
+    return
+  fi
+  echo ""
+}
+DETEKT_CMD=$(find_detekt_cmd)
+ensure_detekt_config() {
+  local cfg="$REPO_ROOT/.ktlint/detekt-config.yml"
+  if [[ -f "$cfg" ]]; then return; fi
+  mkdir -p "$(dirname "$cfg")"
+  cat > "$cfg" << 'ENDCONFIG'
+build:
+  maxIssues: 999999
+config:
+  validation: false
+ENDCONFIG
+}
+run_detekt() {
+  if [[ -z "$DETEKT_CMD" ]]; then
+    echo "(detekt not installed)" >&2
+    return 1
+  fi
+  ensure_detekt_config
+  $DETEKT_CMD --config "$REPO_ROOT/.ktlint/detekt-config.yml" --all-rules "$@" 2>&1 || true
+}
+run_detekt() {
+  if [[ -z "$DETEKT_CMD" ]]; then
+    echo "(detekt not installed)" >&2
+    return 1
+  fi
+  $DETEKT_CMD "$@" 2>&1 || true
+}
 # ── Versions ──
 echo "ktlint-rs: $($KTLINT_RS --version 2>&1 | head -1)"
 echo "ktlint JVM: $(run_jvm --version 2>&1 | head -1)"
@@ -139,6 +181,9 @@ time_run() {
   TIMEFORMAT='%R'
   if [[ "$tool" == "rs" ]]; then
     { time "$KTLINT_RS" "$@" > /dev/null 2>&1; } 2>&1
+  elif [[ "$tool" == "detekt" ]]; then
+    ensure_detekt_config
+    { time $DETEKT_CMD --config "$REPO_ROOT/.ktlint/detekt-config.yml" --all-rules "$@" > /dev/null 2>&1; } 2>&1
   else
     { time run_jvm "$@" > /dev/null 2>&1; } 2>&1
   fi
@@ -149,6 +194,9 @@ exit_code_of() {
   local rc=0
   if [[ "$tool" == "rs" ]]; then
     "$KTLINT_RS" "$@" > /dev/null 2>&1 || rc=$?
+  elif [[ "$tool" == "detekt" ]]; then
+    ensure_detekt_config
+    $DETEKT_CMD --config "$REPO_ROOT/.ktlint/detekt-config.yml" --all-rules "$@" > /dev/null 2>&1 || rc=$?
   else
     run_jvm "$@" > /dev/null 2>&1 || rc=$?
   fi
@@ -158,7 +206,7 @@ exit_code_of() {
 # ── CSV/TSV output file ──
 BENCH_OUT="$REPO_ROOT/bench_results.tsv"
 {
-  printf "project\tfiles\tlines\trs_violations\tjvm_violations\trs_rules\tjvm_rules\trs_files_hit\tjvm_files_hit\trs_time\tjvm_time\trs_exit\tjvm_exit\n"
+  printf "project\tfiles\tlines\trs_violations\tjvm_violations\tdetekt_violations\trs_rules\tjvm_rules\tdetekt_rules\trs_files_hit\tjvm_files_hit\trs_time\tjvm_time\tdetekt_time\trs_exit\tjvm_exit\tdetekt_exit\n"
 } > "$BENCH_OUT"
 
 echo "======= Benchmarks ======="
@@ -189,6 +237,7 @@ for fixture_path in "${!PROJECTS[@]}"; do
   # ── Run lint once per tool, capture all output ──
   rs_out=$("$KTLINT_RS" "${dirs[@]}" 2>&1) || true
   jvm_out=$(run_jvm "${dirs[@]}" 2>&1) || true
+  detekt_out=$(run_detekt --input "${full_path}" 2>&1) || true
 
   # ── Derive metrics ──
   rs_v=$(echo "$rs_out"  | extract_violations | wc -l | tr -d ' ')
@@ -197,23 +246,33 @@ for fixture_path in "${!PROJECTS[@]}"; do
   jvm_ur=$(echo "$jvm_out" | count_unique_rules)
   rs_fv=$(echo "$rs_out" | count_files_with_violations)
   jvm_fv=$(echo "$jvm_out" | count_files_with_violations)
+  # detekt: count lines like "path.kt:line:col: ... [RuleName]"
+  detekt_v=$(echo "$detekt_out" | grep -cE '\.kt:\d+:\d+:.*\[' 2>/dev/null || echo 0)
+  detekt_v=${detekt_v:-0}
+  detekt_ur=$(echo "$detekt_out" | grep -oE '\[([A-Z][a-zA-Z]+)\]' 2>/dev/null | sed 's/^\[//;s/\]$//' | sort -u | wc -l | tr -d ' ')
+  detekt_ur=${detekt_ur:-0}
+  detekt_fv=$(echo "$detekt_out" | grep -oE '^[^ ]+\.kt:' 2>/dev/null | sed 's/:$//' | sort -u | wc -l | tr -d ' ')
+  detekt_fv=${detekt_fv:-0}
 
   # ── Time (separate dry-run for accurate wall-clock) ──
   rs_t=$(time_run rs "${dirs[@]}" 2>/dev/null) || true
   jvm_t=$(time_run jvm "${dirs[@]}" 2>/dev/null) || true
+  detekt_t=$(time_run detekt --input "${full_path}" 2>/dev/null) || true
+  detekt_t=${detekt_t:-0}
 
   # ── Exit codes ──
   rs_rc=$(exit_code_of rs "${dirs[@]}" 2>/dev/null)
   jvm_rc=$(exit_code_of jvm "${dirs[@]}" 2>/dev/null)
+  detekt_rc=$(exit_code_of detekt --input "${full_path}" 2>/dev/null) || true
+  detekt_rc=${detekt_rc:-0}
 
   # ── Per-rule parity (save to temp for reuse) ──
   safe="${fixture_path//\//_}"
   echo "$rs_out"  | per_rule_breakdown > "$RULE_TMPDIR/${safe}_rs"
   echo "$jvm_out" | per_rule_breakdown > "$RULE_TMPDIR/${safe}_jvm"
 
-  # ── Append TSV row ──
-  printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
-    "$name" "$files" "$lines" "$rs_v" "$jvm_v" "$rs_ur" "$jvm_ur" "$rs_fv" "$jvm_fv" "$rs_t" "$jvm_t" "$rs_rc" "$jvm_rc" \
+  printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+    "$name" "$files" "$lines" "$rs_v" "$jvm_v" "$detekt_v" "$rs_ur" "$jvm_ur" "$detekt_ur" "$rs_fv" "$jvm_fv" "$rs_t" "$jvm_t" "$detekt_t" "$rs_rc" "$jvm_rc" "$detekt_rc" \
     >> "$BENCH_OUT"
 
   # ── Print per-project table ──
