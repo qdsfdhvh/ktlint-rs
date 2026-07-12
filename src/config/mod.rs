@@ -250,6 +250,13 @@ impl KtlintConfig {
 
     /// Check whether a rule is enabled.
     pub fn is_rule_enabled(&self, rule_id: &str) -> bool {
+        if self.compat_mode {
+            // In compat mode: code_style still applies, then whitelist
+            if self.code_style.is_rule_disabled(rule_id) {
+                return false;
+            }
+            return self.rules.get(rule_id).map(|r| r.enabled).unwrap_or(false);
+        }
         if let Some(rule_config) = self.rules.get(rule_id) {
             return rule_config.enabled;
         }

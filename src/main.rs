@@ -32,7 +32,7 @@ fn main() -> anyhow::Result<()> {
             let mut parser = KotlinParser::new();
             let tree = parser.parse(&source);
             let config =
-                KtlintConfig::load_for_file(path).unwrap_or_else(|_| default_config.clone());
+                KtlintConfig::load_for_file_compat(path, use_compat).unwrap_or_else(|_| default_config.clone());
             let violations = if use_compat {
                 rules::compat::KtlintCompatEngine::new(&config).check(
                     &path.to_string_lossy(),
