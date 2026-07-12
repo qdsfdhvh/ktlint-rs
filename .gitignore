@@ -2,3 +2,5 @@
 **/*.rs.bk
 Cargo.lock
 .editorconfig
+tests/fixtures/*
+!.gitkeep

@@ -19,7 +19,7 @@ declare -A FIXTURES=(
   ["nowinandroid"]="https://github.com/android/nowinandroid.git"
   ["compose-samples"]="https://github.com/android/compose-samples.git"
   ["okhttp"]="https://github.com/square/okhttp.git"
-  ["androidx"]="https://github.com/androidx/androidx.git activity appcompat compose fragment lifecycle navigation paging work room3 datastore"
+  ["androidx"]="https://github.com/androidx/androidx.git"
 )
 
 # ── Clone helper ──
