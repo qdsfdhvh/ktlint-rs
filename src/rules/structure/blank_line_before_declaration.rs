@@ -73,7 +73,13 @@ impl Rule for BlankLineBeforeDeclaration {
                         message: format!(
                             "Expected a blank line before declaration: \"{}\"",
                             if trimmed.len() > 60 {
-                                &trimmed[..57]
+                                // Safe UTF-8 truncation at char boundary
+                                let end = trimmed
+                                    .char_indices()
+                                    .nth(57)
+                                    .map(|(i, _)| i)
+                                    .unwrap_or(trimmed.len());
+                                &trimmed[..end]
                             } else {
                                 trimmed
                             }
