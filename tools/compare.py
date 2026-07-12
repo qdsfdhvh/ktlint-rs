@@ -23,7 +23,7 @@ for line in result_jvm.stdout.split('\n') + result_jvm.stderr.split('\n'):
 # ktlint-rs  
 os.environ['KTLINT_COMPAT'] = '1'
 result_rs = subprocess.run(
-    ["target/release/ktlint", project],
+    ["target/release/ktlint-rs", project],
     capture_output=True, text=True, timeout=60
 )
 rs_lines = {}

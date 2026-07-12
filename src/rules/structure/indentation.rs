@@ -23,7 +23,7 @@ impl Rule for Indentation {
         let lines: Vec<&str> = source.lines().collect();
         let mut stack: Vec<usize> = Vec::new();
         let mut in_block_comment = false;
-        
+
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
             let spaces = line.len() - trimmed.len();
@@ -58,9 +58,7 @@ impl Rule for Indentation {
                 // Closing brace: indent at the level BEFORE the matching {, not current
                 let parent = stack.last().copied().unwrap_or(0).saturating_sub(is);
                 if spaces != parent {
-                    violations.push(violation(
-                        self.id(), i + 1, spaces, parent,
-                    ));
+                    violations.push(violation(self.id(), i + 1, spaces, parent));
                 }
                 stack.pop();
                 continue;
@@ -69,7 +67,7 @@ impl Rule for Indentation {
             // --- Opening brace ---
             let opens_block = trimmed.ends_with('{')
                 && !trimmed.ends_with("${")      // skip string templates
-                && !trimmed.starts_with("//");   // skip comments
+                && !trimmed.starts_with("//"); // skip comments
 
             // --- Indent check for non-brace, non-closing lines ---
             // Only flag if indent doesn't match expected and isn't a continuation
@@ -88,8 +86,7 @@ impl Rule for Indentation {
                 let next_expected = spaces + is;
                 stack.push(next_expected);
             }
-
-                    }
+        }
 
         violations
     }
@@ -114,10 +111,7 @@ mod tests {
     use super::*;
 
     fn check(src: &str, indent_size: usize) -> Vec<Violation> {
-        Indentation::new(indent_size).check(
-            &crate::parser::KotlinParser::new().parse(src),
-            src,
-        )
+        Indentation::new(indent_size).check(&crate::parser::KotlinParser::new().parse(src), src)
     }
 
     #[test]
@@ -132,7 +126,11 @@ mod tests {
 
     #[test]
     fn nested_blocks() {
-        assert!(check("class Foo {\n    fun bar() {\n        val x = 1\n    }\n}\n", 4).is_empty());
+        assert!(check(
+            "class Foo {\n    fun bar() {\n        val x = 1\n    }\n}\n",
+            4
+        )
+        .is_empty());
     }
 
     #[test]

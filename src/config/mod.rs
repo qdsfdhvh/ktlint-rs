@@ -131,10 +131,7 @@ fn parse_ktlint_properties(ec_path: &Path, file_path: &Path) -> HashMap<String, 
     };
 
     // Determine file extension for section matching.
-    let ext = file_path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("");
+    let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     let mut in_section = false;
     for line in content.lines() {

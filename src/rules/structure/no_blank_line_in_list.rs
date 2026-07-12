@@ -47,13 +47,15 @@ impl NoBlankLineInList {
         }
 
         for row in (start_row + 1)..end_row {
-            let line_start = bytes.iter()
+            let line_start = bytes
+                .iter()
                 .enumerate()
                 .filter(|(_, &b)| b == b'\n')
                 .nth(row.saturating_sub(1))
                 .map(|(i, _)| i + 1)
                 .unwrap_or(0);
-            let line_end = bytes.iter()
+            let line_end = bytes
+                .iter()
                 .enumerate()
                 .skip(line_start)
                 .filter(|(_, &b)| b == b'\n')
