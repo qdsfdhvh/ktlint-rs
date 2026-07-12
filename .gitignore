@@ -4,14 +4,6 @@ Cargo.lock
 .editorconfig
 tests/fixtures/*
 !.gitkeep
-task_plan.md
-findings.md
-progress.md
-TASK_PLAN.md
-findings.md
-progress.md
-TASK_PLAN.md
-task_plan.md
 .ktlint/
 bench_results.tsv
 .pi/
