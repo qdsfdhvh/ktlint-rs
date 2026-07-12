@@ -7,6 +7,10 @@ set -euo pipefail
 RUSTUP_BIN="/opt/homebrew/Cellar/rustup/1.29.0_2/libexec/bin/rustup"
 RUSTUP_ENV="RUSTUP_OVERRIDE_UNIX_FALLBACK_SETTINGS=/opt/homebrew/etc/rustup/settings.toml"
 
+KTLINT_JAR="$REPO_ROOT/.ktlint/ktlint-1.5.0.jar"
+KTLINT_JVM="java -jar $KTLINT_JAR"
+RUSTUP_ENV="RUSTUP_OVERRIDE_UNIX_FALLBACK_SETTINGS=/opt/homebrew/etc/rustup/settings.toml"
+
 if $RELEASE; then
   echo "Building ktlint-rs (release)..."
   env $RUSTUP_ENV "$RUSTUP_BIN" run stable cargo build --release --manifest-path "$REPO_ROOT/Cargo.toml" 2>/dev/null
