@@ -37,12 +37,12 @@ cargo build --release
 
 ## Performance
 
-| Project | Files | Lines | Time |
-|---|---|---|---|
-| nowinandroid | 350 | 31,021 | **0.58s** |
-| compose-samples | 380 | 46,586 | **0.61s** |
-| okhttp | 569 | 131,098 | **0.87s** |
-| androidx (26 modules) | 1,271 | 532,795 | **0.86s** |
+| Project | Files | Lines | Violations | Time |
+|---|---|---|---|---|
+| [nowinandroid](https://github.com/android/nowinandroid) | 350 | 31,021 | 8,622 | **0.58s** |
+| [compose-samples](https://github.com/android/compose-samples) | 380 | 46,586 | 8,458 | **0.61s** |
+| [okhttp](https://github.com/square/okhttp) | 569 | 131,098 | 31,531 | **0.87s** |
+| [androidx](https://github.com/androidx/androidx) (26 modules) | 1,271 | 532,795 | 72,558 | **0.86s** |
 
 > Tested on Apple M3 Pro, release build with [rayon](https://github.com/rayon-rs/rayon) parallel processing.
 > AndroidX benchmark covers 26 self-contained modules (activity, fragment, compose-runtime, etc.).
