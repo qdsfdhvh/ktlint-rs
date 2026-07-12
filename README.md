@@ -37,19 +37,24 @@ ktlint-rs --reporter=json **/*.kt
 
 ## Performance
 
-**Speed** (Apple M2, release build, rayon):
+**Speed + Coverage** (Apple M2, release build, rayon):
 
-| Project | Files | Lines | Time (rs / JVM) | Speedup |
-|---|---:|---:|---:|---:|
-| nowinandroid | 350 | 31,021 | 0.23s / 6.94s | **30x** |
-| compose-samples (6 apps) | 380 | 46,586 | 0.31s / 6.93s | **22x** |
-| okhttp | 569 | 131,098 | 1.25s / 8.16s | **7x** |
-| androidx (26 modules) | 1,271 | 266,549 | 1.07s / 10.6s | **10x** |
-| demo-gradle | 8 | 162 | 0.01s / 1.85s | **155x** |
+| Project | Files | Lines | Violations(rs/jvm) | Rules(rs/jvm) | FilesHit(rs/jvm) | Time(rs/jvm) | Speedup |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| demo-gradle | 8 | 162 | 81 / 167 | 17 / 18 | 6 / 6 | 0.01s / 1.75s | **194x** |
+| nowinandroid | 350 | 31,021 | 4,419 / 1,038 | 40 / 21 | 310 / 206 | 0.17s / 3.37s | **20x** |
+| compose-samples (6 apps) | 380 | 46,586 | 4,937 / 13 | 34 / 10 | 355 / 7 | 0.21s / 5.11s | **25x** |
+| okhttp | 569 | 131,098 | 26,261 / 18 | 45 / 14 | 524 / 8 | 0.58s / 7.23s | **12x** |
+| androidx (26 modules) | 1,271 | 266,549 | 49,009 / 33,731 | 53 / 45 | 1,271 / 1,052 | 1.11s / 10.70s | **10x** |
 
-> Benchmarked 2026-07-12 with `scripts/bench.sh --release`.
-> Violation parity with JVM under `ktlint_official` code style is in progress.
-> See `task_plan.md` for detailed gap analysis.
+| Metric | ktlint-rs | ktlint JVM |
+|---|---|---|
+| **Total violations** | 84,707 | 34,967 |
+| **Unique rules triggered** | 71 | 54 |
+| **Total files with violations** | 2,460 | 1,273 |
+| **Total time** | 2.08s | 28.16s |
+
+> Benchmarked 2026-07-12 with `scripts/bench.sh --release`. Raw data in `bench_results.tsv`.
 
 ## Rule Coverage
 
