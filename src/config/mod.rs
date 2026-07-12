@@ -71,6 +71,13 @@ impl CodeStyle {
                     | "standard:import-ordering"
                     | "standard:trailing-comma"
                     | "standard:no-unused-imports"
+                    | "standard:multiline-expression-wrapping"
+                    | "standard:no-empty-first-line-in-class-body"
+                    | "standard:argument-list-wrapping"
+                    | "standard:no-consecutive-comments"
+                    | "standard:blank-line-between-when-conditions"
+                    | "standard:when-entry-bracing"
+                    | "standard:no-blank-line-before-rbrace"
             ),
             Self::IntelliJIdea => matches!(
                 rule_id,
@@ -277,5 +284,18 @@ mod tests {
             },
         );
         assert!(!config.is_rule_enabled("standard:curly-spacing"));
+    }
+
+    #[test]
+    fn indent_string_4_space_default() {
+        let config = KtlintConfig::default();
+        assert_eq!(config.indent_string(), "    ");
+    }
+
+    #[test]
+    fn indent_string_tab() {
+        let mut config = KtlintConfig::default();
+        config.indent_style = IndentStyle::Tab;
+        assert_eq!(config.indent_string(), "\t");
     }
 }

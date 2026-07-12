@@ -131,44 +131,6 @@ mod integration_tests {
         assert!(output.status.success(), "--version should succeed");
     }
 
-    // ── Config tests ──
-
-    #[test]
-    fn config_code_style_profiles() {
-        let config = crate::config::KtlintConfig::default();
-        assert!(config.is_rule_enabled("standard:curly-spacing"));
-        
-        // android_studio disables certain rules
-        let mut android = crate::config::KtlintConfig::default();
-        android.code_style = crate::config::CodeStyle::AndroidStudio;
-        assert!(!android.is_rule_enabled("standard:final-newline"));
-        assert!(!android.is_rule_enabled("standard:no-wildcard-imports"));
-        assert!(!android.is_rule_enabled("standard:import-ordering"));
-    }
-
-    #[test]
-    fn config_per_rule_enable_disable() {
-        let mut config = crate::config::KtlintConfig::default();
-        config.rules.insert(
-            "standard:curly-spacing".to_string(),
-            crate::config::RuleConfig { enabled: false, properties: Default::default() },
-        );
-        assert!(!config.is_rule_enabled("standard:curly-spacing"));
-        assert!(config.is_rule_enabled("standard:op-spacing"));
-    }
-
-    #[test]
-    fn config_indent_string_4_space() {
-        let config = crate::config::KtlintConfig::default();
-        assert_eq!(config.indent_string(), "    ");
-    }
-
-    #[test]
-    fn config_indent_string_tab() {
-        let mut config = crate::config::KtlintConfig::default();
-        config.indent_style = crate::config::IndentStyle::Tab;
-        assert_eq!(config.indent_string(), "\t");
-    }
 
     // ── Real-world project smoke tests ──
     //
