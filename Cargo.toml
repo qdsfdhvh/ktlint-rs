@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/qdsfdhvh/ktlint-rs"
 
 [[bin]]
-name = "ktlint"
+name = "ktlint-rs"
 path = "src/main.rs"
 
 [dependencies]

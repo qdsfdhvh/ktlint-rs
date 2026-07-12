@@ -4,7 +4,7 @@ mod integration_tests {
     use std::process::Command;
 
     fn ktlint_bin() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/ktlint")
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/ktlint-rs")
     }
 
     fn fixtures_dir(name: &str) -> PathBuf {

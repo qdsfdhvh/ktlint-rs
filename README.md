@@ -26,13 +26,13 @@ Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms. Drop-in 
 cargo install ktlint-rs
 
 # Lint
-ktlint **/*.kt
+ktlint-rs **/*.kt
 
 # Auto-fix
-ktlint --format **/*.kt
+ktlint-rs --format **/*.kt
 
 # JSON output
-ktlint --reporter=json **/*.kt
+ktlint-rs --reporter=json **/*.kt
 ```
 
 ## Performance
