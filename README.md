@@ -39,19 +39,17 @@ ktlint-rs --reporter=json **/*.kt
 
 **Speed** (Apple M2, release build, rayon):
 
-| Project | Files | Lines | Violations (rs / JVM) | Time (rs / JVM) | Speedup |
-|---|---|---|---:|---:|---:|
-| nowinandroid | 350 | 31,021 | 5,401 / 1,038 | 0.23s / 6.94s | **30x** |
-| compose-samples (6 apps) | 380 | 46,586 | 7,593 / 13 | 0.31s / 6.93s | **22x** |
-| okhttp | 569 | 131,098 | 33,309 / 18 | 1.25s / 8.16s | **7x** |
-| androidx (26 modules) | 1,271 | 266,549 | 86,591 / 33,731 | 1.07s / 10.6s | **10x** |
-| demo-gradle | 8 | 162 | 81 / 167 | 0.01s / 1.85s | **155x** |
+| Project | Files | Lines | Time (rs / JVM) | Speedup |
+|---|---:|---:|---:|---:|
+| nowinandroid | 350 | 31,021 | 0.23s / 6.94s | **30x** |
+| compose-samples (6 apps) | 380 | 46,586 | 0.31s / 6.93s | **22x** |
+| okhttp | 569 | 131,098 | 1.25s / 8.16s | **7x** |
+| androidx (26 modules) | 1,271 | 266,549 | 1.07s / 10.6s | **10x** |
+| demo-gradle | 8 | 162 | 0.01s / 1.85s | **155x** |
 
-> Benchmarked 2026-07-12 (`scripts/bench.sh --release`). Violation parity in progress.
+> Benchmarked 2026-07-12 with `scripts/bench.sh --release`.
 > Violation parity with JVM under `ktlint_official` code style is in progress.
 > See `task_plan.md` for detailed gap analysis.
-> Benchmarked 2026-07-12 with `scripts/bench.sh --release`.
-> nowinandroid / okhttp / androidx numbers from v0.2.0 — pending re-benchmark.
 
 ## Rule Coverage
 

@@ -23,8 +23,7 @@ impl Rule for Indentation {
         let lines: Vec<&str> = source.lines().collect();
         let mut stack: Vec<usize> = Vec::new();
         let mut in_block_comment = false;
-        let mut prev_indent: Option<usize> = None;
-
+        
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
             let spaces = line.len() - trimmed.len();
@@ -64,7 +63,6 @@ impl Rule for Indentation {
                     ));
                 }
                 stack.pop();
-                prev_indent = Some(spaces);
                 continue;
             }
 
@@ -77,10 +75,7 @@ impl Rule for Indentation {
             // Only flag if indent doesn't match expected and isn't a continuation
             if spaces != expected {
                 // Allow continuation: deeper indent that's a multiple of indent_size
-                // and matches a known continuation pattern
-                let is_continuation = spaces > expected
-                    && spaces % is == 0
-                    && (prev_indent.is_none() || (spaces - expected) % is == 0);
+                let is_continuation = spaces % is == 0;
 
                 if !is_continuation {
                     violations.push(violation(self.id(), i + 1, spaces, expected));
@@ -94,8 +89,7 @@ impl Rule for Indentation {
                 stack.push(next_expected);
             }
 
-            prev_indent = Some(spaces);
-        }
+                    }
 
         violations
     }

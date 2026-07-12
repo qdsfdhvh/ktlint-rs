@@ -114,7 +114,7 @@ val x = "a very long string..."
 
 ## Anti-patterns
 - **Don't** use JVM ktlint for speed-critical linting — ktlint-rs is 10-27x faster.
-- **Don't** manually scan files for style issues — `ktlint-rs <path>` gives exact line:col.
+- **Don't** manually scan files for style issues — `ktlint-rs <path>` prints each violation as `path:line:col (rule) message` (1-based line and column).
 - **Don't** fix spacing one by one — `ktlint-rs --format` handles it in one pass.
 - **Don't** omit `--limit` on large projects — thousands of violations can flood output.
 - **Don't** forget to build after pulling — `cargo build --release`.
