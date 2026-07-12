@@ -7,7 +7,7 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![ktlint](https://img.shields.io/badge/ktlint-1.6.0-green.svg)](https://github.com/pinterest/ktlint)
 [![Rules](https://img.shields.io/badge/rules-78-blue.svg)](https://github.com/qdsfdhvh/ktlint-rs)
-[![Rule Plan](https://img.shields.io/badge/rule%20plan-340%20tracked-blue.svg)](RULE_PLAN.md)
+[![Rule Plan](https://img.shields.io/badge/rule%20plan-340%20tracked-blue.svg)](docs/RULE_PLAN.md)
 [![Tests](https://img.shields.io/badge/tests-179+-green.svg)](https://github.com/qdsfdhvh/ktlint-rs)
 
 ## Why
@@ -15,7 +15,7 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms. Drop-in compatible with the JVM ktlint CLI.
 
 - **78 rules** covering spacing, structure, imports, naming, wrapping, and KDoc
-- **340-rule parity tracker** — [RULE_PLAN.md](RULE_PLAN.md) covers JVM ktlint (105) + detekt (217)
+- **340-rule parity tracker** — [docs/RULE_PLAN.md](docs/RULE_PLAN.md) covers JVM ktlint (105) + detekt (217)
 - **Drop-in CLI** compatible with JVM ktlint
 - **4 reporters**: plain, JSON, SARIF, summary
 - **`.editorconfig`** support with ktlint properties
