@@ -4,11 +4,11 @@ A fast Kotlin linter and formatter written in Rust — drop-in compatible with [
 
 [![CI](https://github.com/qdsfdhvh/ktlint-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/qdsfdhvh/ktlint-rs/actions)
 [![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://rust-lang.org)
-[![Rules](https://img.shields.io/badge/rules-100-blue.svg)](https://github.com/qdsfdhvh/ktlint-rs)
+[![Rules](https://img.shields.io/badge/rules-78-blue.svg)](https://github.com/qdsfdhvh/ktlint-rs)
 
 ## Features
 
-- **100 rules** covering spacing, structure, imports, naming, wrapping, and KDoc
+- **78 rules** covering spacing, structure, imports, naming, wrapping, and KDoc
 - **6x faster** than JVM ktlint via [rayon](https://github.com/rayon-rs/rayon) parallel processing
 - **Drop-in CLI** compatible with ktlint arguments
 - **.editorconfig** support with code style profiles (ktlint_official, android_studio, intellij_idea)
@@ -64,6 +64,14 @@ ktlint_standard_no_wildcard_imports = enabled
 
 | Category | Count | Examples |
 |---|---|---|
+| Spacing | 17 | curly, operator, comma, paren, colon, dot, keyword, etc. |
+| Structure | 27 | indent, trailing, blank-lines, max-line, trailing-comma, kdoc, etc. |
+| Imports | 4 | wildcard, ordering, unused, etc. |
+| Naming | 6 | class, function, property, filename, package, etc. |
+| Wrapping | 7 | chain, multiline-if-else, try-catch, when, etc. |
+| KDoc | 4 | formatting, no-empty, no-trailing, kdoc |
+| Plus: Built-in (3) + Phase/Final (10) |
+| **Total** | **78** | |
 | Spacing | 25 | curly, operator, comma, paren, colon, dot, keyword, etc. |
 | Structure | 30 | indent, trailing, blank-lines, max-line, trailing-comma, etc. |
 | Imports | 5 | wildcard, ordering, unused, etc. |
@@ -76,7 +84,7 @@ ktlint_standard_no_wildcard_imports = enabled
 ## Development
 
 ```bash
-# Run tests (164+)
+# Run tests (179+)
 cargo test
 
 # Build release
