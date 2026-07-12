@@ -4,3 +4,6 @@ Cargo.lock
 .editorconfig
 tests/fixtures/*
 !.gitkeep
+task_plan.md
+findings.md
+progress.md
