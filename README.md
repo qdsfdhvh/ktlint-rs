@@ -62,7 +62,6 @@ ktlint-rs --reporter=json **/*.kt
 | Plus | 13 | Built-in (3) + Phase/Final rules |
 | **Total** | **78** | |
 
-See [TASK_PLAN.md](TASK_PLAN.md) for full parity tracking.
 
 ## .editorconfig Support
 
