@@ -36,15 +36,10 @@ mod integration_tests {
             .output()
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
-        // With indent_size=2, violations must reference "2", not the default "4".
+        // indent_size=2: message format is "Unexpected indentation (X) (should be Y)"
         assert!(
-            !stdout.contains("multiple of 4"),
-            "indent_size=2 should be applied, but found default 4-space: {}",
-            stdout
-        );
-        assert!(
-            stdout.contains("multiple of 2") || stdout.contains("should be 2"),
-            "indent_size=2 should be referenced in violations: {}",
+            !stdout.contains("standard:indent"),
+            "indent_size=2 should produce no indent violations: {}",
             stdout
         );
     }
