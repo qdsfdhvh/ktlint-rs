@@ -168,6 +168,12 @@ impl KtlintConfig {
         config.project_root = file_path.parent().unwrap_or(std::path::Path::new(".")).to_path_buf();
         Ok(config)
     }
+    /// Load config for a specific file with compat mode.
+    pub fn load_for_file_compat(file_path: &Path, compat: bool) -> anyhow::Result<Self> {
+        let mut config = Self::load_for_file(file_path)?;
+        config.compat_mode = compat;
+        Ok(config)
+    }
 
     fn apply_editorconfig(&mut self, map: &HashMap<String, String>) {
         for (key, value) in map.iter() {
