@@ -72,6 +72,11 @@ cargo test -- --nocapture
 cargo test curly_spacing
 ```
 
+### Branch & PR Policy
+- **Branch protection on `main`**: requires a pull request before merging — no direct pushes.
+- **Squash merge only**: all PRs are squash-merged into a single commit on `main`.
+- Work on feature branches, open a PR when ready, and **never** try to push directly to `main`.
+
 ### Adding a New Rule
 1. Create the rule file in the appropriate category directory
 2. Implement the `Rule` trait
