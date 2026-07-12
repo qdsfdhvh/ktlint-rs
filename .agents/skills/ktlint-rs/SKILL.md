@@ -9,7 +9,7 @@ description: Use `ktlint-rs` — a pure-Rust Kotlin linter & formatter (drop-in 
 compatible with Pinterest's JVM-based [ktlint](https://github.com/pinterest/ktlint).
 It uses tree-sitter to parse Kotlin source into a CST (preserving all whitespace
 and comments), then checks 78 rules across spacing, structure, imports,
-naming, wrapping, and KDoc categories.  Auto-fix handles spacing violations;
+parallel processing via rayon delivers 10-27x speedups over the JVM version.
 parallel processing via rayon delivers 17-25x speedups over the JVM version.
 
 ## Installation
@@ -180,6 +180,14 @@ val x = "a very long string that exceeds the configured max line length"
 | Category | Count | Examples |
 |---|---|---|
 | Spacing | 17 | curly, operator, comma, paren, colon, dot, keyword, annotation, modifier-order |
+| Structure | 28 | indent, trailing-space, blank-lines, max-line-length, trailing-comma, enum-entry, kdoc, blank-line-before-declaration, no-blank-line-in-list |
+| Imports | 4 | wildcard, ordering, unused |
+| Naming | 6 | class, function, property, filename, package |
+| Wrapping | 7 | chain, multiline-if-else, try-catch, when-expression |
+| KDoc | 3 | formatting, no-empty, no-trailing |
+| **Total** | **65** | |
+|---|---|---|
+| Spacing | 17 | curly, operator, comma, paren, colon, dot, keyword, annotation, modifier-order |
 | Structure | 27 | indent, trailing-space, blank-lines, max-line-length, trailing-comma, enum-entry |
 | Imports | 4 | wildcard, ordering, unused |
 | Naming | 6 | class, function, property, filename, package |
@@ -192,7 +200,12 @@ val x = "a very long string that exceeds the configured max line length"
 
 **Benchmarks** (release build, Apple M2, rayon parallel):
 
-| Project | Files | Lines | Time (ktlint-rs / JVM) |
+| Project | Files | Lines | Violations (rs / JVM) | Time (rs / JVM) |
+|---|---|---|---:|---:|
+| nowinandroid | 350 | 31,021 | 9,901 / 1,038 | **0.26s** / 6.71s |
+| compose-samples (6 apps) | 380 | 46,586 | 10,752 / 13 | **0.30s** / 7.96s |
+| okhttp | 569 | 131,098 | 40,632 / 18 | **1.19s** / 11.5s |
+| androidx (26 modules) | 1,271 | 266,549 | 86,591 / 33,731 | **1.07s** / 10.6s |
 |---|---|---|---|
 | compose-samples | 380 | 46,586 | **0.30s** / 7.96s (26x) |
 | nowinandroid | 350 | 31,021 | **0.26s** / 6.71s (25x) |
@@ -202,7 +215,7 @@ val x = "a very long string that exceeds the configured max line length"
 
 ## Anti-patterns
 
-- **Don't** use a JVM-based ktlint for speed-critical linting — ktlint-rs is 17-25x faster.
+- **Don't** use a JVM-based ktlint for speed-critical linting — ktlint-rs is 10-27x faster.
 - **Don't** read files and manually review style when `ktlint-rs <path>` gives exact line:col violations.
 - **Don't** omit `--limit` on large projects — thousands of violations can flood output.
 
