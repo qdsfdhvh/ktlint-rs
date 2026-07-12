@@ -39,13 +39,14 @@ cargo build --release
 
 Compared against [ktlint](https://github.com/pinterest/ktlint) JVM (v1.8.0).
 
-| Project | Files | Lines (rs / JVM) | Violations (rs / JVM) | Time (rs / JVM) |
+| Project | Files | Lines | Violations (rs / JVM) | Time (rs / JVM) |
 |---|---|---|---:|---:|
-| [nowinandroid](https://github.com/android/nowinandroid) | 350 | 31,021 / 31,021 | 8,622 / 1,038 | **0.58s** / 10.1s |
-| [compose-samples](https://github.com/android/compose-samples) (6 apps) | 380 | 46,586 / 46,586 | 8,458 / 13 | **0.61s** / 11.3s |
-| [okhttp](https://github.com/square/okhttp) | 569 | 131,098 / 131,098 | 31,531 / 18 | **0.87s** / 19.6s |
-| [androidx](https://github.com/androidx/androidx) (26 modules) | 1,271 | 266,549 / 266,549 | 72,558 / 33,731 | **0.86s** / 21.9s |
-> Tested on Apple M2, release build with [rayon](https://github.com/rayon-rs/rayon) parallel processing.
+| [nowinandroid](https://github.com/android/nowinandroid) | 350 | 31,021 | 9,901 / 1,038 | **0.26s** / 6.71s |
+| [compose-samples](https://github.com/android/compose-samples) (6 apps) | 380 | 46,586 | 10,752 / 13 | **0.30s** / 7.96s |
+| [okhttp](https://github.com/square/okhttp) | 569 | 131,098 | 40,632 / 18 | **1.19s** / 11.5s |
+| [androidx](https://github.com/androidx/androidx) (26 modules) | 1,271 | 266,549 | 86,591 / 33,731 | **1.07s** / 10.6s |
+> Tested on Apple M2, release build with [rayon](https://github.com/rayon-rs/rayon).
+> ktlint-rs 25-40x faster than JVM. Violation parity with `android_studio` profile in progress.
 > ktlint-rs currently reports more violations than JVM; full rule parity with ktlint's `android_studio` profile is in progress.
 ## Configuration (.editorconfig)
 
