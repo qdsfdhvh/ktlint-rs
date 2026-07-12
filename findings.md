@@ -43,3 +43,66 @@
 
 - Rayon parallel processing: 10-27x faster than JVM.
 - Apple M2, release build.
+
+## 2026-07-12: detekt Non-Rule Feature Surface
+
+Analysis of detekt 2.0.0-alpha.0 non-rule features that ktlint-rs would need to replace.
+
+### Configuration (YAML)
+- detekt uses YAML config (`detekt.yml`), NOT .editorconfig
+- Supports: rule set/rule properties, path filters (includes/excludes per rule), console reports, output reports, processors (metrics)
+- `--build-upon-default-config` flag merges with defaults
+- ktlint-rs gap: .editorconfig only, no YAML
+
+### Reporting
+- 4 output formats: **HTML** (rich with metrics), **XML** (Checkstyle), **Markdown**, **SARIF**
+- Console reports: ProjectStatistics, Complexity, Notification, Findings, FileBasedFindings, LiteFindings
+- ktlint-rs: SARIF ✅, JSON ✅, plain/lite ✅; missing HTML, XML, Markdown
+
+### Suppression
+- `@Suppress("RuleId")` / `@SuppressWarnings("RuleId")`
+- Multiple ID formats: `rule`, `ruleset:rule`, `detekt:ruleset:rule`, `all`
+- ktlint-rs: basic `@Suppress` ✅, but detekt's multi-format resolution is richer
+
+### Baselines
+- XML format (`baseline.xml`), CLI `--baseline` + `--create-baseline`
+- Suppresses known issues for legacy projects
+- ktlint-rs: ❌ (planned Phase 5)
+
+### Suppressors (global suppression filters)
+- **Annotation Suppressor**: `ignoreAnnotated: ['Preview']` — suppresses issues under annotated code
+- **Function Suppressor**: `ignoreFunction: ['java.time.LocalDate.now']` — suppresses issues in specific function definitions
+- ktlint-rs: ❌
+
+### Compose Support
+- Configuration recommendations for @Composable functions (naming patterns, TooManyFunctions exclusions)
+- Not a separate rule set — just config tuning for built-in rules
+- ktlint-rs: partially covered if the same rules exist
+
+### Extensions / Plugins
+- Plugin system: `--plugins /path/to/jar` (CLI) or `detektPlugins()` (Gradle)
+- Custom `RuleSetProvider` implementations via SPI
+- Testing framework: `detekt-test` with `Rule.lint()` helpers
+- ktlint-rs: ❌ no plugin system
+
+### Processors (Metrics)
+- KtFileCount, PackageCount, ClassCount, FunctionCount, PropertyCount
+- ProjectComplexity, ProjectCognitiveComplexity
+- ProjectLLOC/CLOC/LOC/SLOC (line counts)
+- ktlint-rs: ❌
+
+### Feature Gap Summary
+
+| Feature | detekt | ktlint-rs |
+|---|---|---|
+| Config format | YAML | .editorconfig + CLI args |
+| Path filters | ✅ includes/excludes | ❌ (just glob patterns) |
+| HTML report | ✅ rich + metrics | ❌ |
+| XML report | ✅ Checkstyle | ❌ |
+| Markdown report | ✅ | ❌ |
+| Baselines | ✅ XML | ❌ (Phase 5 planned) |
+| `@Suppress` multi-format | ✅ 5 formats | 🟡 basic only |
+| Suppressors | ✅ annotation + function | ❌ |
+| Plugins | ✅ SPI-based | ❌ |
+| Processors/metrics | ✅ 10+ metrics | ❌ |
+| Compose config | ✅ documented | 🟡 partial |

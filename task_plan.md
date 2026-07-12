@@ -13,11 +13,12 @@ A pure-Rust Kotlin linter & formatter, drop-in compatible with [pinterest/ktlint
 | 2 | .editorconfig & config parity | ✅ |
 | 3 | Remaining rules & parity tuning | 🟡 |
 | 4 | Formatter & auto-fix | ✅ |
-| 5 | Advanced features (baselines, git hooks) | ⬜ |
+| 5 | Advanced features (baselines, git hooks, YAML config) | ⬜ |
 | 6 | Testing & benchmarking | 🟡 |
 | 7 | Distribution & docs | ⬜ |
-| 8 | detekt static analysis rules (Phase 1: style) | ⬜ |
-| 9 | detekt static analysis rules (Phase 2: complexity, naming, etc.) | ⬜ |
+| 8 | detekt static analysis rules (Phase 1: style, empty-blocks) | ⬜ |
+| 9 | detekt static analysis rules (Phase 2: complexity, naming, bugs) | ⬜ |
+| 10 | detekt non-rule features (reporters, suppressors, processors) | ⬜ |
 
 ## Performance (Apple M2, release)
 
@@ -69,40 +70,46 @@ detekt has TWO layers of rules:
 
 ### detekt Rule Sets (native, non-ktlint)
 
-| Rule Set | Est. Rules | Overlap with ktlint-rs | Examples |
-|---|---|---|---|
-| `style` | ~45 | ~8 (no-wildcard-imports, no-unused-imports, max-line-length, filename, no-semi, etc.) | MagicNumber, UseCheckOrError, CollapsibleIfStatements, DataClassShouldBeImmutable, UnnecessaryAbstractClass |
-| `complexity` | ~10 | 0 | CognitiveComplexMethod, LongMethod, LargeClass, NestedBlockDepth, CyclomaticComplexity |
-| `exceptions` | ~12 | 0 | TooGenericExceptionCaught, SwallowedException, ThrowingExceptionsWithoutOrCause |
-| `naming` | ~15 | ~3 (class/function/package naming) | BooleanPropertyNaming, MatchingDeclarationName, VariableNaming |
-| `performance` | ~7 | 0 | ArrayPrimitive, SpreadOperator, UnnecessaryTemporaryInstantiation |
-| `comments` | ~5 | ~1 (kdoc) | AbsentOrWrongFileLicense, EndOfSentenceFormat |
-| `coroutines` | ~7 | 0 | GlobalCoroutineUsage, RedundantSuspendModifier, SuspendFunSwallowedCancellation |
-| `empty-blocks` | ~4 | ~2 (no-empty-file, no-empty-class-body) | EmptyCatchBlock, EmptyFunctionBlock |
-| **Total** | **~105** | **~14** | — |
+| Rule Set | Rules | Active by default | Type Res. Required | Overlap |
+|---|---|---|---|---|
+| `style` | 88 | ~25 | ~45 | ~5 |
+| `potential-bugs` | 39 | ~25 | ~20 | 0 |
+| `naming` | 21 | 5 | 1 | ~3 |
+| `exceptions` | 17 | ~13 | ~10 | 0 |
+| `complexity` | 15 | 11 | 3 | 0 |
+| `empty-blocks` | 14 | 14 | 0 | ~2 |
+| `performance` | 10 | 5 | 8 | 0 |
+| `comments` | 9 | 0 | 4 | ~1 |
+| `coroutines` | 8 | 5 | 7 | 0 |
+| `libraries` | 3 | 1 | 3 | 0 |
+| `ruleauthors` | 2 | 0 | 0 | 0 |
+| **Total** | **226** | **~104** | **~101** | **~11** |
 
 ### Key Differences: ktlint vs detekt
 
 | Dimension | ktlint | detekt |
 |---|---|---|
 | **Scope** | Formatting (whitespace, imports, braces) | Static analysis (code smells, complexity, bugs) |
-| **Input** | Text/CST only | Type resolution required for many rules |
+| **Input** | Text/CST only | Type resolution required for ~101 rules |
 | **Fixability** | Almost all auto-fixable | Most are advisory (manual refactor) |
-| **Activation** | All rules enabled by default | Many rules opt-in ("Active by default: No") |
+| **Activation** | All rules enabled by default | ~104/226 rules active by default |
+| **Config format** | .editorconfig | YAML (`detekt.yml`) |
 | **Complexity** | Regex + spacing analysis | AST traversal, control flow, type inference |
 
-### Replacement Strategy
+### detekt Non-Rule Features to Support
 
-**Phase 8 (detekt style)** — Priority rules that overlap or bring high value:
-- `MagicNumber` → already partially in ktlint-rs?
-- `UseCheckOrError` / `UseRequire` — simple pattern match
-- `CollapsibleIfStatements` — AST pattern
-- `UnnecessaryAbstractClass` — AST analysis
-- `NoSemicolons` — already covered by `no-semi`
+| Feature | detekt | ktlint-rs | Phase |
+|---|---|---|---|
+| YAML config (`detekt.yml`) | ✅ | ❌ | 5 |
+| HTML report (rich + metrics) | ✅ | ❌ | 10 |
+| XML report (Checkstyle) | ✅ | ❌ | 10 |
+| Markdown report | ✅ | ❌ | 10 |
+| SARIF report | ✅ | ✅ | — |
+| Baselines (XML) | ✅ | ❌ | 5 |
+| `@Suppress` multi-format | ✅ 5 formats | 🟡 basic | 5 |
+| Suppressors (annotation + function) | ✅ | ❌ | 10 |
+| Plugins / Extensions | ✅ SPI-based | ❌ | — |
+| Processors / Metrics | ✅ 10+ types | ❌ | 10 |
+| Compose config | ✅ documented | 🟡 partial | 10 |
 
-**Phase 9 (remaining detekt categories)** — Harder rules requiring type resolution:
-- Complexity rules need control flow analysis
-- Exception rules need type hierarchy
-- Coroutines rules need suspend-aware analysis
-
-**Note**: Detekt 2.0+ supports Kotlin compiler type resolution. Replicating this in pure Rust without the Kotlin compiler is the major challenge — some detekt rules may be infeasible without it.
+> ⚠️ **Major risk**: 101/226 detekt rules (~45%) require Kotlin compiler type resolution. Pure Rust implementation may need alternative approaches or FFI bindings for these.
