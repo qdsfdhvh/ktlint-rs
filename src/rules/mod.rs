@@ -137,6 +137,9 @@ impl RuleEngine {
             Box::new(detekt::complexity::LongParameterList::new()),
             Box::new(detekt::complexity::NestedBlockDepth::new()),
             Box::new(detekt::complexity::LargeClass::new()),
+            Box::new(detekt::complexity::CyclomaticComplexMethod::new()),
+            Box::new(detekt::complexity::TooManyFunctions::new()),
+            Box::new(detekt::complexity::ComplexCondition::new()),
             // ── Phase 1 rules (unique IDs) ────────────────────────────
             Box::new(phase1_rules::WhenEntryBracing),
             Box::new(phase1_rules::BlankLineBetweenWhenConditions),
