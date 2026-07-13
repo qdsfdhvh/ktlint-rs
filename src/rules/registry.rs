@@ -140,6 +140,8 @@ impl Registry {
             Box::new(detekt::style::ForbiddenComment),
             Box::new(detekt::style::WildcardImport),
             Box::new(detekt::style::MandatoryBracesIfElse),
+            Box::new(detekt::style::SpacingBetweenPackageAndImports),
+            Box::new(detekt::style::UseArrayLiteralsInAnnotations),
         ]
     }
 }
