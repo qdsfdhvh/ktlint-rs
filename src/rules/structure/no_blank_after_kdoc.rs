@@ -41,7 +41,9 @@ impl Rule for NoBlankAfterKdoc {
                         || next.starts_with("const ")
                         || next.starts_with("override ")
                         || next == "companion"
-                        || next.starts_with("companion ");
+                        || next.starts_with("companion ")
+                        || next.starts_with("import ")
+                        || next.starts_with("package ");
                     if is_decl_or_related {
                         continue;
                     }

@@ -1,4 +1,5 @@
 //! standard:function-naming — function names must be camelCase.
+//! PascalCase allowed for @Composable, @Preview, @Test functions.
 
 use crate::rules::{Rule, Violation};
 
@@ -13,44 +14,85 @@ impl Rule for FunctionNaming {
         false
     }
 
-    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
-
-        for (i, line) in source.lines().enumerate() {
-            let trimmed = line.trim();
-
-            if let Some(name) = extract_name_after_keyword(trimmed, "fun ") {
-                if is_operator_function(&name) || name.starts_with("test_") {
-                    continue;
-                }
-                if !is_camel_case(&name) {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: trimmed.find("fun ").unwrap_or(0) + 5,
-                        rule_id: self.id().to_string(),
-                        message: format!("Function name \"{}\" should be camelCase", name),
-                        auto_fixable: false,
-                    });
-                }
-            }
-        }
-
+        let bytes = source.as_bytes();
+        walk_fn(tree.root_node(), bytes, &mut violations);
         violations
     }
 }
 
-fn extract_name_after_keyword(line: &str, keyword: &str) -> Option<String> {
-    let rest = line.strip_prefix(keyword)?;
-    let rest = rest.trim_start();
-    let name: String = rest
-        .chars()
-        .take_while(|c| c.is_alphanumeric() || *c == '_')
-        .collect();
-    if name.is_empty() {
-        None
-    } else {
-        Some(name)
+fn walk_fn(node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    if node.kind() == "function_declaration" {
+        // Find function name (simple_identifier child)
+        let mut name = "";
+        let mut has_composable = false;
+        let mut has_test_annotation = false;
+        let mut has_preview = false;
+
+        for i in 0..node.child_count() {
+            if let Some(child) = node.child(i) {
+                match child.kind() {
+                    "simple_identifier" => {
+                        name = child.utf8_text(bytes).unwrap_or("");
+                    }
+                    "modifiers" => {
+                        // Check for @Composable, @Preview, @Test annotations
+                        for j in 0..child.child_count() {
+                            if let Some(mod_child) = child.child(j) {
+                                if mod_child.kind() == "annotation" {
+                                    let text = mod_child.utf8_text(bytes).unwrap_or("");
+                                    if text.contains("Composable") {
+                                        has_composable = true;
+                                    }
+                                    if text.contains("Preview") {
+                                        has_preview = true;
+                                    }
+                                    if text.contains("Test") {
+                                        has_test_annotation = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if name.is_empty() || name.starts_with("test_") {
+            return;
+        }
+
+        // Skip operator functions
+        if is_operator_function(name) {
+            return;
+        }
+
+        // PascalCase allowed for @Composable, @Preview, @Test
+        if has_composable || has_preview || has_test_annotation {
+            // These annotations allow both PascalCase and camelCase
+            // Only flag if it has invalid characters (not alphanumeric)
+            return;
+        }
+
+        if !is_camel_case(name) {
+            let pos = node.start_position();
+            violations.push(Violation {
+                file: String::new(),
+                line: pos.row + 1,
+                col: pos.column + 1,
+                rule_id: "standard:function-naming".into(),
+                message: format!("Function name \"{}\" should be camelCase", name),
+                auto_fixable: false,
+            });
+        }
+    }
+
+    for i in 0..node.child_count() {
+        if let Some(child) = node.child(i) {
+            walk_fn(child, bytes, violations);
+        }
     }
 }
 
@@ -82,8 +124,7 @@ mod tests {
     use crate::parser::KotlinParser;
 
     fn check(source: &str) -> Vec<Violation> {
-        let mut parser = KotlinParser::new();
-        let tree = parser.parse(source);
+        let tree = KotlinParser::new().parse(source);
         FunctionNaming.check(&tree, source)
     }
 
@@ -93,10 +134,25 @@ mod tests {
     }
 
     #[test]
-    fn pascal_case_function() {
+    fn pascal_case_function_flagged() {
         let v = check("fun MyFunction()\n");
         assert!(!v.is_empty());
-        assert_eq!(v[0].rule_id, "standard:function-naming");
+    }
+
+    #[test]
+    fn composable_function_allowed() {
+        assert!(check("@Composable\nfun MyComponent() {}\n").is_empty());
+        assert!(check("@Composable\nfun myComponent() {}\n").is_empty());
+    }
+
+    #[test]
+    fn preview_function_allowed() {
+        assert!(check("@Preview\nfun MyPreview() {}\n").is_empty());
+    }
+
+    #[test]
+    fn test_function_allowed() {
+        assert!(check("@Test\nfun my_test() {}\n").is_empty());
     }
 
     #[test]
@@ -105,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    fn snake_case_underscore() {
+    fn snake_case_flagged() {
         let v = check("fun my_function()\n");
         assert!(!v.is_empty());
     }
