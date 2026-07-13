@@ -158,6 +158,126 @@ fn walk_class_methods(n: tree_sitter::Node, v: &mut Vec<Violation>, t: usize) {
     }
 }
 
+// ── CyclomaticComplexMethod ──
+pub struct CyclomaticComplexMethod { threshold: usize }
+impl CyclomaticComplexMethod {
+    pub fn new() -> Self { Self { threshold: 15 } }
+}
+impl Rule for CyclomaticComplexMethod {
+    fn id(&self) -> &'static str { "detekt:complexity:CyclomaticComplexMethod" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+        let mut v = Vec::new();
+        walk_cyclo(tree.root_node(), &mut v, self.threshold);
+        v
+    }
+}
+
+fn walk_cyclo(n: tree_sitter::Node, v: &mut Vec<Violation>, t: usize) {
+    if n.kind() == "function_body" {
+        let complexity = 1 + count_branches(&n);
+        if complexity > t {
+            let pos = n.start_position();
+            v.push(Violation {
+                file: String::new(), line: pos.row + 1, col: pos.column + 1,
+                rule_id: "detekt:complexity:CyclomaticComplexMethod".into(),
+                message: format!("Cyclomatic complexity {} exceeds threshold of {}", complexity, t),
+                auto_fixable: false,
+            });
+        }
+    }
+    for i in 0..n.child_count() {
+        if let Some(c) = n.child(i) { walk_cyclo(c, v, t); }
+    }
+}
+
+fn count_branches(n: &tree_sitter::Node) -> usize {
+    let kind = n.kind();
+    let mut count = if matches!(kind, "if_expression" | "when_entry" | "while_statement" |
+        "for_statement" | "do_while_statement" | "catch_block")
+    { 1 } else { 0 };
+    // AND/OR in conditions
+    if kind == "conjunction_expression" || kind == "disjunction_expression" { count += 1; }
+    for i in 0..n.child_count() {
+        if let Some(c) = n.child(i) { count += count_branches(&c); }
+    }
+    count
+}
+
+// ── TooManyFunctions ──
+pub struct TooManyFunctions { threshold: usize }
+impl TooManyFunctions {
+    pub fn new() -> Self { Self { threshold: 20 } }
+}
+impl Rule for TooManyFunctions {
+    fn id(&self) -> &'static str { "detekt:complexity:TooManyFunctions" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+        let mut v = Vec::new();
+        // Check per-file: count all function_declarations
+        let count = count_fns(tree.root_node());
+        if count > self.threshold {
+            v.push(Violation {
+                file: String::new(), line: 1, col: 1,
+                rule_id: "detekt:complexity:TooManyFunctions".into(),
+                message: format!("File has {} functions, exceeding threshold of {}", count, self.threshold),
+                auto_fixable: false,
+            });
+        }
+        v
+    }
+}
+
+fn count_fns(n: tree_sitter::Node) -> usize {
+    let mut count = if n.kind() == "function_declaration" { 1 } else { 0 };
+    for i in 0..n.child_count() {
+        if let Some(c) = n.child(i) { count += count_fns(c); }
+    }
+    count
+}
+
+// ── ComplexCondition ──
+pub struct ComplexCondition { threshold: usize }
+impl ComplexCondition {
+    pub fn new() -> Self { Self { threshold: 3 } }
+}
+impl Rule for ComplexCondition {
+    fn id(&self) -> &'static str { "detekt:complexity:ComplexCondition" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+        let mut v = Vec::new();
+        walk_cond(tree.root_node(), &mut v, self.threshold);
+        v
+    }
+}
+
+fn walk_cond(n: tree_sitter::Node, v: &mut Vec<Violation>, t: usize) {
+    if n.kind() == "if_expression" || n.kind() == "when_entry" || n.kind() == "while_statement" {
+        // Count logical operators in condition
+        let ops = count_ops(&n);
+        if ops > t {
+            let pos = n.start_position();
+            v.push(Violation {
+                file: String::new(), line: pos.row + 1, col: pos.column + 1,
+                rule_id: "detekt:complexity:ComplexCondition".into(),
+                message: format!("Condition has {} logical operators, exceeding threshold of {}", ops, t),
+                auto_fixable: false,
+            });
+        }
+    }
+    for i in 0..n.child_count() {
+        if let Some(c) = n.child(i) { walk_cond(c, v, t); }
+    }
+}
+
+fn count_ops(n: &tree_sitter::Node) -> usize {
+    let k = n.kind();
+    let mut count = if k == "conjunction_expression" || k == "disjunction_expression" { 1 } else { 0 };
+    for i in 0..n.child_count() {
+        if let Some(c) = n.child(i) { count += count_ops(&c); }
+    }
+    count
+}
 #[cfg(test)]
 mod tests {
     use super::*;
