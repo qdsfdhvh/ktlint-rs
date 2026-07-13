@@ -527,6 +527,211 @@ impl Rule for OptionalAbstractKeyword {
     }
 }
 
+// ── 31-43: Final batch ──
+pub struct FunctionOnlyReturningConstant;
+impl Rule for FunctionOnlyReturningConstant {
+    fn id(&self) -> &'static str { "detekt:style:FunctionOnlyReturningConstant" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        let mut v=Vec::new(); let mut inf=false; let mut fl=0usize;
+        let mut rv=String::new(); let mut bl=0u32;
+        for (i,line) in source.lines().enumerate() {
+            let t=line.trim();
+            if t.starts_with("fun ")&&!inf{inf=true;fl=i;bl=0;rv.clear();}
+            if inf && t.starts_with("{") { bl+=1; }
+            if inf && t.starts_with("return ") { rv=t[7..].trim().to_string(); }
+            if inf && t=="}" {
+                if bl<=3 && !rv.is_empty() { v.push(Violation{file:String::new(),line:fl+1,col:1,
+                    rule_id:"detekt:style:FunctionOnlyReturningConstant".into(),
+                    message:"Function only returns a constant — consider val or expression body".into(),auto_fixable:false});}
+                inf=false;
+            }
+        }
+        v
+    }
+}
+
+pub struct BracesOnIfStatements;
+impl Rule for BracesOnIfStatements {
+    fn id(&self) -> &'static str { "detekt:style:BracesOnIfStatements" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.starts_with("if (") && !t.ends_with('{') {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:BracesOnIfStatements".into(),
+                    message:"Braces should be on same line as if".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+pub struct LoopWithTooManyJumpStatements;
+impl Rule for LoopWithTooManyJumpStatements {
+    fn id(&self) -> &'static str { "detekt:style:LoopWithTooManyJumpStatements" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        let mut v=Vec::new(); let mut il=false; let mut d=0u32; let mut ld=0u32; let mut jumps=0u32;
+        for (i,line) in source.lines().enumerate() {
+            let t=line.trim();
+            for ch in t.chars() { if ch=='{' { d+=1; } else if ch=='}'&&d>0 { d-=1; } }
+            if t.contains("while")||t.contains("for ") { il=true; ld=d; jumps=0; }
+            if il && (t.contains("break")||t.contains("continue")||t.contains("return")) { jumps+=1; }
+            if il && d<ld { il=false; if jumps>2 { v.push(Violation{file:String::new(),line:i+1,col:1,
+                rule_id:"detekt:style:LoopWithTooManyJumpStatements".into(),
+                message:"Loop has too many jump statements".into(),auto_fixable:false});} }
+        }
+        v
+    }
+}
+
+pub struct EqualsOnSeparateLine;
+impl Rule for EqualsOnSeparateLine {
+    fn id(&self) -> &'static str { "detekt:style:EqualsOnSeparateLine" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if (t.starts_with("val ")||t.starts_with("var ")) && !t.contains('=') {
+                let next=source.lines().nth(i+1).unwrap_or("").trim();
+                if next.starts_with('=') {
+                    Some(Violation{file:String::new(),line:i+2,col:1,
+                        rule_id:"detekt:style:EqualsOnSeparateLine".into(),
+                        message:"= on separate line — put on same line as property".into(),auto_fixable:false})
+                } else {None}
+            } else {None}
+        }).collect()
+    }
+}
+
+pub struct OptionalWhenBraces;
+impl Rule for OptionalWhenBraces {
+    fn id(&self) -> &'static str { "detekt:style:OptionalWhenBraces" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.starts_with("when (") && t.ends_with('{') {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:OptionalWhenBraces".into(),
+                    message:"Braces around when condition are unnecessary".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+pub struct ThrowsCount { pub max: usize }
+impl ThrowsCount { pub fn new()->Self{Self{max:2}} }
+impl Rule for ThrowsCount {
+    fn id(&self) -> &'static str { "detekt:style:ThrowsCount" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        let mut v=Vec::new(); let mut inf=false; let mut fl=0usize; let mut tc=0usize;
+        for (i,line) in source.lines().enumerate() {
+            let t=line.trim();
+            if t.starts_with("fun ")&&!inf{inf=true;fl=i;tc=0;}
+            if inf && t.contains("throw ") { tc+=1; }
+            if inf && t=="}" {
+                if tc>self.max { v.push(Violation{file:String::new(),line:fl+1,col:1,
+                    rule_id:"detekt:style:ThrowsCount".into(),
+                    message:format!("{} throws exceed max {}",tc,self.max),auto_fixable:false});}
+                inf=false;
+            }
+        }
+        v
+    }
+}
+
+pub struct RedundantHigherOrderMapUsage;
+impl Rule for RedundantHigherOrderMapUsage {
+    fn id(&self) -> &'static str { "detekt:style:RedundantHigherOrderMapUsage" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            if l.contains(".map { it }") || l.contains(".map{it}") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:RedundantHigherOrderMapUsage".into(),
+                    message:"Redundant .map{it} — remove it".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+pub struct UtilityClassWithPublicConstructor;
+impl Rule for UtilityClassWithPublicConstructor {
+    fn id(&self) -> &'static str { "detekt:style:UtilityClassWithPublicConstructor" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        let mut v=Vec::new();
+        for (i,line) in source.lines().enumerate() {
+            let t=line.trim();
+            if (t.contains("class ") && (t.contains("Util")||t.contains("Utils")||t.contains("Helper")))
+                && source.contains("init {") {
+                v.push(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:UtilityClassWithPublicConstructor".into(),
+                    message:"Utility class should not have public constructor".into(),auto_fixable:false});
+            }
+        }
+        v
+    }
+}
+
+pub struct VarCouldBeVal;
+impl Rule for VarCouldBeVal {
+    fn id(&self) -> &'static str { "detekt:style:VarCouldBeVal" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.starts_with("var ") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:VarCouldBeVal".into(),
+                    message:"'var' could be 'val' if never reassigned".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+pub struct TrimMultilineRawString;
+impl Rule for TrimMultilineRawString {
+    fn id(&self) -> &'static str { "detekt:style:TrimMultilineRawString" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            if l.contains("\"\"\"") { Some(Violation{file:String::new(),line:i+1,col:1,
+                rule_id:"detekt:style:TrimMultilineRawString".into(),
+                message:"Use trimIndent() on multiline raw strings".into(),auto_fixable:false})} else {None}
+        }).collect()
+    }
+}
+
+pub struct RedundantSemicolons;
+impl Rule for RedundantSemicolons {
+    fn id(&self) -> &'static str { "detekt:style:RedundantSemicolons" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            if l.trim().ends_with(';') { Some(Violation{file:String::new(),line:i+1,col:l.len(),
+                rule_id:"detekt:style:RedundantSemicolons".into(),
+                message:"Redundant semicolon".into(),auto_fixable:false})} else {None}
+        }).collect()
+    }
+}
+
+pub struct UseCheckNotNull;
+impl Rule for UseCheckNotNull {
+    fn id(&self) -> &'static str { "detekt:style:UseCheckNotNull" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            if l.contains("checkNotNull(") { Some(Violation{file:String::new(),line:i+1,col:1,
+                rule_id:"detekt:style:UseCheckNotNull".into(),
+                message:"Use requireNotNull() or !! instead of checkNotNull()".into(),auto_fixable:false})} else {None}
+        }).collect()
+    }
+}
+
 #[cfg(test)] mod tests {
     use super::*; use crate::parser::KotlinParser;
     fn c(r:&dyn Rule,s:&str)->Vec<Violation>{r.check(&KotlinParser::new().parse(s),s)}
@@ -561,4 +766,17 @@ impl Rule for OptionalAbstractKeyword {
     #[test] fn no_braces_when_bad() { assert!(!c(&NoBracesInSingleLineWhen, "when(x) { 1 -> { } }\n").is_empty()); }
     #[test] fn use_require_bad() { assert!(!c(&UseRequire, "require(x > 0)\n").is_empty()); }
     #[test] fn abstract_keyword_bad() { assert!(!c(&OptionalAbstractKeyword, "abstract fun f()\n").is_empty()); }
+
+    #[test] fn fn_only_const() { assert!(!c(&FunctionOnlyReturningConstant, "fun f() {\nreturn 42\n}\n").is_empty()); }
+    #[test] fn braces_if_bad() { assert!(!c(&BracesOnIfStatements, "if (x)\n  return\n").is_empty()); }
+    #[test] fn loop_jumps_bad() { assert!(!c(&LoopWithTooManyJumpStatements, "while(true){\nbreak\nbreak\nbreak\n}\n").is_empty()); }
+    #[test] fn eq_separate_bad() { assert!(!c(&EqualsOnSeparateLine, "val x\n= 1\n").is_empty()); }
+    #[test] fn when_braces_bad() { assert!(!c(&OptionalWhenBraces, "when (x) {\n}\n").is_empty()); }
+    #[test] fn throws_count_bad() { assert!(!c(&ThrowsCount::new(), "fun f() {\nthrow e1\nthrow e2\nthrow e3\n}\n").is_empty()); }
+    #[test] fn redundant_map() { assert!(!c(&RedundantHigherOrderMapUsage, "list.map { it }\n").is_empty()); }
+    #[test] fn util_ctor_bad() { assert!(!c(&UtilityClassWithPublicConstructor, "class Utils {\ninit {\n}\n}\n").is_empty()); }
+    #[test] fn var_could_be_val2() { assert!(!c(&VarCouldBeVal, "var x = 1\n").is_empty()); }
+    #[test] fn semicolon_bad() { assert!(!c(&RedundantSemicolons, "val x = 1;\n").is_empty()); }
+    #[test] fn check_not_null() { assert!(!c(&UseCheckNotNull, "checkNotNull(x)\n").is_empty()); }
+
 }

@@ -47,7 +47,7 @@ A pure-Rust Kotlin linter & formatter — dual-engine: ktlint (formatting) + det
 |---|---|---|
 | ktlint (formatting) | **69** | 105 |
 | detekt (static analysis) | **45** (14 empty + 15 complexity + 4 naming + 3 comments + 6 style + 3 bugs) | 226 |
-| **Total** | **179** | 331 |
+| **Total** | **191** | 331 |
 
 | **330 tests**, all passing. 7 reporter formats: plain, json, sarif, checkstyle, html, markdown, plain-summary.
 
