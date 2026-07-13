@@ -267,31 +267,57 @@ Name inference logic:
 
 ### Critical Path
 
-1. **✅ Fix mod.rs duplicates & missing rules** — 4 rules were registered 10x each, causing massive false positives. Now 78 unique rules with no duplication.
-2. **✅ Fix indent rule logic** — 6,948 → 369 violations. JVM-compatible brace tracking with `} else {` combo handling. Remaining gap (369 vs 15) from deeply-nested indent flakiness.
-3. **✅ Tune new rules** — `blank-line-before-declaration`: 1,240 → 1. Now requires both current AND prev line to be declarations (matching JVM AST sibling check).
-4. **🟡 Investigate rs-only rules** — `colon-spacing` fixed for annotations (196→35). Remaining: `no-unnecessary-parentheses-before-trailing-lambda` (389 vs 1), `function-naming` (324 vs 0), `no-empty-line-after-kdoc` (334 vs 0), `kdoc` (313 vs 5).
-5. **✅ Fix `no-semicolons`** — 312→0 by tracking block comment state.
+1. **✅ Fix mod.rs duplicates** — 4 rules registered 10× each; now clean.
+2. **✅ Fix indent rule** — JVM-compatible `} else {` handling. Gap: 369 vs 15.
+3. **✅ Tune blank-line-before-declaration** — 1,240→1 (under-flags vs JVM 25).
+4. **✅ Six parity rules fixed** — no-semicolons, no-unnecessary-paren-lambda, colon-spacing, function-naming, kdoc @param, no-empty-line-after-kdoc. Total: ~1,300 violations eliminated.
+5. **⬜ Three core gaps remain** — multiline-expression-wrapping (+384), indent (+354), kdoc (+174). **These three account for 88% of the remaining implementation gap.**
 
-### Known Parity Gaps (nowinandroid, Jul 2026)
+### Current Bench (Jul 2026, nowinandroid)
 
-| # | Gap | rs | jvm | Status |
-|---|---:|---:|---|
-| 1 | ✅ per-rule disable | — | — | Done |
-| 2 | ✅ blank-line-before-declaration | 1 | 25 | Under-flags |
-| 3 | ✅ no-semicolons | 0 | 0 | Done |
-| 4 | ✅ no-unnecessary-paren-lambda | 0 | 1 | Done (389→0) |
-| 5 | ✅ colon-spacing | 35 | 0 | 196→35 |
-| 6 | ✅ function-naming | 2 | 0 | 324→2 (CST + @Composable) |
-| 7 | 🟡 **multiline-expression-wrapping** | 1,125 | 741 | +384 gap |
-| 8 | 🟡 **indent** | 369 | 15 | +354 gap |
-| 9 | 🟡 **kdoc** | 179 | 5 | +174 gap |
-| 10 | 🟡 no-consecutive-comments | 100 | 3 | JVM more lenient |
-| 11 | 🟡 annotation | 3 | 78 | **Under-flags** (misses same-line code) |
-| 12 | 🟡 rs-only JVM=0 | ~600 | 0 | Experimental / ktlint-rs specific |
-| 13 | 🟡 jvm-only RS=0 | 19 | — | 6 rules missing |
----
+| | ktlint-rs | JVM ktlint |
+|---|---|---|
+| Violations | 2,600 | 1,057 |
+| Rules used | 38 | 21 |
+| Speed | **0.68s** | 7.1s (**10× faster**) |
 
+### Gap Root Cause Analysis
+
+Total rs excess: **2,348 violations**
+
+| Category | Violations | % | Description |
+|---|---|---|---|
+| Implementation differences | 1,096 | 47% | Same rule, different behavior (wrapping, indent, kdoc, etc.) |
+| RS-only rules | 626 | 27% | JVM doesn't have these (experimental, different naming) |
+| JVM-only (we miss) | 19 | 1% | 6 rules we don't implement |
+| Exact match | 1 | — | `no-blank-line-before-rbrace` |
+
+**Top 3 implementation gaps** (88% of all impl diff):
+| Rule | rs | jvm | diff |
+|---|---:|---:|
+| `multiline-expression-wrapping` | 1,125 | 741 | +384 |
+| `indent` | 369 | 15 | +354 |
+| `kdoc` | 179 | 5 | +174 |
+
+**Under-flagging** (we miss valid JVM violations):
+| Rule | rs | jvm | diff |
+|---|---:|---:|
+| `annotation` | 3 | 78 | -75 |
+| `no-empty-first-line-in-class-body` | 67 | 107 | -40 |
+| `blank-line-before-declaration` | 1 | 25 | -24 |
+| `when-entry-bracing` | 5 | 25 | -20 |
+
+**RS-only top offenders** (JVM=0, >30 violations):
+| Rule | Count | Why |
+|---|---|---|
+| `no-single-expression-body` | 139 | JVM doesn't have this rule |
+| `import-ordering` | 82 | JVM experimental, disabled by default |
+| `no-unused-imports` | 66 | JVM under different ID? |
+| `property-naming` | 50 | JVM experimental |
+| `spacing-between-declarations` | 49 | JVM doesn't have this |
+| `op-spacing` | 41 | JVM uses different rule IDs |
+| `colon-spacing` | 35 | Partially fixed (196→35) |
+| `multiline-if-else` | 31 | JVM doesn't have this |
 ## Verified Dimensions
 
 | Dimension | Status |
