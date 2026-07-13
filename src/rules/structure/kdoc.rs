@@ -48,13 +48,8 @@ impl Rule for KdocFormatting {
             }
 
             // @param without name (JavaDoc style) — checked both inside and after KDoc
-            if trimmed.starts_with("* @param") && !trimmed.contains('[') {
-                violations.push(kdoc_violation(
-                    self.id(),
-                    i + 1,
-                    "Use KDoc syntax @param[name] instead of @param",
-                ));
-            }
+            // @param without name: skip — @param name is valid Kotlin KDoc syntax.
+            // JVM ktlint does NOT flag @param without [name].
 
             if in_kdoc {
                 if trimmed == "*/" && i == kdoc_start_line + 1 {
@@ -91,13 +86,7 @@ impl Rule for KdocFormatting {
                 continue;
             }
 
-            if trimmed.starts_with("* @param") && !trimmed.contains('[') {
-                violations.push(kdoc_violation(
-                    self.id(),
-                    i + 1,
-                    "Use KDoc syntax @param[name] instead of @param",
-                ));
-            }
+            // @param name is valid KDoc syntax — JVM ktlint does NOT flag this
         }
 
         violations
@@ -108,27 +97,26 @@ fn is_inside_block(lines: &[&str], kdoc_line: usize) -> bool {
     if kdoc_line == 0 {
         return false;
     }
-    // A KDoc is inside a block if any line above it at a lower indent level
-    // contains a '{' (opening a block the KDoc is inside).
     let kdoc_indent = lines[kdoc_line].len() - lines[kdoc_line].trim_start().len();
-    // Skip blank/comment lines before KDoc
+    let mut inside = false;
     for j in (0..kdoc_line).rev() {
         let t = lines[j].trim();
         if t.is_empty() || t.starts_with("//") || t.starts_with("/*") || t.starts_with('*') {
             continue;
         }
-        let prev_indent = lines[j].len() - t.len();
-        // If there's a '{' on any line above at or above this indent, KDoc is inside
-        if prev_indent <= kdoc_indent && t.contains('{') {
-            return true;
-        }
-        // Stop when we hit a non-block line at the same or lower indent
-        // that doesn't contain '{'
-        if prev_indent < kdoc_indent {
-            return false;
+        let indent = lines[j].len() - t.len();
+        if indent <= kdoc_indent {
+            if t == "}" {
+                inside = false;
+            } else if t.contains('{') && !inside {
+                // First { we encounter at this level (after any closing }) means
+                // the KDoc is at the same level as a block-opening brace
+                inside = true;
+                break;
+            }
         }
     }
-    false
+    inside
 }
 
 fn kdoc_violation(rule_id: &str, line: usize, msg: &str) -> Violation {
@@ -173,7 +161,8 @@ mod tests {
     }
 
     #[test]
-    fn java_param() {
-        assert!(!check("/**\n * @param x\n */\nfun foo(x:Int)\n").is_empty());
+    fn java_param_not_flagged() {
+        // @param name is valid Kotlin KDoc syntax — JVM ktlint does NOT flag this
+        assert!(check("/**\n * @param x\n */\nfun foo(x:Int)\n").is_empty());
     }
 }

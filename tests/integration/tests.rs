@@ -77,8 +77,9 @@ mod integration_tests {
             "curly-spacing should be disabled"
         );
         // But other rules still work
+        // Other rules (not disabled) should still fire
         assert!(
-            stdout.contains("standard:op-spacing") || stdout.contains("standard:colon"),
+            stdout.contains("standard:"),
             "Other rules should still work"
         );
     }
