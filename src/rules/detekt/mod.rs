@@ -2,7 +2,9 @@
 //!
 //! Organized by detekt categories:
 //! - `empty-blocks` (14 rules) — flag empty code blocks
-//! - `complexity` (4 rules) — measure code complexity (LongMethod, LongParameterList, NestedBlockDepth, LargeClass)
+//! - `complexity` (7 rules) — code complexity metrics
+//! - `naming` (3 rules) — FunctionMaxLength, FunctionMinLength, EnumNaming
 
 pub mod empty_blocks;
 pub mod complexity;
+pub mod naming;

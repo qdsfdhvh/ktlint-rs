@@ -126,6 +126,10 @@ impl Registry {
             Box::new(detekt::complexity::CyclomaticComplexMethod::new()),
             Box::new(detekt::complexity::TooManyFunctions::new()),
             Box::new(detekt::complexity::ComplexCondition::new()),
+            // ── detekt naming ──
+            Box::new(detekt::naming::FunctionMaxLength::new()),
+            Box::new(detekt::naming::FunctionMinLength::new()),
+            Box::new(detekt::naming::EnumNaming),
         ]
     }
 }
