@@ -169,6 +169,12 @@ impl Registry {
             Box::new(detekt::style::MandatoryBracesIfElse),
             Box::new(detekt::style::SpacingBetweenPackageAndImports),
             Box::new(detekt::style::UseArrayLiteralsInAnnotations),
+            Box::new(detekt::style::NewLineAtEndOfFile),
+            Box::new(detekt::style::MagicNumber),
+            Box::new(detekt::style::OptionalUnit),
+            Box::new(detekt::style::UnderscoresInNumericLiterals),
+            Box::new(detekt::style::UseCheckOrError),
+            Box::new(detekt::style::CollapsibleIfStatements),
             // potential-bugs
             Box::new(detekt::potential_bugs::DuplicateCaseInWhen),
             Box::new(detekt::potential_bugs::UnreachableCatchBlock),
