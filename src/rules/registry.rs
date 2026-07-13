@@ -134,6 +134,11 @@ impl Registry {
             Box::new(detekt::comments::DeprecatedBlockTag),
             Box::new(detekt::comments::EndOfSentenceFormat),
             Box::new(detekt::comments::AbsentOrWrongFileLicense),
+            // detekt style
+            Box::new(detekt::style::NoTabs),
+            Box::new(detekt::style::ForbiddenComment),
+            Box::new(detekt::style::WildcardImport),
+            Box::new(detekt::style::MandatoryBracesIfElse),
         ]
     }
 }
