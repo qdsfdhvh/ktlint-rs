@@ -130,6 +130,7 @@ impl Registry {
             Box::new(detekt::naming::FunctionMaxLength::new()),
             Box::new(detekt::naming::FunctionMinLength::new()),
             Box::new(detekt::naming::EnumNaming),
+            Box::new(detekt::naming::FunctionParameterNaming),
             // ── detekt comments ──
             Box::new(detekt::comments::DeprecatedBlockTag),
             Box::new(detekt::comments::EndOfSentenceFormat),
