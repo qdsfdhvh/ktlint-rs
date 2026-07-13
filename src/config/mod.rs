@@ -26,6 +26,8 @@ pub struct KtlintConfig {
     pub trim_trailing_whitespace: bool,
     /// Rule set filter (ktlint-only, detekt-only, or both)
     pub rule_set: RuleSet,
+    /// Category-level overrides from YAML (e.g., "detekt:complexity" → RuleConfig)
+    pub category_overrides: HashMap<String, RuleConfig>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,6 +64,7 @@ impl Default for KtlintConfig {
             insert_final_newline: true,
             trim_trailing_whitespace: true,
             rule_set: RuleSet::KtlintOnly,
+            category_overrides: HashMap::new(),
         }
     }
 }
@@ -340,9 +343,17 @@ impl KtlintConfig {
 
     /// Check whether a rule is enabled.
     pub fn is_rule_enabled(&self, rule_id: &str) -> bool {
+        // 1. Code style disables certain rules
         if self.code_style.is_rule_disabled(rule_id) {
             return false;
         }
+        // 2. Category-level overrides (e.g., "detekt:complexity" → disabled)
+        for (prefix, rc) in &self.category_overrides {
+            if rule_id.starts_with(prefix) && !rc.enabled {
+                return false;
+            }
+        }
+        // 3. Per-rule enable/disable
         if let Some(rule_config) = self.rules.get(rule_id) {
             return rule_config.enabled;
         }
