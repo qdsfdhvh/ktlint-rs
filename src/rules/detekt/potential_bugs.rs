@@ -280,7 +280,8 @@ impl Rule for ImplicitUnitReturnType {
             if inf && t.contains("return") { hr=true; }
             if inf && t == "}" {
                 if hr {
-                    let decl = source.lines().nth(fl).unwrap_or("");
+                    let lines: Vec<&str> = source.lines().collect();
+                    let decl = lines.get(fl).copied().unwrap_or("");
                     if !decl.contains(':') {
                         v.push(Violation{file:String::new(),line:fl+1,col:1,
                             rule_id:"detekt:potential-bugs:ImplicitUnitReturnType".into(),

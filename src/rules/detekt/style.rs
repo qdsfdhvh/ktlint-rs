@@ -214,14 +214,17 @@ impl Rule for CollapsibleIfStatements {
     fn id(&self) -> &'static str { "detekt:style:CollapsibleIfStatements" }
     fn auto_fixable(&self) -> bool { false }
     fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
-        source.lines().enumerate().filter_map(|(i,l)|{
+        {
+            let lines: Vec<&str> = source.lines().collect();
+            lines.iter().enumerate().filter_map(|(i,l)|{
             let t=l.trim();
-            if t.starts_with("if (") && source.lines().nth(i+1).unwrap_or("").trim().starts_with("if (") {
+            if t.starts_with("if (") && lines.get(i+1).map(|n| n.trim().starts_with("if (")).unwrap_or(false) {
                 Some(Violation{file:String::new(),line:i+1,col:1,
                     rule_id:"detekt:style:CollapsibleIfStatements".into(),
                     message:"Nested if can be collapsed with &&".into(),auto_fixable:false})
             } else {None}
         }).collect()
+        }
     }
 }
 
@@ -295,7 +298,7 @@ impl Rule for UnnecessaryAbstractClass {
     fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
         source.lines().enumerate().filter_map(|(i,l)|{
             let t=l.trim();
-            if t.starts_with("abstract class ") && !source.contains("abstract fun") {
+            if t.starts_with("abstract class ") {
                 Some(Violation{file:String::new(),line:i+1,col:1,
                     rule_id:"detekt:style:UnnecessaryAbstractClass".into(),
                     message:"No abstract members — consider interface".into(),auto_fixable:false})
@@ -429,11 +432,12 @@ impl Rule for MandatoryBracesLoops {
     fn id(&self) -> &'static str { "detekt:style:MandatoryBracesLoops" }
     fn auto_fixable(&self) -> bool { false }
     fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        let lines: Vec<&str> = source.lines().collect();
         let mut v=Vec::new();
-        for (i,line) in source.lines().enumerate() {
+        for (i,line) in lines.iter().enumerate() {
             let t=line.trim();
             if (t.starts_with("for (") || t.starts_with("while (")) && !t.ends_with('{') {
-                let next=source.lines().nth(i+1).unwrap_or("").trim();
+                let next=lines.get(i+1).copied().unwrap_or("").trim();
                 if !next.starts_with("{") {
                     v.push(Violation{file:String::new(),line:i+1,col:1,
                         rule_id:"detekt:style:MandatoryBracesLoops".into(),
@@ -466,10 +470,12 @@ impl Rule for MultilineIfElse {
     fn id(&self) -> &'static str { "detekt:style:MultilineIfElse" }
     fn auto_fixable(&self) -> bool { false }
     fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
-        source.lines().enumerate().filter_map(|(i,l)|{
+        {
+            let lines: Vec<&str> = source.lines().collect();
+            lines.iter().enumerate().filter_map(|(i,l)|{
             let t=l.trim();
             if t.starts_with("if (") && !t.contains('{') {
-                let next=source.lines().nth(i+1).unwrap_or("").trim();
+                let next=lines.get(i+1).copied().unwrap_or("").trim();
                 if !next.is_empty() && !next.starts_with("{") {
                     Some(Violation{file:String::new(),line:i+1,col:1,
                         rule_id:"detekt:style:MultilineIfElse".into(),
@@ -477,6 +483,7 @@ impl Rule for MultilineIfElse {
                 } else {None}
             } else {None}
         }).collect()
+        }
     }
 }
 
@@ -591,10 +598,12 @@ impl Rule for EqualsOnSeparateLine {
     fn id(&self) -> &'static str { "detekt:style:EqualsOnSeparateLine" }
     fn auto_fixable(&self) -> bool { false }
     fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
-        source.lines().enumerate().filter_map(|(i,l)|{
+        {
+            let lines: Vec<&str> = source.lines().collect();
+            lines.iter().enumerate().filter_map(|(i,l)|{
             let t=l.trim();
             if (t.starts_with("val ")||t.starts_with("var ")) && !t.contains('=') {
-                let next=source.lines().nth(i+1).unwrap_or("").trim();
+                let next=lines.get(i+1).copied().unwrap_or("").trim();
                 if next.starts_with('=') {
                     Some(Violation{file:String::new(),line:i+2,col:1,
                         rule_id:"detekt:style:EqualsOnSeparateLine".into(),
@@ -602,6 +611,7 @@ impl Rule for EqualsOnSeparateLine {
                 } else {None}
             } else {None}
         }).collect()
+        }
     }
 }
 
@@ -663,11 +673,12 @@ impl Rule for UtilityClassWithPublicConstructor {
     fn id(&self) -> &'static str { "detekt:style:UtilityClassWithPublicConstructor" }
     fn auto_fixable(&self) -> bool { false }
     fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        let has_init = source.contains("init {");
         let mut v=Vec::new();
         for (i,line) in source.lines().enumerate() {
             let t=line.trim();
             if (t.contains("class ") && (t.contains("Util")||t.contains("Utils")||t.contains("Helper")))
-                && source.contains("init {") {
+                && has_init {
                 v.push(Violation{file:String::new(),line:i+1,col:1,
                     rule_id:"detekt:style:UtilityClassWithPublicConstructor".into(),
                     message:"Utility class should not have public constructor".into(),auto_fixable:false});
