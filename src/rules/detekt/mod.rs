@@ -2,13 +2,16 @@
 //!
 //! Organized by detekt categories:
 //! - `empty-blocks` (14) — flag empty code blocks
-//! - `complexity` (7) — LongMethod, NestedBlockDepth, etc.
-//! - `naming` (3) — FunctionMax/MinLength, EnumNaming
-//! - `comments` (3) — DeprecatedBlockTag, EndOfSentenceFormat, License
-//! - `style` (4) — NoTabs, ForbiddenComment, WildcardImport, MandatoryBraces
+//! - `complexity` (7) — LongMethod, Cyclomatic, etc.
+//! - `naming` (4) — Max/MinLength, Enum, Parameter
+//! - `comments` (3) — Deprecated, Sentence, License
+//! - `style` (6) — NoTabs, Forbidden, Wildcard, MandatoryBraces, PackageSpacing
+//! - `potential-bugs` (3) — DuplicateCaseInWhen, UnreachableCatch, EqualsNull
 
 pub mod empty_blocks;
 pub mod complexity;
 pub mod naming;
 pub mod comments;
 pub mod style;
+pub mod potential_bugs;
+pub mod exceptions;

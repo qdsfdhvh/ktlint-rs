@@ -126,6 +126,14 @@ impl Registry {
             Box::new(detekt::complexity::CyclomaticComplexMethod::new()),
             Box::new(detekt::complexity::TooManyFunctions::new()),
             Box::new(detekt::complexity::ComplexCondition::new()),
+            Box::new(detekt::complexity::StringLiteralDuplication::new()),
+            Box::new(detekt::complexity::CognitiveComplexMethod::new()),
+            Box::new(detekt::complexity::MethodOverloading::new()),
+            Box::new(detekt::complexity::NamedArguments::new()),
+            Box::new(detekt::complexity::SpreadOperator),
+            Box::new(detekt::complexity::ComplexInterface::new()),
+            Box::new(detekt::complexity::LabeledExpression),
+            Box::new(detekt::complexity::ReplaceSafeCallChainWithRun),
             // ── detekt naming ──
             Box::new(detekt::naming::FunctionMaxLength::new()),
             Box::new(detekt::naming::FunctionMinLength::new()),
@@ -135,6 +143,12 @@ impl Registry {
             Box::new(detekt::comments::DeprecatedBlockTag),
             Box::new(detekt::comments::EndOfSentenceFormat),
             Box::new(detekt::comments::AbsentOrWrongFileLicense),
+            Box::new(detekt::comments::DeprecatedAnnotation),
+            Box::new(detekt::comments::KDocMissing),
+            Box::new(detekt::comments::NonAsciiCharacters),
+            Box::new(detekt::comments::UndocumentedPublicClass),
+            Box::new(detekt::comments::UndocumentedPublicFunction),
+            Box::new(detekt::comments::UndocumentedPublicProperty),
             // detekt style
             Box::new(detekt::style::NoTabs),
             Box::new(detekt::style::ForbiddenComment),
@@ -142,6 +156,20 @@ impl Registry {
             Box::new(detekt::style::MandatoryBracesIfElse),
             Box::new(detekt::style::SpacingBetweenPackageAndImports),
             Box::new(detekt::style::UseArrayLiteralsInAnnotations),
+            // potential-bugs
+            Box::new(detekt::potential_bugs::DuplicateCaseInWhen),
+            Box::new(detekt::potential_bugs::UnreachableCatchBlock),
+            Box::new(detekt::potential_bugs::EqualsNullCall),
+            // ── detekt exceptions ──
+            Box::new(detekt::exceptions::InstanceOfCheckForException),
+            Box::new(detekt::exceptions::NotImplementedDeclaration),
+            Box::new(detekt::exceptions::PrintStackTrace),
+            Box::new(detekt::exceptions::RethrowCaughtException),
+            Box::new(detekt::exceptions::ReturnFromFinally),
+            Box::new(detekt::exceptions::SwallowedException),
+            Box::new(detekt::exceptions::ThrowingExceptionFromFinally),
+            Box::new(detekt::exceptions::TooGenericExceptionCaught),
+            Box::new(detekt::exceptions::TooGenericExceptionThrown),
         ]
     }
 }

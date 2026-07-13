@@ -21,14 +21,9 @@ A pure-Rust Kotlin linter & formatter — dual-engine: ktlint (formatting) + det
 | 8 | Registry + architecture refactor | ✅ |
 | 9 | Unified config (namespace, category switches) | ✅ |
 | 10 | CLI: \`--ruleset\` integration | ✅ |
-| 11 | detekt L0 rules (empty-blocks 14, complexity 7) | 🟡 21/126 |
-| 12 | Name resolution engine | ⬜ blocked |
-| 13 | Type resolution bridge | ⬜ blocked |
-| **8** | **Dual-engine architecture refactor** | ⬜ |
-| **9** | **Unified config layer (.editorconfig + YAML unified)** | ⬜ |
-| **10** | **detekt L0 rules (no type resolution, ~107 rules)** | ⬜ |
-| **11** | **Name resolution engine (L1, ~50 rules)** | ⬜ |
-| **12** | **Type resolution bridge (L2, ~51 rules)** | ⬜ |
+| 11 | detekt L0 rules (37/126: 14 empty + 7 complexity + 4 naming + 3 comments + 6 style + 3 bugs) | 🟡 37/126 |
+| 12 | Name resolution engine (L1, ~50 rules) | ⬜ blocked |
+| 13 | Type resolution bridge (L2, ~51 rules) | ⬜ blocked |
 
 ---
 
@@ -50,11 +45,11 @@ A pure-Rust Kotlin linter & formatter — dual-engine: ktlint (formatting) + det
 
 | 类型 | ktlint-rs | detekt 2.0 |
 |---|---|---|
-| ktlint (formatting) | **78** | 105 |
-| detekt (static analysis) | **21** (7 complexity + 14 empty-blocks) | 226 |
-| **Total** | **99** | 331 |
+| ktlint (formatting) | **69** | 105 |
+| detekt (static analysis) | **45** (14 empty + 15 complexity + 4 naming + 3 comments + 6 style + 3 bugs) | 226 |
+| **Total** | **129** | 331 |
 
-**219 tests**, all passing. 7 reporter formats: plain, json, sarif, checkstyle, html, markdown, plain-summary.
+| **330 tests**, all passing. 7 reporter formats: plain, json, sarif, checkstyle, html, markdown, plain-summary.
 
 ---
 
