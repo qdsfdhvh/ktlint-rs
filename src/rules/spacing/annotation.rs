@@ -1,73 +1,62 @@
-//! standard:annotation-spacing — each annotation on its own line.
-
+//! standard:annotation — annotations on separate lines.
+//! Only flags: multiple annotations on same line, code after annotation block.
 use crate::rules::{Rule, Violation};
 
 pub struct AnnotationSpacing;
 
 impl Rule for AnnotationSpacing {
-    fn id(&self) -> &'static str {
-        "standard:annotation-spacing"
-    }
-
+    fn id(&self) -> &'static str { "standard:annotation" }
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
-        let mut violations = Vec::new();
-        let bytes = source.as_bytes();
-        self.walk(tree.root_node(), bytes, source, &mut violations);
-        violations
+        let mut v = Vec::new();
+        walk(tree.root_node(), source.as_bytes(), &mut v);
+        v
     }
 }
 
-impl AnnotationSpacing {
-    fn walk(
-        &self,
-        node: tree_sitter::Node,
-        bytes: &[u8],
-        source: &str,
-        violations: &mut Vec<Violation>,
-    ) {
-        // Find annotation nodes — they start with "@" in the annotations list
-        if node.kind() == "annotation" {
-            self.check_annotation(&node, bytes, source, violations);
-        }
-        for i in 0..node.child_count() {
-            if let Some(child) = node.child(i) {
-                self.walk(child, bytes, source, violations);
+fn walk(node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    if node.kind() == "modifiers" {
+        let anns: Vec<tree_sitter::Node> =
+            (0..node.child_count()).filter_map(|i| node.child(i)).filter(|c| c.kind() == "annotation").collect();
+
+        for idx in 0..anns.len() {
+            let ann = &anns[idx];
+            let pos = ann.start_position();
+
+            // Consecutive annotations on same line → flag
+            if idx > 0 {
+                let prev = &anns[idx - 1];
+                if prev.end_position().row == pos.row {
+                    violations.push(Violation {
+                        file: String::new(), line: pos.row + 1, col: pos.column + 1,
+                        rule_id: "standard:annotation".into(),
+                        message: "Expected newline before annotation".into(),
+                        auto_fixable: true,
+                    });
+                }
+            }
+
+            // Code after last annotation on same line → flag (only for multi-annotation blocks)
+            if anns.len() > 1 && idx == anns.len() - 1 {
+                let mut a = ann.end_byte();
+                while a < bytes.len() {
+                    if bytes[a] == b'\n' { break; }
+                    if bytes[a] != b' ' && bytes[a] != b'\t' && bytes[a] != b'@' {
+                        violations.push(Violation {
+                            file: String::new(), line: pos.row + 1, col: pos.column + 1,
+                            rule_id: "standard:annotation".into(),
+                            message: "Expected newline after last annotation".into(),
+                            auto_fixable: true,
+                        });
+                        break;
+                    }
+                    a += 1;
+                }
             }
         }
     }
 
-    fn check_annotation(
-        &self,
-        node: &tree_sitter::Node,
-        bytes: &[u8],
-        _source: &str,
-        violations: &mut Vec<Violation>,
-    ) {
-        let pos = node.start_position();
-        let start_byte = node.start_byte();
-
-        // Check if annotation is preceded by another annotation on the same line
-        if start_byte > 0 && bytes[start_byte - 1] != b'\n' {
-            // Count backwards to see if we're after another annotation
-            let mut back = start_byte - 1;
-            while back > 0 {
-                if bytes[back] == b'\n' {
-                    break;
-                }
-                if bytes[back] == b'@' {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: pos.row + 1,
-                        col: pos.column + 1,
-                        rule_id: self.id().to_string(),
-                        message: "Annotation should be on a separate line".to_string(),
-                        auto_fixable: true,
-                    });
-                    break;
-                }
-                back -= 1;
-            }
-        }
+    for i in 0..node.child_count() {
+        if let Some(c) = node.child(i) { walk(c, bytes, violations); }
     }
 }
 
@@ -75,22 +64,12 @@ impl AnnotationSpacing {
 mod tests {
     use super::*;
     use crate::parser::KotlinParser;
-
-    fn check(source: &str) -> Vec<Violation> {
-        let mut parser = KotlinParser::new();
-        let tree = parser.parse(source);
-        AnnotationSpacing.check(&tree, source)
+    fn check(s: &str) -> Vec<Violation> {
+        AnnotationSpacing.check(&KotlinParser::new().parse(s), s)
     }
 
-    #[test]
-    fn single_annotation_ok() {
-        let v = check("@Deprecated\nclass Foo\n");
-        assert!(v.is_empty());
-    }
-
-    #[test]
-    fn multiple_annotations_separate_lines_ok() {
-        let v = check("@Deprecated\n@Suppress\nclass Foo\n");
-        assert!(v.is_empty());
-    }
+    #[test] fn single_annotation_newline_ok() { assert!(check("@Deprecated\nclass Foo\n").is_empty()); }
+    #[test] fn single_annotation_same_line_ok() { assert!(check("@Deprecated class Foo\n").is_empty()); }
+    #[test] fn two_annotations_separate_ok() { assert!(check("@A\n@B\nclass Foo\n").is_empty()); }
+    #[test] fn two_annotations_same_line_bad() { assert!(!check("@A @B\nclass Foo\n").is_empty()); }
 }
