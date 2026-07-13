@@ -45,6 +45,20 @@ pub struct Cli {
     /// Path to YAML config file (detekt-style)
     #[arg(long)]
     pub config: Option<String>,
+
+    // ── Rule set selection ──
+    /// Enable detekt rules alongside ktlint rules
+    #[arg(long)]
+    pub detekt: bool,
+
+    /// Run ONLY detekt rules (disable ktlint)
+    #[arg(long)]
+    pub detekt_only: bool,
+
+    /// Run ONLY ktlint rules (disable detekt, default)
+    #[arg(long)]
+    pub ktlint_only: bool,
+
     /// Maximum number of errors to show
     #[arg(long)]
     pub limit: Option<usize>,

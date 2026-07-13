@@ -24,8 +24,17 @@ pub struct KtlintConfig {
     pub max_line_length: usize,
     pub insert_final_newline: bool,
     pub trim_trailing_whitespace: bool,
+    /// Rule set filter (ktlint-only, detekt-only, or both)
+    pub rule_set: RuleSet,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum RuleSet {
+    #[default]
+    KtlintOnly,
+    DetektOnly,
+    Both,
+}
 impl Default for KtlintConfig {
     fn default() -> Self {
         Self {
@@ -40,6 +49,7 @@ impl Default for KtlintConfig {
             max_line_length: 0,
             insert_final_newline: true,
             trim_trailing_whitespace: true,
+            rule_set: RuleSet::KtlintOnly,
         }
     }
 }
@@ -169,6 +179,13 @@ impl KtlintConfig {
         let project_root = std::env::current_dir()?;
         let mut config = Self {
             project_root,
+            rule_set: if cli.detekt_only {
+                RuleSet::DetektOnly
+            } else if cli.detekt || cli.ktlint_only {
+                RuleSet::Both
+            } else {
+                RuleSet::KtlintOnly
+            },
             ..Default::default()
         };
 

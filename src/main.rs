@@ -48,7 +48,9 @@ fn main() -> anyhow::Result<()> {
             let tree = parser.parse(&source);
             let mut config =
                 KtlintConfig::load_for_file(path).unwrap_or_else(|_| default_config.clone());
-            // Apply YAML config overrides to per-file config
+            // Inherit CLI-level settings into per-file config
+            config.rule_set = default_config.rule_set;
+            // Apply YAML config overrides
             if let Some(ref config_path) = cli.config {
                 if let Err(e) =
                     yaml_config::load_and_apply(&mut config, std::path::Path::new(config_path))
@@ -57,10 +59,8 @@ fn main() -> anyhow::Result<()> {
                 }
             }
             let engine = RuleEngine::new(&config);
-            KtlintConfig::load_for_file(path).unwrap_or_else(|_| default_config.clone());
-            let engine = RuleEngine::new(&config);
             let violations = engine.check(&path.to_string_lossy(), &tree, &source);
-            rules::suppress::filter_suppressed(violations, &source)
+            violations
         })
         .collect();
 

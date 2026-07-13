@@ -168,16 +168,25 @@ impl RuleEngine {
             if !self.config.is_rule_enabled(rule.id()) {
                 continue;
             }
+            if !self.rule_set_allows(rule.id()) {
+                continue;
+            }
             for mut v in rule.check(tree, source) {
                 v.file = path.to_string();
-                v.auto_fixable = rule.auto_fixable();
                 violations.push(v);
             }
         }
         violations
     }
-}
 
+    fn rule_set_allows(&self, rule_id: &str) -> bool {
+        match self.config.rule_set {
+            crate::config::RuleSet::Both => true,
+            crate::config::RuleSet::DetektOnly => rule_id.starts_with("detekt:"),
+            crate::config::RuleSet::KtlintOnly => !rule_id.starts_with("detekt:"),
+        }
+    }
+}
 // ── Built-in simple rules ────────────────────────────────────────────
 
 pub struct NoTrailingSpaces;
