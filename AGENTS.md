@@ -6,6 +6,13 @@
 a Kotlin linter and formatter. It aims for drop-in CLI compatibility and `.editorconfig`
 support, with startup under 50ms and per-file lint under 5ms.
 
+**Performance Constraints (硬性要求):**
+- **低内存**: 全项目 lint 后内存立即释放，无残留。禁止缓存大量文件内容。
+- **低 CPU**: lint 完成后 CPU 归零，无后台线程/rayon pool 残留。
+- **跑完即停**: 进程退出必须干净（exit 0/1/2），不允许 daemon 化或 event loop。
+- **Rule 轻量**: 每个 rule 的 `check()` 必须 O(n) 且无副作用的纯函数。禁止规则内 I/O、网络、或全局状态。
+- **测试快**: unit tests < 1s, integration tests < 30s（debug build）。
+- **二进制体量**: release binary < 15MB。
 ## Architecture
 
 ```
