@@ -732,6 +732,62 @@ impl Rule for UseCheckNotNull {
     }
 }
 
+
+// ── 43. UseDataClass ──
+pub struct UseDataClass;
+impl Rule for UseDataClass {
+    fn id(&self) -> &'static str { "detekt:style:UseDataClass" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.starts_with("class ") && t.contains("val ") && !t.contains("data class") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:UseDataClass".into(),
+                    message:"Consider using 'data class'".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 44. SpacingAroundComma ──
+pub struct SpacingAroundComma;
+impl Rule for SpacingAroundComma {
+    fn id(&self) -> &'static str { "detekt:style:SpacingAroundComma" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            if l.contains(", ") && l.contains(" ,") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:SpacingAroundComma".into(),
+                    message:"Inconsistent comma spacing".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 45. ImportOrdering ──
+pub struct ImportOrdering;
+impl Rule for ImportOrdering {
+    fn id(&self) -> &'static str { "detekt:style:ImportOrdering" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        let mut v=Vec::new(); let mut last = String::new();
+        for (i,line) in source.lines().enumerate() {
+            let t=line.trim();
+            if t.starts_with("import ") {
+                if !last.is_empty() && t < last.as_str() {
+                    v.push(Violation{file:String::new(),line:i+1,col:1,
+                        rule_id:"detekt:style:ImportOrdering".into(),
+                        message:"Imports not alphabetically sorted".into(),auto_fixable:false});
+                }
+                last = t.to_string();
+            }
+        }
+        v
+    }
+}
+
 #[cfg(test)] mod tests {
     use super::*; use crate::parser::KotlinParser;
     fn c(r:&dyn Rule,s:&str)->Vec<Violation>{r.check(&KotlinParser::new().parse(s),s)}
@@ -778,5 +834,10 @@ impl Rule for UseCheckNotNull {
     #[test] fn var_could_be_val2() { assert!(!c(&VarCouldBeVal, "var x = 1\n").is_empty()); }
     #[test] fn semicolon_bad() { assert!(!c(&RedundantSemicolons, "val x = 1;\n").is_empty()); }
     #[test] fn check_not_null() { assert!(!c(&UseCheckNotNull, "checkNotNull(x)\n").is_empty()); }
+
+
+    #[test] fn data_class_bad() { assert!(!c(&UseDataClass, "class Foo(val x: Int)\n").is_empty()); }
+    #[test] fn comma_spacing_bad() { assert!(!c(&SpacingAroundComma, "foo(a , b, c ,d)\n").is_empty()); }
+    #[test] fn import_order_bad() { assert!(!c(&ImportOrdering, "import com.B\nimport com.A\n").is_empty()); }
 
 }

@@ -152,6 +152,7 @@ impl Registry {
             Box::new(detekt::naming::MatchingDeclarationName),
             Box::new(detekt::naming::InvalidPackageDeclaration),
             Box::new(detekt::naming::NoNameShadowing),
+            Box::new(detekt::naming::PropertyUsedBeforeDeclaration),
             // ── detekt comments ──
             Box::new(detekt::comments::DeprecatedBlockTag),
             Box::new(detekt::comments::EndOfSentenceFormat),
@@ -193,6 +194,9 @@ impl Registry {
             Box::new(detekt::style::NoBracesInSingleLineWhen),
             Box::new(detekt::style::UseRequire),
             Box::new(detekt::style::OptionalAbstractKeyword),
+            Box::new(detekt::style::UseDataClass),
+            Box::new(detekt::style::SpacingAroundComma),
+            Box::new(detekt::style::ImportOrdering),
             Box::new(detekt::style::FunctionOnlyReturningConstant),
             Box::new(detekt::style::BracesOnIfStatements),
             Box::new(detekt::style::LoopWithTooManyJumpStatements),

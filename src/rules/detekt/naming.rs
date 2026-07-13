@@ -407,6 +407,34 @@ impl Rule for NoNameShadowing {
     }
 }
 
+
+// ── PropertyUsedBeforeDeclaration ──
+pub struct PropertyUsedBeforeDeclaration;
+impl Rule for PropertyUsedBeforeDeclaration {
+    fn id(&self) -> &'static str { "detekt:naming:PropertyUsedBeforeDeclaration" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        let mut v=Vec::new(); let mut declared: Vec<String> = Vec::new();
+        for (i,line) in source.lines().enumerate() {
+            let t=line.trim();
+            if t.starts_with("val ")||t.starts_with("var ") {
+                if let Some(name)=t[4..].split_whitespace().next() {
+                    let nm=name.split(':').next().unwrap_or(name).to_string();
+                    if !nm.is_empty() { declared.push(nm); }
+                }
+            }
+            for d in &declared {
+                if t.contains(d.as_str()) && !t.starts_with("val ") && !t.starts_with("var ") && i>0 {
+                    v.push(Violation{file:String::new(),line:i+1,col:1,
+                        rule_id:"detekt:naming:PropertyUsedBeforeDeclaration".into(),
+                        message:format!("Property '{}' used before declaration",d),auto_fixable:false});
+                }
+            }
+        }
+        v
+    }
+}
+
 #[cfg(test)] mod tests {
     use super::*; use crate::parser::KotlinParser;
     fn c(r:&dyn Rule,s:&str)->Vec<Violation>{r.check(&KotlinParser::new().parse(s),s)}
@@ -436,4 +464,6 @@ impl Rule for NoNameShadowing {
     #[test] fn forbidden_class_ok() { assert!(c(&ForbiddenClassName, "class StringParser { }\n").is_empty()); }
     #[test] fn is_prefix_non_bool_bad() { assert!(!c(&NonBooleanPropertyPrefixedWithIs, "val isReady: Int\n").is_empty()); }
     #[test] fn no_shadow_bad() { assert!(!c(&NoNameShadowing, "val x = 1\nfun f() {\nval x = 2\n}\n").is_empty()); }
+
+
 }

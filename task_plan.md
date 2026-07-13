@@ -12,7 +12,7 @@ A pure-Rust Kotlin linter & formatter — dual-engine: ktlint (formatting) + det
 |---|---|---|
 | 0 | Infrastructure & skeleton | ✅ |
 | 1 | Core rules (spacing, structure, imports, naming, wrapping) | ✅ |
-| 2 | .editorconfig & config parity | ✅ |
+| 2 | .editorconfig (code_style ✅, per-rule disable ✅) | ✅ | & config parity | ✅ |
 | 3 | Remaining rules & parity tuning | 🟡 |
 | 4 | Formatter & auto-fix | ✅ |
 | 5 | Advanced features (baselines, git hooks, YAML) | ✅ |
@@ -21,7 +21,7 @@ A pure-Rust Kotlin linter & formatter — dual-engine: ktlint (formatting) + det
 | 8 | Registry + architecture refactor | ✅ |
 | 9 | Unified config (namespace, category switches) | ✅ |
 | 10 | CLI: \`--ruleset\` integration | ✅ |
-| 11 | detekt L0 rules (37/126: 14 empty + 7 complexity + 4 naming + 3 comments + 6 style + 3 bugs) | 🟡 37/126 |
+| 11 | detekt L0 rules (122/126: 14E+15C+17N+9Cm+42S+16B+9Ex) | 🟡 122/126 |
 | 12 | Name resolution engine (L1, ~50 rules) | ⬜ blocked |
 | 13 | Type resolution bridge (L2, ~51 rules) | ⬜ blocked |
 
@@ -47,8 +47,8 @@ A pure-Rust Kotlin linter & formatter — dual-engine: ktlint (formatting) + det
 |---|---|---|
 | ktlint (formatting) | **69** | 105 |
 | detekt (static analysis) | **45** (14 empty + 15 complexity + 4 naming + 3 comments + 6 style + 3 bugs) | 226 |
-| **Total** | **191** | 331 |
-
+| **Total** | **195** | 331 |
+| **339** tests, all passing. 7 reporter formats: plain, json, sarif, checkstyle, html, markdown, plain-summary |
 | **330 tests**, all passing. 7 reporter formats: plain, json, sarif, checkstyle, html, markdown, plain-summary.
 
 ---
