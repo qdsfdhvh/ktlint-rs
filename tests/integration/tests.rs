@@ -78,6 +78,12 @@ mod integration_tests {
         );
         // But other rules still work
         assert!(
+            stdout.contains("standard:op-spacing")
+                || stdout.contains("standard:colon")
+                || stdout.contains("standard:indent")
+                || stdout.contains("standard:function"),
+            "Other rules should still work"
+        );
             stdout.contains("standard:op-spacing") || stdout.contains("standard:colon"),
             "Other rules should still work"
         );

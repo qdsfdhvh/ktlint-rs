@@ -61,8 +61,7 @@ fn walk(node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) 
                 file: String::new(),
                 line: pos.row + 1,
                 col: pos.column + 1,
-                rule_id: "standard:no-unnecessary-parentheses-before-trailing-lambda"
-                    .into(),
+                rule_id: "standard:no-unnecessary-parentheses-before-trailing-lambda".into(),
                 message: "Unnecessary parentheses before trailing lambda".into(),
                 auto_fixable: true,
             });
