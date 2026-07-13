@@ -5,6 +5,7 @@ use tree_sitter::Tree;
 
 pub mod detekt;
 pub mod registry;
+pub mod builtins;
 pub mod imports;
 pub mod naming;
 pub mod new_rules;
@@ -79,124 +80,5 @@ impl RuleEngine {
         }
     }
 }
-// ── Built-in simple rules ────────────────────────────────────────────
-
-pub struct NoTrailingSpaces;
-impl Rule for NoTrailingSpaces {
-    fn id(&self) -> &'static str {
-        "standard:no-trailing-spaces"
-    }
-    fn check(&self, _: &Tree, s: &str) -> Vec<Violation> {
-        s.lines()
-            .enumerate()
-            .filter(|(_, l)| l.ends_with(' ') || l.ends_with('\t'))
-            .map(|(i, _)| Violation {
-                file: String::new(),
-                line: i + 1,
-                col: 0,
-                rule_id: self.id().into(),
-                message: "Trailing space(s)".into(),
-                auto_fixable: true,
-            })
-            .collect()
-    }
-}
-pub struct FinalNewline;
-impl Rule for FinalNewline {
-    fn id(&self) -> &'static str {
-        "standard:final-newline"
-    }
-    fn check(&self, _: &Tree, s: &str) -> Vec<Violation> {
-        if s.is_empty() || s.ends_with('\n') {
-            vec![]
-        } else {
-            vec![Violation {
-                file: String::new(),
-                line: s.lines().count(),
-                col: 0,
-                rule_id: self.id().into(),
-                message: "File must end with a newline".into(),
-                auto_fixable: true,
-            }]
-        }
-    }
-}
-pub struct NoConsecutiveBlankLines;
-impl Rule for NoConsecutiveBlankLines {
-    fn id(&self) -> &'static str {
-        "standard:no-consecutive-blank-lines"
-    }
-    fn check(&self, _: &Tree, s: &str) -> Vec<Violation> {
-        let mut v = vec![];
-        let mut b = 0;
-        for (i, l) in s.lines().enumerate() {
-            if l.trim().is_empty() {
-                b += 1;
-                if b > 1 {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 0,
-                        rule_id: self.id().into(),
-                        message: "Needless blank line(s)".into(),
-                        auto_fixable: true,
-                    });
-                }
-            } else {
-                b = 0;
-            }
-        }
-        v
-    }
-}
-pub struct NoWildcardImports;
-impl Rule for NoWildcardImports {
-    fn id(&self) -> &'static str {
-        "standard:no-wildcard-imports"
-    }
-    fn auto_fixable(&self) -> bool {
-        false
-    }
-    fn check(&self, _: &Tree, s: &str) -> Vec<Violation> {
-        s.lines()
-            .enumerate()
-            .filter(|(_, l)| {
-                let t = l.trim();
-                t.starts_with("import ") && t.contains(".*")
-            })
-            .map(|(i, _)| Violation {
-                file: String::new(),
-                line: i + 1,
-                col: 0,
-                rule_id: self.id().into(),
-                message: "Wildcard import".into(),
-                auto_fixable: false,
-            })
-            .collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn no_trailing_spaces_detects() {
-        let rule = NoTrailingSpaces;
-        let violations = rule.check(
-            &crate::parser::KotlinParser::new().parse("fun test() \n"),
-            "fun test() \n",
-        );
-        assert!(!violations.is_empty());
-    }
-
-    #[test]
-    fn final_newline_missing() {
-        let rule = FinalNewline;
-        let v = rule.check(
-            &crate::parser::KotlinParser::new().parse("fun a() {}"),
-            "fun a() {}",
-        );
-        assert!(!v.is_empty());
-    }
-}
+// Built-in rules (extracted to builtins.rs)
+pub use builtins::*;
