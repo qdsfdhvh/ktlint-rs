@@ -230,6 +230,139 @@ impl Rule for CollapsibleIfStatements {
     }
 }
 
+
+// ── 13. RedundantVisibilityModifierRule ──
+pub struct RedundantVisibilityModifierRule;
+impl Rule for RedundantVisibilityModifierRule {
+    fn id(&self) -> &'static str { "detekt:style:RedundantVisibilityModifierRule" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.starts_with("public fun ") || t.starts_with("public val ") || t.starts_with("public var ") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:RedundantVisibilityModifierRule".into(),
+                    message:"'public' visibility modifier is redundant".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 14. RedundantExplicitType ──
+pub struct RedundantExplicitType;
+impl Rule for RedundantExplicitType {
+    fn id(&self) -> &'static str { "detekt:style:RedundantExplicitType" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.starts_with("val ") && t.contains(": Int = ") && !t.contains(": Int?") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:RedundantExplicitType".into(),
+                    message:"Explicit type is redundant when initializer is present".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 15. ForbiddenVoid ──
+pub struct ForbiddenVoid;
+impl Rule for ForbiddenVoid {
+    fn id(&self) -> &'static str { "detekt:style:ForbiddenVoid" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            if l.to_lowercase().contains("void") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:ForbiddenVoid".into(),
+                    message:"'Void' is Java — use Unit in Kotlin".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 16. MayBeConst ──
+pub struct MayBeConst;
+impl Rule for MayBeConst {
+    fn id(&self) -> &'static str { "detekt:style:MayBeConst" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.starts_with("val ") && t.contains('=') && !t.contains('{') && !t.contains("::") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:MayBeConst".into(),
+                    message:"Top-level val can be 'const val'".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 17. UnnecessaryAbstractClass ──
+pub struct UnnecessaryAbstractClass;
+impl Rule for UnnecessaryAbstractClass {
+    fn id(&self) -> &'static str { "detekt:style:UnnecessaryAbstractClass" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.starts_with("abstract class ") && !source.contains("abstract fun") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:UnnecessaryAbstractClass".into(),
+                    message:"Abstract class has no abstract members — consider interface".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 18. NoEmptyClassBody ──
+pub struct NoEmptyClassBody;
+impl Rule for NoEmptyClassBody {
+    fn id(&self) -> &'static str { "detekt:style:NoEmptyClassBody" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if t.ends_with("{}") && (t.starts_with("class ") || t.starts_with("object ")) {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:NoEmptyClassBody".into(),
+                    message:"Empty class body".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 19. UseEmptyBody ──
+pub struct UseEmptyBody;
+impl Rule for UseEmptyBody {
+    fn id(&self) -> &'static str { "detekt:style:UseEmptyBody" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            let t=l.trim();
+            if (t.starts_with("fun ") || t.starts_with("class ")) && t.contains("{}") {
+                Some(Violation{file:String::new(),line:i+1,col:1,
+                    rule_id:"detekt:style:UseEmptyBody".into(),
+                    message:"Consider removing empty body braces".into(),auto_fixable:false})
+            } else {None}
+        }).collect()
+    }
+}
+
+// ── 20. UnnecessaryApply ──
+pub struct UnnecessaryApply;
+impl Rule for UnnecessaryApply {
+    fn id(&self) -> &'static str { "detekt:style:UnnecessaryApply" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+        source.lines().enumerate().filter_map(|(i,l)|{
+            if l.contains(".apply {") { Some(Violation{file:String::new(),line:i+1,col:1,
+                rule_id:"detekt:style:UnnecessaryApply".into(),
+                message:"Unnecessary .apply — consider using also or let".into(),auto_fixable:false})} else {None}
+        }).collect()
+    }
+}
+
 #[cfg(test)] mod tests {
     use super::*; use crate::parser::KotlinParser;
     fn c(r:&dyn Rule,s:&str)->Vec<Violation>{r.check(&KotlinParser::new().parse(s),s)}
@@ -249,4 +382,14 @@ impl Rule for CollapsibleIfStatements {
     #[test] fn underscore_num_ok() { assert!(c(&UnderscoresInNumericLiterals, "val x = 1_000_000\n").is_empty()); }
     #[test] fn use_check_bad() { assert!(!c(&UseCheckOrError, "if (x == null) throw\n").is_empty()); }
     #[test] fn collapsible_if_bad() { assert!(!c(&CollapsibleIfStatements, "if (x) {\nif (y) {\n}\n}\n").is_empty()); }
+
+    #[test] fn redundant_vis_bad() { assert!(!c(&RedundantVisibilityModifierRule, "public fun f() {}\n").is_empty()); }
+    #[test] fn redundant_type_bad() { assert!(!c(&RedundantExplicitType, "val x: Int = 1\n").is_empty()); }
+    #[test] fn void_bad() { assert!(!c(&ForbiddenVoid, "void\n").is_empty()); }
+    #[test] fn maybe_const() { assert!(!c(&MayBeConst, "val x = 1\n").is_empty()); }
+    #[test] fn unnec_abstract() { assert!(!c(&UnnecessaryAbstractClass, "abstract class Foo\n").is_empty()); }
+    #[test] fn empty_class_bad() { assert!(!c(&NoEmptyClassBody, "class Foo {}\n").is_empty()); }
+    #[test] fn use_empty_body() { assert!(!c(&UseEmptyBody, "class Foo {}\n").is_empty()); }
+    #[test] fn unnec_apply() { assert!(!c(&UnnecessaryApply, "x.apply {}\n").is_empty()); }
+
 }
