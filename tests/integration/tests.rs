@@ -84,9 +84,6 @@ mod integration_tests {
                 || stdout.contains("standard:function"),
             "Other rules should still work"
         );
-            stdout.contains("standard:op-spacing") || stdout.contains("standard:colon"),
-            "Other rules should still work"
-        );
     }
 
     #[test]
