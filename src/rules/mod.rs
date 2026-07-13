@@ -132,6 +132,11 @@ impl RuleEngine {
             Box::new(detekt::empty_blocks::EmptyDoWhileBlock),
             Box::new(detekt::empty_blocks::EmptyForBlock),
             Box::new(detekt::empty_blocks::EmptyStructBlock),
+            // --- detekt complexity rules ---
+            Box::new(detekt::complexity::LongMethod::new()),
+            Box::new(detekt::complexity::LongParameterList::new()),
+            Box::new(detekt::complexity::NestedBlockDepth::new()),
+            Box::new(detekt::complexity::LargeClass::new()),
             // ── Phase 1 rules (unique IDs) ────────────────────────────
             Box::new(phase1_rules::WhenEntryBracing),
             Box::new(phase1_rules::BlankLineBetweenWhenConditions),
