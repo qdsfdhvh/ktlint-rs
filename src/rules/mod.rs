@@ -4,6 +4,7 @@ use crate::config::KtlintConfig;
 use tree_sitter::Tree;
 
 pub mod detekt;
+pub mod registry;
 pub mod imports;
 pub mod naming;
 pub mod new_rules;
@@ -46,119 +47,7 @@ pub struct RuleEngine {
 
 impl RuleEngine {
     pub fn new(config: &KtlintConfig) -> Self {
-        let rules: Vec<Box<dyn Rule>> = vec![
-            // ── Built-in ─────────────────────────────────────────────
-            Box::new(NoTrailingSpaces),
-            Box::new(FinalNewline),
-            Box::new(NoConsecutiveBlankLines),
-            // ── Spacing (17 rules) ───────────────────────────────────
-            Box::new(spacing::AnnotationSpacing),
-            Box::new(spacing::ArgumentListWrapping),
-            Box::new(spacing::BlockCommentStar),
-            Box::new(spacing::ClassSignatureSpacing),
-            Box::new(spacing::ColonSpacing),
-            Box::new(spacing::CommaSpacing),
-            Box::new(spacing::CommentSpacing),
-            Box::new(spacing::CurlySpacing),
-            Box::new(spacing::DoubleColonSpacing),
-            Box::new(spacing::FunctionNameParenSpacing),
-            Box::new(spacing::FunctionReturnTypeSpacing),
-            Box::new(spacing::FunctionStartOfBodySpacing),
-            Box::new(spacing::ModifierOrder),
-            Box::new(spacing::OperatorSpacing),
-            Box::new(spacing::ParenSpacing),
-            Box::new(spacing::RangeOperatorSpacing),
-            Box::new(spacing::SpacingAroundKeyword),
-            // ── Structure (27 rules) ──────────────────────────────────
-            Box::new(structure::BlankLineBeforeDeclaration),
-            Box::new(structure::EnumEntry),
-            Box::new(structure::IJTrailingComma),
-            Box::new(structure::Indentation::new(config.indent_size)),
-            Box::new(structure::KdocFormatting),
-            Box::new(structure::KdocNoEmptyFirstLine),
-            Box::new(structure::KdocNoTrailingSpace),
-            Box::new(structure::LambdaParen),
-            Box::new(structure::MaxLineLength),
-            Box::new(structure::NoBlankAfterKdoc),
-            Box::new(structure::NoBlankBeforeListClose),
-            Box::new(structure::NoBlankLineBeforeRbrace),
-            Box::new(structure::NoBlankLineInList),
-            Box::new(structure::NoEmptyClassBody),
-            Box::new(structure::NoEmptyFile),
-            Box::new(structure::NoEmptyFileBody),
-            Box::new(structure::NoEmptyFirstLineInClassBody),
-            Box::new(structure::NoLeadingEmptyLinesInMethod),
-            Box::new(structure::NoMultiSpaces),
-            Box::new(structure::NoSemicolons),
-            Box::new(structure::NoSingleExpressionBody),
-            Box::new(structure::NoTrailingSpacesInString),
-            Box::new(structure::ParameterListSpacing),
-            Box::new(structure::SpacingBetweenDeclarations),
-            Box::new(structure::TrailingComma),
-            Box::new(structure::TrailingSpacesInComment),
-            Box::new(structure::UnnecessaryParenBeforeLambda),
-            // ── Imports (4 rules) ─────────────────────────────────────
-            Box::new(NoWildcardImports),
-            Box::new(imports::ImportOrdering),
-            Box::new(imports::NoUnusedImports),
-            Box::new(imports::NoWildcardImportsEither),
-            // ── Naming (6 rules) ──────────────────────────────────────
-            Box::new(naming::BackingPropertyNaming),
-            Box::new(naming::ClassNaming),
-            Box::new(naming::Filename),
-            Box::new(naming::FunctionNaming),
-            Box::new(naming::PackageName),
-            Box::new(naming::PropertyNaming),
-            // ── Wrapping (7 rules) ────────────────────────────────────
-            Box::new(wrapping::ChainWrapping),
-            Box::new(wrapping::GeneralWrapping),
-            Box::new(wrapping::MultilineExpressionWrapping),
-            Box::new(wrapping::MultilineIfElse),
-            Box::new(wrapping::StringTemplateIndent),
-            Box::new(wrapping::TryCatchFinallyWrapping),
-            Box::new(wrapping::WhenExpressionLineBreak),
-            // --- detekt empty-blocks rules ---
-            Box::new(detekt::empty_blocks::EmptyFunctionBlock),
-            Box::new(detekt::empty_blocks::EmptyClassBlock),
-            Box::new(detekt::empty_blocks::EmptyInitBlock),
-            Box::new(detekt::empty_blocks::EmptyDefaultConstructor),
-            Box::new(detekt::empty_blocks::EmptySecondaryConstructor),
-            Box::new(detekt::empty_blocks::EmptyIfBlock),
-            Box::new(detekt::empty_blocks::EmptyWhenBlock),
-            Box::new(detekt::empty_blocks::EmptyTryBlock),
-            Box::new(detekt::empty_blocks::EmptyCatchBlock),
-            Box::new(detekt::empty_blocks::EmptyFinallyBlock),
-            Box::new(detekt::empty_blocks::EmptyWhileBlock),
-            Box::new(detekt::empty_blocks::EmptyDoWhileBlock),
-            Box::new(detekt::empty_blocks::EmptyForBlock),
-            Box::new(detekt::empty_blocks::EmptyStructBlock),
-            // --- detekt complexity rules ---
-            Box::new(detekt::complexity::LongMethod::new()),
-            Box::new(detekt::complexity::LongParameterList::new()),
-            Box::new(detekt::complexity::NestedBlockDepth::new()),
-            Box::new(detekt::complexity::LargeClass::new()),
-            Box::new(detekt::complexity::CyclomaticComplexMethod::new()),
-            Box::new(detekt::complexity::TooManyFunctions::new()),
-            Box::new(detekt::complexity::ComplexCondition::new()),
-            // ── Phase 1 rules (unique IDs) ────────────────────────────
-            Box::new(phase1_rules::WhenEntryBracing),
-            Box::new(phase1_rules::BlankLineBetweenWhenConditions),
-            Box::new(phase1_rules::SpacingBetweenDeclarationsWithComments),
-            // ── Phase 1 more (unique IDs) ─────────────────────────────
-            Box::new(phase1_more::KtlintAnnotation),
-            Box::new(phase1_more::KtlintWrapping),
-            Box::new(phase1_more::KtlintNoConsecutiveComments),
-            // ── Phase 3b (unique IDs) ─────────────────────────────────
-            Box::new(phase3b_rules::FunctionSignatureSpacing),
-            Box::new(phase3b_rules::FunctionExpressionBody),
-            Box::new(phase3b_rules::KeywordSpacing),
-            // ── Final rules ───────────────────────────────────────────
-            Box::new(final_rules::TypeArgumentListSpacing),
-            Box::new(final_rules::SpacingAroundAngleBrackets),
-            Box::new(final_rules::EnumWrapping),
-            Box::new(final_rules::TrailingCommaOnDeclarationSite),
-            Box::new(final_rules::TrailingCommaOnCallSite),
-        ];
+        let rules: Vec<Box<dyn Rule>> = registry::Registry::all_rules(config);
         Self {
             config: config.clone(),
             rules,

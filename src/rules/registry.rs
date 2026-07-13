@@ -1,0 +1,131 @@
+//! Rule registry — single source of truth for all rule instances.
+//! RuleEngine::new() delegates here.
+
+use crate::config::KtlintConfig;
+use crate::rules::Rule;
+
+pub struct Registry;
+
+impl Registry {
+    pub fn all_rules(config: &KtlintConfig) -> Vec<Box<dyn Rule>> {
+        use crate::rules::{
+            detekt, final_rules, imports, naming, phase1_more, phase1_rules, phase3b_rules,
+            spacing, structure, wrapping,
+            FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces, NoWildcardImports,
+        };
+
+        vec![
+            // ── Built-in ─────────────────────────────────────────────
+            Box::new(NoTrailingSpaces),
+            Box::new(FinalNewline),
+            Box::new(NoConsecutiveBlankLines),
+            // ── Spacing ──────────────────────────────────────────────
+            Box::new(spacing::AnnotationSpacing),
+            Box::new(spacing::ArgumentListWrapping),
+            Box::new(spacing::BlockCommentStar),
+            Box::new(spacing::ClassSignatureSpacing),
+            Box::new(spacing::ColonSpacing),
+            Box::new(spacing::CommaSpacing),
+            Box::new(spacing::CommentSpacing),
+            Box::new(spacing::CurlySpacing),
+            Box::new(spacing::DoubleColonSpacing),
+            Box::new(spacing::FunctionNameParenSpacing),
+            Box::new(spacing::FunctionReturnTypeSpacing),
+            Box::new(spacing::FunctionStartOfBodySpacing),
+            Box::new(spacing::ModifierOrder),
+            Box::new(spacing::OperatorSpacing),
+            Box::new(spacing::ParenSpacing),
+            Box::new(spacing::RangeOperatorSpacing),
+            Box::new(spacing::SpacingAroundKeyword),
+            // ── Structure ─────────────────────────────────────────────
+            Box::new(structure::BlankLineBeforeDeclaration),
+            Box::new(structure::EnumEntry),
+            Box::new(structure::IJTrailingComma),
+            Box::new(structure::Indentation::new(config.indent_size)),
+            Box::new(structure::KdocFormatting),
+            Box::new(structure::KdocNoEmptyFirstLine),
+            Box::new(structure::KdocNoTrailingSpace),
+            Box::new(structure::LambdaParen),
+            Box::new(structure::MaxLineLength),
+            Box::new(structure::NoBlankAfterKdoc),
+            Box::new(structure::NoBlankBeforeListClose),
+            Box::new(structure::NoBlankLineBeforeRbrace),
+            Box::new(structure::NoBlankLineInList),
+            Box::new(structure::NoEmptyClassBody),
+            Box::new(structure::NoEmptyFile),
+            Box::new(structure::NoEmptyFileBody),
+            Box::new(structure::NoEmptyFirstLineInClassBody),
+            Box::new(structure::NoLeadingEmptyLinesInMethod),
+            Box::new(structure::NoMultiSpaces),
+            Box::new(structure::NoSemicolons),
+            Box::new(structure::NoSingleExpressionBody),
+            Box::new(structure::NoTrailingSpacesInString),
+            Box::new(structure::ParameterListSpacing),
+            Box::new(structure::SpacingBetweenDeclarations),
+            Box::new(structure::TrailingComma),
+            Box::new(structure::TrailingSpacesInComment),
+            Box::new(structure::UnnecessaryParenBeforeLambda),
+            // ── Imports ───────────────────────────────────────────────
+            Box::new(NoWildcardImports),
+            Box::new(imports::ImportOrdering),
+            Box::new(imports::NoUnusedImports),
+            Box::new(imports::NoWildcardImportsEither),
+            // ── Naming ────────────────────────────────────────────────
+            Box::new(naming::BackingPropertyNaming),
+            Box::new(naming::ClassNaming),
+            Box::new(naming::Filename),
+            Box::new(naming::FunctionNaming),
+            Box::new(naming::PackageName),
+            Box::new(naming::PropertyNaming),
+            // ── Wrapping ──────────────────────────────────────────────
+            Box::new(wrapping::ChainWrapping),
+            Box::new(wrapping::GeneralWrapping),
+            Box::new(wrapping::MultilineExpressionWrapping),
+            Box::new(wrapping::MultilineIfElse),
+            Box::new(wrapping::StringTemplateIndent),
+            Box::new(wrapping::TryCatchFinallyWrapping),
+            Box::new(wrapping::WhenExpressionLineBreak),
+            // ── Phase 1 ───────────────────────────────────────────────
+            Box::new(phase1_rules::WhenEntryBracing),
+            Box::new(phase1_rules::BlankLineBetweenWhenConditions),
+            Box::new(phase1_rules::SpacingBetweenDeclarationsWithComments),
+            // ── Phase 1 more ──────────────────────────────────────────
+            Box::new(phase1_more::KtlintAnnotation),
+            Box::new(phase1_more::KtlintWrapping),
+            Box::new(phase1_more::KtlintNoConsecutiveComments),
+            // ── Phase 3b ──────────────────────────────────────────────
+            Box::new(phase3b_rules::FunctionSignatureSpacing),
+            Box::new(phase3b_rules::FunctionExpressionBody),
+            Box::new(phase3b_rules::KeywordSpacing),
+            // ── Final rules ───────────────────────────────────────────
+            Box::new(final_rules::TypeArgumentListSpacing),
+            Box::new(final_rules::SpacingAroundAngleBrackets),
+            Box::new(final_rules::EnumWrapping),
+            Box::new(final_rules::TrailingCommaOnDeclarationSite),
+            Box::new(final_rules::TrailingCommaOnCallSite),
+            // ── detekt empty-blocks ───────────────────────────────────
+            Box::new(detekt::empty_blocks::EmptyFunctionBlock),
+            Box::new(detekt::empty_blocks::EmptyClassBlock),
+            Box::new(detekt::empty_blocks::EmptyInitBlock),
+            Box::new(detekt::empty_blocks::EmptyDefaultConstructor),
+            Box::new(detekt::empty_blocks::EmptySecondaryConstructor),
+            Box::new(detekt::empty_blocks::EmptyIfBlock),
+            Box::new(detekt::empty_blocks::EmptyWhenBlock),
+            Box::new(detekt::empty_blocks::EmptyTryBlock),
+            Box::new(detekt::empty_blocks::EmptyCatchBlock),
+            Box::new(detekt::empty_blocks::EmptyFinallyBlock),
+            Box::new(detekt::empty_blocks::EmptyWhileBlock),
+            Box::new(detekt::empty_blocks::EmptyDoWhileBlock),
+            Box::new(detekt::empty_blocks::EmptyForBlock),
+            Box::new(detekt::empty_blocks::EmptyStructBlock),
+            // ── detekt complexity ─────────────────────────────────────
+            Box::new(detekt::complexity::LongMethod::new()),
+            Box::new(detekt::complexity::LongParameterList::new()),
+            Box::new(detekt::complexity::NestedBlockDepth::new()),
+            Box::new(detekt::complexity::LargeClass::new()),
+            Box::new(detekt::complexity::CyclomaticComplexMethod::new()),
+            Box::new(detekt::complexity::TooManyFunctions::new()),
+            Box::new(detekt::complexity::ComplexCondition::new()),
+        ]
+    }
+}
