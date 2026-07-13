@@ -97,6 +97,52 @@ fn walk_if_braces(n: tree_sitter::Node, bytes: &[u8], v: &mut Vec<Violation>) {
     }
 }
 
+// ── SpacingBetweenPackageAndImports ──
+pub struct SpacingBetweenPackageAndImports;
+impl Rule for SpacingBetweenPackageAndImports {
+    fn id(&self) -> &'static str { "detekt:style:SpacingBetweenPackageAndImports" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _t: &Tree, s: &str) -> Vec<Violation> {
+        let mut v = Vec::new();
+        let lines: Vec<&str> = s.lines().collect();
+        let mut saw_package = false;
+        for (i, line) in lines.iter().enumerate() {
+            let t = line.trim();
+            if t.starts_with("package ") { saw_package = true; continue; }
+            if saw_package && !t.is_empty() && !t.starts_with("import ") && i>0 && !lines[i-1].trim().is_empty() {
+                v.push(Violation {
+                    file: String::new(), line: i + 1, col: 1,
+                    rule_id: "detekt:style:SpacingBetweenPackageAndImports".into(),
+                    message: "Expected blank line between package and imports".into(),
+                    auto_fixable: false,
+                });
+                saw_package = false;
+            }
+            if t.starts_with("import ") { saw_package = false; }
+        }
+        v
+    }
+}
+
+// ── UseArrayLiteralsInAnnotations ──
+pub struct UseArrayLiteralsInAnnotations;
+impl Rule for UseArrayLiteralsInAnnotations {
+    fn id(&self) -> &'static str { "detekt:style:UseArrayLiteralsInAnnotations" }
+    fn auto_fixable(&self) -> bool { false }
+    fn check(&self, _t: &Tree, s: &str) -> Vec<Violation> {
+        s.lines().enumerate().filter_map(|(i, l)| {
+            let t = l.trim();
+            if t.starts_with('@') && t.contains("[") && t.contains(']') {
+                Some(Violation {
+                    file: String::new(), line: i + 1, col: 1,
+                    rule_id: "detekt:style:UseArrayLiteralsInAnnotations".into(),
+                    message: "Use array literal syntax in annotations".into(),
+                    auto_fixable: false,
+                })
+            } else { None }
+        }).collect()
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
