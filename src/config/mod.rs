@@ -28,12 +28,24 @@ pub struct KtlintConfig {
     pub rule_set: RuleSet,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleSet {
-    #[default]
     KtlintOnly,
     DetektOnly,
     Both,
+}
+
+impl RuleSet {
+    pub fn from_str(s: &str) -> Self {
+        let parts: Vec<&str> = s.split(',').map(|p| p.trim()).collect();
+        let has_ktlint = parts.iter().any(|p| *p == "ktlint");
+        let has_detekt = parts.iter().any(|p| *p == "detekt");
+        match (has_ktlint, has_detekt) {
+            (true, true) => RuleSet::Both,
+            (false, true) => RuleSet::DetektOnly,
+            _ => RuleSet::KtlintOnly,
+        }
+    }
 }
 impl Default for KtlintConfig {
     fn default() -> Self {
@@ -179,13 +191,7 @@ impl KtlintConfig {
         let project_root = std::env::current_dir()?;
         let mut config = Self {
             project_root,
-            rule_set: if cli.detekt_only {
-                RuleSet::DetektOnly
-            } else if cli.detekt || cli.ktlint_only {
-                RuleSet::Both
-            } else {
-                RuleSet::KtlintOnly
-            },
+            rule_set: RuleSet::from_str(&cli.ruleset),
             ..Default::default()
         };
 

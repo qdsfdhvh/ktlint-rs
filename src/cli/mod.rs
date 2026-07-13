@@ -47,17 +47,9 @@ pub struct Cli {
     pub config: Option<String>,
 
     // ── Rule set selection ──
-    /// Enable detekt rules alongside ktlint rules
-    #[arg(long)]
-    pub detekt: bool,
-
-    /// Run ONLY detekt rules (disable ktlint)
-    #[arg(long)]
-    pub detekt_only: bool,
-
-    /// Run ONLY ktlint rules (disable detekt, default)
-    #[arg(long)]
-    pub ktlint_only: bool,
+    /// Comma-separated rule sets: ktlint, detekt, ktlint,detekt (default: ktlint)
+    #[arg(long, default_value = "ktlint")]
+    pub ruleset: String,
 
     /// Maximum number of errors to show
     #[arg(long)]
