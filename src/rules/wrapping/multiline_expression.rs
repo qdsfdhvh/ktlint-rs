@@ -20,8 +20,11 @@ fn walk(node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) 
     let kind = node.kind();
     let is_target = matches!(
         kind,
-        "when_expression" | "if_expression" | "try_expression"
-            | "function_declaration" | "class_declaration"
+        "when_expression"
+            | "if_expression"
+            | "try_expression"
+            | "function_declaration"
+            | "class_declaration"
     );
     if is_target {
         check_node(&node, bytes, violations);

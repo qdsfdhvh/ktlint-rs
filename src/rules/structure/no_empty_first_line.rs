@@ -59,12 +59,38 @@ mod tests {
         NoEmptyFirstLineInClassBody.check(&p.parse(s), s)
     }
 
-    #[test] fn ok() { assert!(c("class Foo {\n    val x=1\n}\n").is_empty()); }
-    #[test] fn bad() { assert!(!c("class Foo {\n\n    val x=1\n}\n").is_empty()); }
-    #[test] fn fun_ignored() { assert!(c("fun bar() {\n    return 1\n}\n").is_empty()); }
-    #[test] fn data_class_ok() { assert!(c("data class Foo(val x: Int)\n").is_empty()); }
-    #[test] fn data_class_bad() { assert!(!c("data class Foo {\n\n    val x=1\n}\n").is_empty()); }
-    #[test] fn enum_class_bad() { assert!(!c("enum class Foo {\n\n    A\n}\n").is_empty()); }
-    #[test] fn sealed_class_bad() { assert!(!c("sealed class Foo {\n\n    class A: Foo()\n}\n").is_empty()); }
-    #[test] fn companion_object_bad() { assert!(!c("class Foo {\n    companion object {\n\n        val x=1\n    }\n}\n").is_empty()); }
+    #[test]
+    fn ok() {
+        assert!(c("class Foo {\n    val x=1\n}\n").is_empty());
+    }
+    #[test]
+    fn bad() {
+        assert!(!c("class Foo {\n\n    val x=1\n}\n").is_empty());
+    }
+    #[test]
+    fn fun_ignored() {
+        assert!(c("fun bar() {\n    return 1\n}\n").is_empty());
+    }
+    #[test]
+    fn data_class_ok() {
+        assert!(c("data class Foo(val x: Int)\n").is_empty());
+    }
+    #[test]
+    fn data_class_bad() {
+        assert!(!c("data class Foo {\n\n    val x=1\n}\n").is_empty());
+    }
+    #[test]
+    fn enum_class_bad() {
+        assert!(!c("enum class Foo {\n\n    A\n}\n").is_empty());
+    }
+    #[test]
+    fn sealed_class_bad() {
+        assert!(!c("sealed class Foo {\n\n    class A: Foo()\n}\n").is_empty());
+    }
+    #[test]
+    fn companion_object_bad() {
+        assert!(
+            !c("class Foo {\n    companion object {\n\n        val x=1\n    }\n}\n").is_empty()
+        );
+    }
 }

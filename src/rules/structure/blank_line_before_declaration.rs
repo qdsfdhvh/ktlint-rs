@@ -47,8 +47,12 @@ impl Rule for BlankLineBeforeDeclaration {
                     found_blank = true;
                     continue;
                 }
-                if p.starts_with("//") || p.starts_with("/*") || p.starts_with('@')
-                    || p == "*/" || p.starts_with("* ") {
+                if p.starts_with("//")
+                    || p.starts_with("/*")
+                    || p.starts_with('@')
+                    || p == "*/"
+                    || p.starts_with("* ")
+                {
                     continue;
                 }
                 // Found a non-blank, non-comment line
@@ -72,7 +76,11 @@ impl Rule for BlankLineBeforeDeclaration {
                             message: format!(
                                 "Expected a blank line before declaration: \"{}\"",
                                 if trimmed.len() > 60 {
-                                    let end = trimmed.char_indices().nth(57).map(|(i, _)| i).unwrap_or(trimmed.len());
+                                    let end = trimmed
+                                        .char_indices()
+                                        .nth(57)
+                                        .map(|(i, _)| i)
+                                        .unwrap_or(trimmed.len());
                                     &trimmed[..end]
                                 } else {
                                     trimmed

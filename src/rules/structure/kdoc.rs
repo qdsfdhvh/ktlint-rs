@@ -141,8 +141,12 @@ fn is_inside_block(lines: &[&str], kdoc_line: usize) -> bool {
                 found_opener = true;
                 continue;
             }
-            if found_opener && indent == kdoc_indent && !t.is_empty()
-                && !t.starts_with("//") && !t.starts_with("/*") && !t.starts_with('*')
+            if found_opener
+                && indent == kdoc_indent
+                && !t.is_empty()
+                && !t.starts_with("//")
+                && !t.starts_with("/*")
+                && !t.starts_with('*')
                 && !is_declaration_or_modifier(t)
             {
                 return true;

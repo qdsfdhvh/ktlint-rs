@@ -80,7 +80,7 @@ impl Rule for Indentation {
             let opens_block = trimmed.ends_with('{')
                 && !trimmed.ends_with("${")      // skip string templates
                 && !trimmed.starts_with("//")    // skip comments
-                && !is_inline_brace(trimmed);    // skip inline lambdas/blocks
+                && !is_inline_brace(trimmed); // skip inline lambdas/blocks
 
             // Re-evaluate expected indent AFTER combo-brace stack adjustment
             let expected = stack.last().copied().unwrap_or(0);
@@ -121,7 +121,7 @@ fn is_continuation_line(trimmed: &str, i: usize, lines: &[&str]) -> bool {
     }
 
     // Check if the line starts with a comma-separated parameter continuation
-    // e.g.: "    b: Int," after "fun foo(a: Int," 
+    // e.g.: "    b: Int," after "fun foo(a: Int,"
     if trimmed.starts_with(',') {
         return true;
     }
@@ -130,10 +130,14 @@ fn is_continuation_line(trimmed: &str, i: usize, lines: &[&str]) -> bool {
     if i > 0 {
         let mut prev_idx = i.saturating_sub(1);
         loop {
-            if prev_idx == 0 { break; }
+            if prev_idx == 0 {
+                break;
+            }
             let prev = lines[prev_idx].trim();
             if prev.is_empty() || prev.starts_with("//") || prev.starts_with("/*") {
-                if prev_idx == 0 { break; }
+                if prev_idx == 0 {
+                    break;
+                }
                 prev_idx -= 1;
                 continue;
             }
@@ -171,7 +175,7 @@ fn is_inline_brace(trimmed: &str) -> bool {
     // If there's meaningful content before `{`, it's likely inline
     // e.g.: "val x = foo {", "return bar {", "list.map {", "when (x) {"
     // Block openers: "fun foo() {", "class Foo {", "if (x) {", "} else {"
-    
+
     // These are always block openers
     if trimmed.starts_with("if (")
         || trimmed.starts_with("else if (")
@@ -184,7 +188,11 @@ fn is_inline_brace(trimmed: &str) -> bool {
     }
 
     // Combo braces (after closing brace) are block openers
-    if trimmed.starts_with("} ") || trimmed.starts_with("} else") || trimmed.starts_with("} catch") || trimmed.starts_with("} finally") {
+    if trimmed.starts_with("} ")
+        || trimmed.starts_with("} else")
+        || trimmed.starts_with("} catch")
+        || trimmed.starts_with("} finally")
+    {
         return false;
     }
 
@@ -299,7 +307,8 @@ mod tests {
         assert!(check(
             "class Foo {\n    fun bar() {\n        val x = 1\n    }\n}\n",
             4
-        ).is_empty());
+        )
+        .is_empty());
     }
 
     #[test]
@@ -329,6 +338,10 @@ mod tests {
 
     #[test]
     fn else_if_combo() {
-        assert!(check("fun f() {\n    if (x) {\n        a()\n    } else if (y) {\n        b()\n    }\n}\n", 4).is_empty());
+        assert!(check(
+            "fun f() {\n    if (x) {\n        a()\n    } else if (y) {\n        b()\n    }\n}\n",
+            4
+        )
+        .is_empty());
     }
 }
