@@ -8,10 +8,10 @@
 //! - `style` (6) — NoTabs, Forbidden, Wildcard, MandatoryBraces, PackageSpacing
 //! - `potential-bugs` (3) — DuplicateCaseInWhen, UnreachableCatch, EqualsNull
 
-pub mod empty_blocks;
-pub mod complexity;
-pub mod naming;
 pub mod comments;
-pub mod style;
-pub mod potential_bugs;
+pub mod complexity;
+pub mod empty_blocks;
 pub mod exceptions;
+pub mod naming;
+pub mod potential_bugs;
+pub mod style;

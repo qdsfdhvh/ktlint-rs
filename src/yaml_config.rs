@@ -12,8 +12,16 @@ use std::path::Path;
 
 // Known detekt rule short names → full ID prefix
 const DETEKT_CATEGORIES: &[&str] = &[
-    "empty-blocks", "complexity", "style", "naming", "comments",
-    "exceptions", "potential-bugs", "performance", "coroutines", "libraries",
+    "empty-blocks",
+    "complexity",
+    "style",
+    "naming",
+    "comments",
+    "exceptions",
+    "potential-bugs",
+    "performance",
+    "coroutines",
+    "libraries",
 ];
 
 /// Top-level YAML config structure.
@@ -42,7 +50,9 @@ pub struct YamlRuleConfig {
     pub properties: HashMap<String, serde_yaml::Value>,
 }
 
-fn default_active() -> bool { true }
+fn default_active() -> bool {
+    true
+}
 
 /// Resolve a rule name from YAML to its full ID.
 /// - Contains `:` → full ID, use as-is
@@ -64,9 +74,14 @@ fn resolve_rule_id(name: &str) -> String {
     // For now, heuristic: if it looks like a detekt rule name (PascalCase, contains certain patterns)
     // then prefix with detekt: otherwise standard:
     let looks_like_detekt = name.chars().next().map_or(false, |c| c.is_uppercase())
-        && (name.contains("Method") || name.contains("Class") || name.contains("Function")
-            || name.contains("Block") || name.contains("Condition") || name.contains("Complex")
-            || name.contains("Naming") || name.contains("Comment"));
+        && (name.contains("Method")
+            || name.contains("Class")
+            || name.contains("Function")
+            || name.contains("Block")
+            || name.contains("Condition")
+            || name.contains("Complex")
+            || name.contains("Naming")
+            || name.contains("Comment"));
     if looks_like_detekt {
         // Try to infer category from name suffix
         let category = guess_detekt_category(name);
@@ -77,9 +92,14 @@ fn resolve_rule_id(name: &str) -> String {
 }
 
 fn guess_detekt_category(name: &str) -> &str {
-    if name.contains("Method") || name.contains("Class") || name.contains("Parameter")
-        || name.contains("Condition") || name.contains("Complex") || name.contains("Depth")
-        || name.contains("Block") || name.contains("Function") && name.contains("Many")
+    if name.contains("Method")
+        || name.contains("Class")
+        || name.contains("Parameter")
+        || name.contains("Condition")
+        || name.contains("Complex")
+        || name.contains("Depth")
+        || name.contains("Block")
+        || name.contains("Function") && name.contains("Many")
     {
         "complexity"
     } else if name.contains("Empty") && name.contains("Block") {
@@ -104,12 +124,22 @@ pub fn load_and_apply(config: &mut KtlintConfig, yaml_path: &Path) -> anyhow::Re
     }
 
     // Apply global settings
-    if let Some(n) = yaml.indent_size { config.indent_size = n; }
-    if let Some(ref s) = yaml.indent_style {
-        config.indent_style = if s == "tab" { IndentStyle::Tab } else { IndentStyle::Space };
+    if let Some(n) = yaml.indent_size {
+        config.indent_size = n;
     }
-    if let Some(n) = yaml.max_line_length { config.max_line_length = n; }
-    if let Some(b) = yaml.insert_final_newline { config.insert_final_newline = b; }
+    if let Some(ref s) = yaml.indent_style {
+        config.indent_style = if s == "tab" {
+            IndentStyle::Tab
+        } else {
+            IndentStyle::Space
+        };
+    }
+    if let Some(n) = yaml.max_line_length {
+        config.max_line_length = n;
+    }
+    if let Some(b) = yaml.insert_final_newline {
+        config.insert_final_newline = b;
+    }
 
     // Apply rule configs with namespace inference + category-level support
     for (rule_name, rule_cfg) in &yaml.rules {
@@ -125,7 +155,10 @@ pub fn load_and_apply(config: &mut KtlintConfig, yaml_path: &Path) -> anyhow::Re
             properties.insert(k.clone(), val_str);
         }
 
-        let rc = RuleConfig { enabled: rule_cfg.active, properties };
+        let rc = RuleConfig {
+            enabled: rule_cfg.active,
+            properties,
+        };
 
         // Category-level batch switch: if rule_name is "detekt:category" (contains : but no second : → category prefix)
         if rule_id.contains(':') && !rule_id.matches(':').count() >= 2 {
@@ -143,7 +176,9 @@ pub fn load_and_apply(config: &mut KtlintConfig, yaml_path: &Path) -> anyhow::Re
 fn apply_category(config: &mut KtlintConfig, prefix: &str, rc: &RuleConfig) {
     // We need to know ALL possible rule IDs. Scan the registry.
     // For now, store a wildcard entry that is_rule_enabled can check.
-    config.category_overrides.insert(prefix.to_string(), rc.clone());
+    config
+        .category_overrides
+        .insert(prefix.to_string(), rc.clone());
 }
 
 #[cfg(test)]

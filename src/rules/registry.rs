@@ -10,8 +10,8 @@ impl Registry {
     pub fn all_rules(config: &KtlintConfig) -> Vec<Box<dyn Rule>> {
         use crate::rules::{
             detekt, final_rules, imports, naming, phase1_more, phase1_rules, phase3b_rules,
-            spacing, structure, wrapping,
-            FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces, NoWildcardImports,
+            spacing, structure, wrapping, FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces,
+            NoWildcardImports,
         };
 
         vec![
