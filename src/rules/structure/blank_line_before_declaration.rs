@@ -3,6 +3,7 @@ use tree_sitter::Tree;
 
 /// Checks that declarations (class, function, property) are preceded by a blank
 /// line unless they're the first declaration in a file/class body.
+/// JVM-compatible: checks both top-level and inside class bodies.
 pub struct BlankLineBeforeDeclaration;
 
 impl Rule for BlankLineBeforeDeclaration {
@@ -17,95 +18,119 @@ impl Rule for BlankLineBeforeDeclaration {
             return violations;
         }
 
-        let mut prev_line_is_empty = true; // Treat file start as "blank"
-        let mut prev_line_is_decl = false;
-        let mut prev_indent = 0;
-
+        // Scan backwards from each declaration to find the previous non-blank
+        // non-comment line. If it's also a declaration at the same indent, flag.
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
+
+            if !is_declaration(trimmed) {
+                continue;
+            }
+
             let current_indent = line.len().saturating_sub(trimmed.len());
 
-            // Detect declarations: fun / val / var / class / object / interface /
-            // enum class / typealias / constructor / init / companion object at
-            // indent level <= previous (top-level or after closing brace).
-            let is_decl = trimmed.starts_with("fun ")
-                || trimmed.starts_with("val ")
-                || trimmed.starts_with("var ")
-                || trimmed.starts_with("class ")
-                || trimmed.starts_with("object ")
-                || trimmed.starts_with("interface ")
-                || trimmed.starts_with("enum class ")
-                || trimmed.starts_with("typealias ")
-                || trimmed.starts_with("constructor(")
-                || trimmed.starts_with("init ")
-                || trimmed.starts_with("companion object ")
-                || trimmed.starts_with("data class ")
-                || trimmed.starts_with("sealed class ")
-                || trimmed.starts_with("sealed interface ")
-                || trimmed.starts_with("abstract class ")
-                || trimmed.starts_with("open class ")
-                || trimmed.starts_with("annotation class ")
-                || trimmed.starts_with("expect class ")
-                || trimmed.starts_with("actual class ")
-                || trimmed.starts_with("inline class ")
-                || trimmed.starts_with("value class ")
-                || trimmed.starts_with("suspend fun ")
-                || trimmed.starts_with("operator fun ")
-                || trimmed.starts_with("infix fun ")
-                || trimmed.starts_with("tailrec fun ")
-                || trimmed.starts_with("external fun ")
-                || trimmed.starts_with("inline fun ")
-                || trimmed.starts_with("override fun ")
-                || trimmed.starts_with("private fun ")
-                || trimmed.starts_with("internal fun ")
-                || trimmed.starts_with("protected fun ")
-                || trimmed.starts_with("public fun ");
+            // Skip very first declaration in file
+            if current_indent == 0 && i == 0 {
+                continue;
+            }
 
-            // Only top-level declarations (indent == 0) require a blank line.
-            if is_decl
-                && current_indent == 0
-                && prev_indent == 0
-                && !prev_line_is_empty
-                && prev_line_is_decl
-            {
-                // Check if this is the first thing after an opening brace or
-                // a comment; if so, don't flag.
-                if !trimmed.is_empty() && !trimmed.starts_with("//") && !trimmed.starts_with("/*") {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: self.id().into(),
-                        message: format!(
-                            "Expected a blank line before declaration: \"{}\"",
-                            if trimmed.len() > 60 {
-                                // Safe UTF-8 truncation at char boundary
-                                let end = trimmed
-                                    .char_indices()
-                                    .nth(57)
-                                    .map(|(i, _)| i)
-                                    .unwrap_or(trimmed.len());
-                                &trimmed[..end]
-                            } else {
-                                trimmed
-                            }
-                        ),
-                        auto_fixable: true,
-                    });
+            // Find previous non-blank, non-comment line
+            let mut prev_idx = i;
+            let mut found_blank = false;
+            loop {
+                if prev_idx == 0 {
+                    break;
                 }
-            }
+                prev_idx -= 1;
+                let p = lines[prev_idx].trim();
+                if p.is_empty() {
+                    found_blank = true;
+                    continue;
+                }
+                if p.starts_with("//")
+                    || p.starts_with("/*")
+                    || p.starts_with('@')
+                    || p == "*/"
+                    || p.starts_with("* ")
+                {
+                    continue;
+                }
+                // Found a non-blank, non-comment line
+                let prev_indent = lines[prev_idx].len().saturating_sub(p.len());
 
-            if trimmed.is_empty() {
-                prev_line_is_empty = true;
-            } else {
-                prev_line_is_empty = false;
+                // Only flag if same indent level AND not separated by blank line
+                // AND the previous line is also a declaration
+                if prev_indent == current_indent && !found_blank {
+                    // Special case: previous line has `{` at the end (opening brace)
+                    // e.g., "class Foo {" — first declaration in a block is fine
+                    if p.ends_with('{') {
+                        break;
+                    }
+                    // Previous line must be a declaration too
+                    if is_declaration(p) {
+                        violations.push(Violation {
+                            file: String::new(),
+                            line: i + 1,
+                            col: 1,
+                            rule_id: "standard:blank-line-before-declaration".into(),
+                            message: format!(
+                                "Expected a blank line before declaration: \"{}\"",
+                                if trimmed.len() > 60 {
+                                    let end = trimmed
+                                        .char_indices()
+                                        .nth(57)
+                                        .map(|(i, _)| i)
+                                        .unwrap_or(trimmed.len());
+                                    &trimmed[..end]
+                                } else {
+                                    trimmed
+                                }
+                            ),
+                            auto_fixable: true,
+                        });
+                    }
+                }
+                break;
             }
-            prev_line_is_decl = is_decl;
-            prev_indent = current_indent;
         }
 
         violations
     }
+}
+
+fn is_declaration(trimmed: &str) -> bool {
+    trimmed.starts_with("fun ")
+        || trimmed.starts_with("val ")
+        || trimmed.starts_with("var ")
+        || trimmed.starts_with("class ")
+        || trimmed.starts_with("object ")
+        || trimmed.starts_with("interface ")
+        || trimmed.starts_with("enum class ")
+        || trimmed.starts_with("typealias ")
+        || trimmed.starts_with("constructor(")
+        || trimmed.starts_with("init ")
+        || trimmed.starts_with("companion object ")
+        || trimmed.starts_with("data class ")
+        || trimmed.starts_with("sealed class ")
+        || trimmed.starts_with("sealed interface ")
+        || trimmed.starts_with("abstract class ")
+        || trimmed.starts_with("open class ")
+        || trimmed.starts_with("annotation class ")
+        || trimmed.starts_with("expect class ")
+        || trimmed.starts_with("actual class ")
+        || trimmed.starts_with("inline class ")
+        || trimmed.starts_with("value class ")
+        || trimmed.starts_with("suspend fun ")
+        || trimmed.starts_with("operator fun ")
+        || trimmed.starts_with("infix fun ")
+        || trimmed.starts_with("tailrec fun ")
+        || trimmed.starts_with("external fun ")
+        || trimmed.starts_with("inline fun ")
+        || trimmed.starts_with("override fun ")
+        || trimmed.starts_with("private fun ")
+        || trimmed.starts_with("internal fun ")
+        || trimmed.starts_with("protected fun ")
+        || trimmed.starts_with("public fun ")
 }
 
 #[cfg(test)]
@@ -133,6 +158,24 @@ mod tests {
     #[test]
     fn first_declaration_no_blank() {
         let v = check("fun a() {}");
+        assert!(v.is_empty());
+    }
+
+    #[test]
+    fn inside_class_body_no_blank() {
+        let v = check("class Foo {\n    fun a() {}\n    fun b() {}\n}\n");
+        assert!(!v.is_empty());
+    }
+
+    #[test]
+    fn inside_class_body_with_blank() {
+        let v = check("class Foo {\n    fun a() {}\n\n    fun b() {}\n}\n");
+        assert!(v.is_empty());
+    }
+
+    #[test]
+    fn first_in_class_body_no_blank_needed() {
+        let v = check("class Foo {\n    fun a() {}\n}\n");
         assert!(v.is_empty());
     }
 }

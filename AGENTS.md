@@ -64,6 +64,18 @@ Key node kinds used by spacing rules:
 
 ## Development Workflow
 
+### ⚠️ CRITICAL: Never commit directly to `master`
+
+- **ALWAYS** create a feature branch before making changes.
+- **ALWAYS** open a pull request — never push or merge directly to `master`.
+- If you accidentally commit to master, immediately:
+  1. `git branch <feature-branch>` to save your commits
+  2. `git reset --hard <last-good-commit>` on master
+  3. Push the feature branch and open a PR
+- This is a hard requirement. No exceptions.
+
+### Build & Test
+
 ### Build & Test
 ```bash
 # Build

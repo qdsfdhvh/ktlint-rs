@@ -1,11 +1,14 @@
 //! standard:annotation — annotations on separate lines.
-//! Only flags: multiple annotations on same line, code after annotation block.
+//! JVM-compatible: checks ALL annotation nodes in declaration contexts.
+
 use crate::rules::{Rule, Violation};
 
 pub struct AnnotationSpacing;
 
 impl Rule for AnnotationSpacing {
-    fn id(&self) -> &'static str { "standard:annotation" }
+    fn id(&self) -> &'static str {
+        "standard:annotation"
+    }
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         walk(tree.root_node(), source.as_bytes(), &mut v);
@@ -14,50 +17,110 @@ impl Rule for AnnotationSpacing {
 }
 
 fn walk(node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
-    if node.kind() == "modifiers" {
-        let anns: Vec<tree_sitter::Node> =
-            (0..node.child_count()).filter_map(|i| node.child(i)).filter(|c| c.kind() == "annotation").collect();
-
-        for idx in 0..anns.len() {
-            let ann = &anns[idx];
-            let pos = ann.start_position();
-
-            // Consecutive annotations on same line → flag
-            if idx > 0 {
-                let prev = &anns[idx - 1];
-                if prev.end_position().row == pos.row {
-                    violations.push(Violation {
-                        file: String::new(), line: pos.row + 1, col: pos.column + 1,
-                        rule_id: "standard:annotation".into(),
-                        message: "Expected newline before annotation".into(),
-                        auto_fixable: true,
-                    });
-                }
-            }
-
-            // Code after last annotation on same line → flag (only for multi-annotation blocks)
-            if anns.len() > 1 && idx == anns.len() - 1 {
-                let mut a = ann.end_byte();
-                while a < bytes.len() {
-                    if bytes[a] == b'\n' { break; }
-                    if bytes[a] != b' ' && bytes[a] != b'\t' && bytes[a] != b'@' {
-                        violations.push(Violation {
-                            file: String::new(), line: pos.row + 1, col: pos.column + 1,
-                            rule_id: "standard:annotation".into(),
-                            message: "Expected newline after last annotation".into(),
-                            auto_fixable: true,
-                        });
-                        break;
-                    }
-                    a += 1;
-                }
-            }
+    if node.kind() == "annotation" && is_decl_annotation(&node) {
+        check_annotation(&node, bytes, violations);
+    }
+    for i in 0..node.child_count() {
+        if let Some(c) = node.child(i) {
+            walk(c, bytes, violations);
         }
     }
+}
 
-    for i in 0..node.child_count() {
-        if let Some(c) = node.child(i) { walk(c, bytes, violations); }
+/// Only check annotations on declarations (class, function, property, constructor, typealias, etc.).
+/// Skip expression-level annotations (type annotations, when-entry annotations, etc.).
+fn is_decl_annotation(node: &tree_sitter::Node) -> bool {
+    let mut cur = node.parent();
+    while let Some(p) = cur {
+        match p.kind() {
+            "class_declaration"
+            | "function_declaration"
+            | "property_declaration"
+            | "object_declaration"
+            | "companion_object"
+            | "enum_entry"
+            | "primary_constructor"
+            | "secondary_constructor"
+            | "type_alias"
+            | "modifiers" => return true,
+            // Parameter annotations are declaration annotations too
+            "class_parameters" | "function_value_parameters" => return true,
+            // Type annotations, expression annotations — NOT declaration annotations
+            "user_type" | "nullable_type" | "type_arguments" | "type_projection"
+            | "function_type" | "annotated_type" | "value_arguments" | "call_expression"
+            | "when_entry" | "when_expression" | "binary_expression" | "lambda_literal"
+            | "return_expression" | "function_body" | "class_body" | "statements" => return false,
+            _ => {}
+        }
+        cur = p.parent();
     }
+    true
+}
+
+fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    let pos = node.start_position();
+    let line_start = node.start_byte().saturating_sub(pos.column);
+
+    // Determine if we're in a parameter list — only check multiple annotations there,
+    // not "code before annotation" (since `(` or `,` is expected before param annotations).
+    let in_params = in_parameter_list(node);
+
+    let mut prev_was_annotation = false;
+    let mut prev_was_code = false;
+
+    let mut i = line_start;
+    while i < node.start_byte() {
+        match bytes[i] {
+            b' ' | b'\t' => {}
+            b'@' => {
+                prev_was_annotation = true;
+            }
+            b'\n' => break,
+            _ => {
+                prev_was_code = true;
+            }
+        }
+        i += 1;
+    }
+
+    if prev_was_code && !in_params {
+        violations.push(Violation {
+            file: String::new(),
+            line: pos.row + 1,
+            col: pos.column + 1,
+            rule_id: "standard:annotation".into(),
+            message: "Expected newline before annotation".into(),
+            auto_fixable: true,
+        });
+        return;
+    }
+
+    if prev_was_annotation {
+        violations.push(Violation {
+            file: String::new(),
+            line: pos.row + 1,
+            col: pos.column + 1,
+            rule_id: "standard:annotation".into(),
+            message: "Multiple annotations should be placed on separate lines".into(),
+            auto_fixable: true,
+        });
+    }
+}
+
+fn in_parameter_list(node: &tree_sitter::Node) -> bool {
+    let mut cur = node.parent();
+    while let Some(p) = cur {
+        match p.kind() {
+            "class_parameters" | "function_value_parameters" | "value_parameter" => return true,
+            "class_declaration"
+            | "function_declaration"
+            | "property_declaration"
+            | "object_declaration" => return false,
+            _ => {}
+        }
+        cur = p.parent();
+    }
+    false
 }
 
 #[cfg(test)]
@@ -68,8 +131,33 @@ mod tests {
         AnnotationSpacing.check(&KotlinParser::new().parse(s), s)
     }
 
-    #[test] fn single_annotation_newline_ok() { assert!(check("@Deprecated\nclass Foo\n").is_empty()); }
-    #[test] fn single_annotation_same_line_ok() { assert!(check("@Deprecated class Foo\n").is_empty()); }
-    #[test] fn two_annotations_separate_ok() { assert!(check("@A\n@B\nclass Foo\n").is_empty()); }
-    #[test] fn two_annotations_same_line_bad() { assert!(!check("@A @B\nclass Foo\n").is_empty()); }
+    #[test]
+    fn single_annotation_newline_ok() {
+        assert!(check("@Deprecated\nclass Foo\n").is_empty());
+    }
+    #[test]
+    fn single_annotation_same_line_ok() {
+        assert!(check("@Deprecated class Foo\n").is_empty());
+    }
+    #[test]
+    fn two_annotations_separate_ok() {
+        assert!(check("@A\n@B\nclass Foo\n").is_empty());
+    }
+    #[test]
+    fn two_annotations_same_line_bad() {
+        assert!(!check("@A @B\nclass Foo\n").is_empty());
+    }
+    #[test]
+    fn code_before_annotation_bad() {
+        assert!(!check("class Foo @Inject\n").is_empty());
+    }
+    #[test]
+    fn three_annotations_first_clean() {
+        let v = check("@A @B @C\nclass Foo\n");
+        assert_eq!(v.len(), 2);
+    }
+    #[test]
+    fn annotation_inside_when_ok() {
+        assert!(check("val x = when { is Foo -> @Suppress(\"bar\") 1 }\n").is_empty());
+    }
 }

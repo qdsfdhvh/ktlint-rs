@@ -3,9 +3,8 @@
 use crate::config::KtlintConfig;
 use tree_sitter::Tree;
 
-pub mod detekt;
-pub mod registry;
 pub mod builtins;
+pub mod detekt;
 pub mod imports;
 pub mod naming;
 pub mod new_rules;
@@ -15,6 +14,7 @@ pub mod new_rules4;
 pub mod phase1_more;
 pub mod phase1_rules;
 pub mod phase3b_rules;
+pub mod registry;
 pub mod spacing;
 pub mod structure;
 pub mod suppress;
