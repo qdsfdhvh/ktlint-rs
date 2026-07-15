@@ -6,6 +6,7 @@ mod formatter;
 mod git_hook;
 mod parser;
 mod reporter;
+mod resolver;
 mod rules;
 mod yaml_config;
 
