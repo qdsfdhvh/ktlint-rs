@@ -11,8 +11,9 @@ support, with startup under 50ms and per-file lint under 5ms.
 - **低 CPU**: lint 完成后 CPU 归零，无后台线程/rayon pool 残留。
 - **跑完即停**: 进程退出必须干净（exit 0/1/2），不允许 daemon 化或 event loop。
 - **Rule 轻量**: 每个 rule 的 `check()` 必须 O(n) 且无副作用的纯函数。禁止规则内 I/O、网络、或全局状态。
-- **测试快**: unit tests < 1s, integration tests < 30s（debug build）。
 - **二进制体量**: release binary < 15MB。
+- **禁止 daemon**: 进程必须有明确的退出点（exit 0/1/2）。不允许常驻后台、server 模式、watch 模式、或任何形式的常驻进程。每次调用必须是一次性的：读文件 → lint → 输出 → 退出。
+- **可缓存**: 允许使用 `.ktlint-rs/` 目录缓存解析结果或配置以加速重复运行，但缓存不得导致进程常驻。
 ## Architecture
 
 ```
@@ -177,15 +178,21 @@ impl Rule for MyRule {
 - **Integration test**: Run on real Kotlin project (kataris-app, 1377 files)
 - **Benchmarks**: `cargo bench` for per-rule micro-benchmarks
 
-## Current Status (2026-07-12)
+## Current Status (2026-07-15)
 - **Phase 0**: ✅ Infrastructure & skeleton
-- **Phase 1**: ✅ Core rules — 65 rules across all categories
-- **Phase 2**: 🟡 .editorconfig (code_style ✅, per-rule disable ⚠ pending wiring)
-- **Phase 3**: 🟡 Parity tuning (indent, blank-line-before-declaration, etc.)
+- **Phase 1**: ✅ Core rules — 69 ktlint rules across all categories
+- **Phase 2**: ✅ .editorconfig & config parity
+- **Phase 3**: ✅ Parity tuning — 7 gaps fixed (PR #22)
 - **Phase 4**: ✅ Formatter & auto-fix engine
-- **Phase 5**: ⬜ Advanced features
-- **Phase 6**: 🟡 Testing & benchmarking (185 tests, parity analysis in progress)
-- **Phase 7**: ⬜ Distribution & docs
+- **Phase 5**: ✅ Advanced features (baselines, git hooks, YAML)
+- **Phase 6**: ✅ Testing & benchmarking (330+ tests, CI, bench)
+- **Phase 7**: ✅ Distribution & docs
+- **Phase 8**: ✅ Registry + architecture refactor
+- **Phase 9**: ✅ Unified config (namespace, category switches)
+- **Phase 10**: ✅ CLI --ruleset integration
+- **Phase 11**: ✅ detekt L0 rules (134/126)
+- **Phase 12**: ⬜ blocked — Name resolution engine (~50 rules)
+- **Phase 13**: ⬜ blocked — Type resolution bridge (~51 rules)
 
 See `task_plan.md` for detailed gap analysis and priority path.
 

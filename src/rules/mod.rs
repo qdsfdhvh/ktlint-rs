@@ -12,7 +12,6 @@ pub mod new_rules2;
 pub mod new_rules3;
 pub mod new_rules4;
 pub mod phase1_more;
-pub mod phase1_rules;
 pub mod phase3b_rules;
 pub mod registry;
 pub mod spacing;

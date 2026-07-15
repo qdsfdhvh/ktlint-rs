@@ -9,7 +9,7 @@ pub struct Registry;
 impl Registry {
     pub fn all_rules(config: &KtlintConfig) -> Vec<Box<dyn Rule>> {
         use crate::rules::{
-            detekt, final_rules, imports, naming, phase1_more, phase1_rules, phase3b_rules,
+            detekt, final_rules, imports, naming, phase1_more, phase3b_rules,
             spacing, structure, wrapping, FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces,
             NoWildcardImports,
         };
@@ -85,10 +85,11 @@ impl Registry {
             Box::new(wrapping::StringTemplateIndent),
             Box::new(wrapping::TryCatchFinallyWrapping),
             Box::new(wrapping::WhenExpressionLineBreak),
-            // ── Phase 1 ───────────────────────────────────────────────
-            Box::new(phase1_rules::WhenEntryBracing),
-            Box::new(phase1_rules::BlankLineBetweenWhenConditions),
-            Box::new(phase1_rules::SpacingBetweenDeclarationsWithComments),
+            // ── Wrapping (more) ────────────────────────────────────────
+            Box::new(wrapping::WhenEntryBracing),
+            // ── Structure (more) ────────────────────────────────────────
+            Box::new(structure::BlankLineBetweenWhenConditions),
+            Box::new(structure::SpacingBetweenDeclarationsWithComments),
             // ── Phase 1 more ──────────────────────────────────────────
             Box::new(phase1_more::KtlintAnnotation),
             Box::new(phase1_more::KtlintWrapping),
