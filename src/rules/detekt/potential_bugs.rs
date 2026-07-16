@@ -202,6 +202,9 @@ impl Rule for LateinitUsage {
     fn id(&self) -> &'static str {
         "detekt:potential-bugs:LateinitUsage"
     }
+    fn requires_type_resolution(&self) -> bool {
+        true
+    }
     fn auto_fixable(&self) -> bool {
         false
     }
@@ -324,6 +327,9 @@ pub struct UnsafeCallOnNullableType;
 impl Rule for UnsafeCallOnNullableType {
     fn id(&self) -> &'static str {
         "detekt:potential-bugs:UnsafeCallOnNullableType"
+    }
+    fn requires_type_resolution(&self) -> bool {
+        true
     }
     fn auto_fixable(&self) -> bool {
         false
