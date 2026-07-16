@@ -215,6 +215,7 @@ impl Registry {
             Box::new(detekt::style::RedundantModifier),
             Box::new(detekt::style::LibraryCodeMustSpecifyReturnType),
             Box::new(detekt::style::UseCheckNotNull),
+            Box::new(detekt::style::UnusedLocalVariable),
             Box::new(detekt::style::RedundantVisibilityModifierRule),
             Box::new(detekt::style::RedundantExplicitType),
             Box::new(detekt::style::ForbiddenVoid),

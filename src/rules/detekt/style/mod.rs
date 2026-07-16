@@ -1744,3 +1744,5 @@ pub mod redundant_modifier;
 pub use redundant_modifier::RedundantModifier;
 pub mod l1_batch;
 pub use l1_batch::LibraryCodeMustSpecifyReturnType;
+pub mod unused_local_variable;
+pub use unused_local_variable::UnusedLocalVariable;
