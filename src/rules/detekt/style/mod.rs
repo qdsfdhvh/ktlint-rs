@@ -1752,3 +1752,5 @@ pub mod lib_code;
 pub use lib_code::LibraryCodeMustSpecifyReturnType;
 pub mod constructors_on_top;
 pub use constructors_on_top::ConstructorsOnTop;
+pub mod unused_private_class;
+pub use unused_private_class::UnusedPrivateClass;
