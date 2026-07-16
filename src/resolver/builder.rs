@@ -95,6 +95,19 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                 push_children(&n, &mut stack, sid);
             }
 
+            // ── Constructors ──
+            "secondary_constructor" | "primary_constructor" => {
+                table.add_symbol(
+                    "<init>".into(),
+                    SymbolKind::Constructor,
+                    Visibility::Implicit,
+                    n.start_position().row + 1,
+                    n.start_position().column + 1,
+                    sid,
+                );
+                push_children(&n, &mut stack, sid);
+            }
+
             // ── Function parameters ──
             "value_parameter" => {
                 let pos = n.start_position();

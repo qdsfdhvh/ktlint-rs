@@ -1750,3 +1750,5 @@ pub mod unused_parameter;
 pub use unused_parameter::UnusedParameter;
 pub mod lib_code;
 pub use lib_code::LibraryCodeMustSpecifyReturnType;
+pub mod constructors_on_top;
+pub use constructors_on_top::ConstructorsOnTop;
