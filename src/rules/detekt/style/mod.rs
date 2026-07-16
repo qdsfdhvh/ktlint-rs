@@ -1742,3 +1742,5 @@ pub mod explicit_visibility;
 pub use explicit_visibility::ExplicitApiVisibility;
 pub mod redundant_modifier;
 pub use redundant_modifier::RedundantModifier;
+pub mod l1_batch;
+pub use l1_batch::LibraryCodeMustSpecifyReturnType;
