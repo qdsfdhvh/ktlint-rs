@@ -8,26 +8,37 @@ use crate::rules::{Rule, Violation};
 pub struct ProtectedMemberInFinalClass;
 
 impl Rule for ProtectedMemberInFinalClass {
-    fn id(&self) -> &'static str { "detekt:naming:ProtectedMemberInFinalClass" }
+    fn id(&self) -> &'static str {
+        "detekt:naming:ProtectedMemberInFinalClass"
+    }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let table = build_symbol_table(source, tree.root_node());
 
         // Find all protected symbols
-        for sym in table.symbols.iter().filter(|s| s.visibility == crate::resolver::Visibility::Protected) {
+        for sym in table
+            .symbols
+            .iter()
+            .filter(|s| s.visibility == crate::resolver::Visibility::Protected)
+        {
             // Walk up to find the enclosing class
             if let Some(scope) = table.scopes.get(sym.scope_id) {
                 if let Some(parent_id) = scope.parent_id {
                     for class_sym in table.symbols.iter().filter(|s| {
-                        matches!(s.kind, crate::resolver::SymbolKind::Class | crate::resolver::SymbolKind::Object)
-                            && s.scope_id == parent_id
+                        matches!(
+                            s.kind,
+                            crate::resolver::SymbolKind::Class
+                                | crate::resolver::SymbolKind::Object
+                        ) && s.scope_id == parent_id
                     }) {
                         // Check if the class is effectively final (not open, not abstract, not sealed)
                         // We determine this from the source text at class declaration
                         if !is_extensible_class(class_sym.line, source) {
                             violations.push(Violation {
-                                file: String::new(), line: sym.line, col: sym.col,
+                                file: String::new(),
+                                line: sym.line,
+                                col: sym.col,
                                 rule_id: "detekt:naming:ProtectedMemberInFinalClass".into(),
                                 message: format!(
                                     "Protected member '{}' in final class '{}'",
@@ -68,7 +79,16 @@ mod tests {
         ProtectedMemberInFinalClass.check(&tree, s)
     }
 
-    #[test] fn final_class_protected_bad() { assert!(!c("class Foo { protected fun bar() {} }").is_empty()); }
-    #[test] fn open_class_protected_ok() { assert!(c("open class Foo { protected fun bar() {} }").is_empty()); }
-    #[test] fn public_member_ok() { assert!(c("class Foo { fun bar() {} }").is_empty()); }
+    #[test]
+    fn final_class_protected_bad() {
+        assert!(!c("class Foo { protected fun bar() {} }").is_empty());
+    }
+    #[test]
+    fn open_class_protected_ok() {
+        assert!(c("open class Foo { protected fun bar() {} }").is_empty());
+    }
+    #[test]
+    fn public_member_ok() {
+        assert!(c("class Foo { fun bar() {} }").is_empty());
+    }
 }

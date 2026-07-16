@@ -9,9 +9,8 @@ pub struct Registry;
 impl Registry {
     pub fn all_rules(config: &KtlintConfig) -> Vec<Box<dyn Rule>> {
         use crate::rules::{
-            detekt, final_rules, imports, naming, phase1_more, phase3b_rules,
-            spacing, structure, wrapping, FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces,
-            NoWildcardImports,
+            detekt, final_rules, imports, naming, phase1_more, phase3b_rules, spacing, structure,
+            wrapping, FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces, NoWildcardImports,
         };
 
         vec![

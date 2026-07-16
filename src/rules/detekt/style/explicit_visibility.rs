@@ -9,7 +9,9 @@ use crate::rules::{Rule, Violation};
 pub struct ExplicitApiVisibility;
 
 impl Rule for ExplicitApiVisibility {
-    fn id(&self) -> &'static str { "detekt:style:ExplicitApiVisibility" }
+    fn id(&self) -> &'static str {
+        "detekt:style:ExplicitApiVisibility"
+    }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
@@ -35,9 +37,14 @@ impl Rule for ExplicitApiVisibility {
                 continue;
             }
             violations.push(Violation {
-                file: String::new(), line: sym.line, col: sym.col,
+                file: String::new(),
+                line: sym.line,
+                col: sym.col,
                 rule_id: "detekt:style:ExplicitApiVisibility".into(),
-                message: format!("Declaration '{}' should have explicit visibility modifier", sym.name),
+                message: format!(
+                    "Declaration '{}' should have explicit visibility modifier",
+                    sym.name
+                ),
                 auto_fixable: false,
             });
         }
@@ -57,8 +64,20 @@ mod tests {
         ExplicitApiVisibility.check(&tree, s)
     }
 
-    #[test] fn implicitly_public_bad() { assert!(!c("class Foo {}\n").is_empty()); }
-    #[test] fn explicitly_public_ok() { assert!(c("public class Foo {}\n").is_empty()); }
-    #[test] fn private_class_ok() { assert!(c("private class Foo { private fun bar() {} }\n").is_empty()); }
-    #[test] fn local_val_ok() { assert!(c("private fun foo() { val x = 1 }\n").is_empty()); }
+    #[test]
+    fn implicitly_public_bad() {
+        assert!(!c("class Foo {}\n").is_empty());
+    }
+    #[test]
+    fn explicitly_public_ok() {
+        assert!(c("public class Foo {}\n").is_empty());
+    }
+    #[test]
+    fn private_class_ok() {
+        assert!(c("private class Foo { private fun bar() {} }\n").is_empty());
+    }
+    #[test]
+    fn local_val_ok() {
+        assert!(c("private fun foo() { val x = 1 }\n").is_empty());
+    }
 }

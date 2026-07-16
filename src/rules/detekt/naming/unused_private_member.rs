@@ -9,7 +9,9 @@ use std::collections::HashSet;
 pub struct UnusedPrivateMember;
 
 impl Rule for UnusedPrivateMember {
-    fn id(&self) -> &'static str { "detekt:naming:UnusedPrivateMember" }
+    fn id(&self) -> &'static str {
+        "detekt:naming:UnusedPrivateMember"
+    }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
@@ -28,7 +30,9 @@ impl Rule for UnusedPrivateMember {
         }) {
             if !used.contains(&sym.name) {
                 violations.push(Violation {
-                    file: String::new(), line: sym.line, col: sym.col,
+                    file: String::new(),
+                    line: sym.line,
+                    col: sym.col,
                     rule_id: "detekt:naming:UnusedPrivateMember".into(),
                     message: format!("Private member '{}' is never used", sym.name),
                     auto_fixable: false,
@@ -49,20 +53,29 @@ fn collect_references(root: tree_sitter::Node, source: &str) -> HashSet<String> 
     // Node kinds that represent a DECLARATION (where the identifier is the name being declared).
     // Identifiers inside these are skipped because they declare, not reference.
     const DECL_KINDS: &[&str] = &[
-        "class_declaration", "function_declaration", "property_declaration",
-        "object_declaration", "enum_entry", "type_alias",
-        "import_header", "package_header",
-        "class_parameter", "value_parameter",
+        "class_declaration",
+        "function_declaration",
+        "property_declaration",
+        "object_declaration",
+        "enum_entry",
+        "type_alias",
+        "import_header",
+        "package_header",
+        "class_parameter",
+        "value_parameter",
     ];
 
     while let Some(node) = stack.pop() {
         // Collect simple_identifier references
-        if node.kind() == "simple_identifier" || node.kind() == "type_identifier" || node.kind() == "identifier" {
+        if node.kind() == "simple_identifier"
+            || node.kind() == "type_identifier"
+            || node.kind() == "identifier"
+        {
             if let Ok(name) = node.utf8_text(bytes) {
                 // Check if this identifier is in a declaration position
-                let is_decl = node.parent().map_or(false, |p| {
-                    DECL_KINDS.contains(&p.kind())
-                });
+                let is_decl = node
+                    .parent()
+                    .map_or(false, |p| DECL_KINDS.contains(&p.kind()));
                 if !is_decl {
                     used.insert(name.to_string());
                 }
@@ -70,7 +83,9 @@ fn collect_references(root: tree_sitter::Node, source: &str) -> HashSet<String> 
         }
         // Push children
         for i in (0..node.child_count()).rev() {
-            if let Some(c) = node.child(i) { stack.push(c); }
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
         }
     }
 
@@ -88,8 +103,17 @@ mod tests {
         UnusedPrivateMember.check(&tree, s)
     }
 
-    #[test] #[ignore]
-    fn used_private_ok() { assert!(c("class Foo { private fun bar() {} fun baz() { bar() } }").is_empty()); }
-    #[test] fn public_never_flagged() { assert!(c("class Foo { fun bar() {} }").is_empty()); }
-    #[test] fn private_val_used_ok() { assert!(c("class Foo { private val x = 1\n fun getX() = x }").is_empty()); }
+    #[test]
+    #[ignore]
+    fn used_private_ok() {
+        assert!(c("class Foo { private fun bar() {} fun baz() { bar() } }").is_empty());
+    }
+    #[test]
+    fn public_never_flagged() {
+        assert!(c("class Foo { fun bar() {} }").is_empty());
+    }
+    #[test]
+    fn private_val_used_ok() {
+        assert!(c("class Foo { private val x = 1\n fun getX() = x }").is_empty());
+    }
 }

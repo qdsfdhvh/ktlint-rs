@@ -20,7 +20,12 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                 if let Some(sym) = extract_class_symbol(&n, bytes) {
                     let new_scope = table.add_scope(sid);
                     table.add_symbol(
-                        sym.name.clone(), sym.kind, sym.visibility, sym.line, sym.col, sid,
+                        sym.name.clone(),
+                        sym.kind,
+                        sym.visibility,
+                        sym.line,
+                        sym.col,
+                        sid,
                     );
                     // Push children into the new scope
                     push_children(&n, &mut stack, new_scope);
@@ -31,7 +36,12 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                 if let Some(sym) = extract_function_symbol(&n, bytes) {
                     let new_scope = table.add_scope(sid);
                     table.add_symbol(
-                        sym.name.clone(), SymbolKind::Function, sym.visibility, sym.line, sym.col, sid,
+                        sym.name.clone(),
+                        SymbolKind::Function,
+                        sym.visibility,
+                        sym.line,
+                        sym.col,
+                        sid,
                     );
                     push_children(&n, &mut stack, new_scope);
                 }
@@ -41,7 +51,14 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                 if let Some(name) = extract_property_name(&n, bytes) {
                     let vis = extract_visibility(&n, bytes);
                     let pos = n.start_position();
-                    table.add_symbol(name, SymbolKind::Property, vis, pos.row + 1, pos.column + 1, sid);
+                    table.add_symbol(
+                        name,
+                        SymbolKind::Property,
+                        vis,
+                        pos.row + 1,
+                        pos.column + 1,
+                        sid,
+                    );
                 }
                 push_children(&n, &mut stack, sid);
             }
@@ -71,7 +88,10 @@ fn extract_class_symbol(node: &Node, bytes: &[u8]) -> Option<ClassInfo> {
     // Find the name (simple_identifier) among children
     for i in 0..node.child_count() {
         if let Some(child) = node.child(i) {
-            if child.kind() == "type_identifier" || child.kind() == "simple_identifier" || child.kind() == "identifier" {
+            if child.kind() == "type_identifier"
+                || child.kind() == "simple_identifier"
+                || child.kind() == "identifier"
+            {
                 let name = child.utf8_text(bytes).unwrap_or("").to_string();
                 return Some(ClassInfo {
                     name,
@@ -162,15 +182,29 @@ fn extract_visibility(node: &Node, bytes: &[u8]) -> Visibility {
         if let Some(child) = node.child(i) {
             if child.kind() == "modifiers" {
                 let text = child.utf8_text(bytes).unwrap_or("");
-                if text.contains("private") { return Visibility::Private; }
-                if text.contains("protected") { return Visibility::Protected; }
-                if text.contains("internal") { return Visibility::Internal; }
-                if text.contains("public") { return Visibility::Public; }
+                if text.contains("private") {
+                    return Visibility::Private;
+                }
+                if text.contains("protected") {
+                    return Visibility::Protected;
+                }
+                if text.contains("internal") {
+                    return Visibility::Internal;
+                }
+                if text.contains("public") {
+                    return Visibility::Public;
+                }
             }
             // Direct visibility keywords (some grammars put them as direct children)
-            if child.kind() == "private" || child.kind() == "private_modifier" { return Visibility::Private; }
-            if child.kind() == "protected" || child.kind() == "protected_modifier" { return Visibility::Protected; }
-            if child.kind() == "internal" || child.kind() == "internal_modifier" { return Visibility::Internal; }
+            if child.kind() == "private" || child.kind() == "private_modifier" {
+                return Visibility::Private;
+            }
+            if child.kind() == "protected" || child.kind() == "protected_modifier" {
+                return Visibility::Protected;
+            }
+            if child.kind() == "internal" || child.kind() == "internal_modifier" {
+                return Visibility::Internal;
+            }
         }
     }
     Visibility::Implicit
