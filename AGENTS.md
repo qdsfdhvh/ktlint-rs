@@ -104,6 +104,14 @@ cargo test curly_spacing
 4. Register in `rules/mod.rs` → `RuleEngine::new()`
 5. Add to TASK_PLAN.md if applicable
 
+### ⚠️ Documentation Sync (硬性要求)
+
+- **Every rule change MUST** be reflected in `docs/RULE_PLAN.md` and `task_plan.md`.
+- Adding a rule: update both docs with ✅ status.
+- Modifying a rule: update docs with changes.
+- Phase completion: update `task_plan.md` Phase Status table + checkboxes.
+- Do NOT leave documentation stale — it's the single source of truth for parity tracking.
+
 ### Rule Pattern (CST-based)
 ```rust
 impl Rule for MyRule {
