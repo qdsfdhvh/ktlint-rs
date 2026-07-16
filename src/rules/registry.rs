@@ -213,6 +213,7 @@ impl Registry {
             Box::new(detekt::style::TrimMultilineRawString),
             Box::new(detekt::style::RedundantSemicolons),
             Box::new(detekt::style::ExplicitApiVisibility),
+            Box::new(detekt::style::RedundantModifier),
             Box::new(detekt::style::UseCheckNotNull),
             Box::new(detekt::style::RedundantVisibilityModifierRule),
             Box::new(detekt::style::RedundantExplicitType),
