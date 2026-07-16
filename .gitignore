@@ -8,5 +8,6 @@ task_plan.md
 findings.md
 progress.md
 .ktlint/
+.ktlint-rs/
 bench_results.tsv
 .pi/
