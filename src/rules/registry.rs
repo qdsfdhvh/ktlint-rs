@@ -68,7 +68,6 @@ impl Registry {
             Box::new(NoWildcardImports),
             Box::new(imports::ImportOrdering),
             Box::new(imports::NoUnusedImports),
-            Box::new(detekt::style::UnusedParameter),
             Box::new(imports::NoWildcardImportsEither),
             // ── Naming ────────────────────────────────────────────────
             Box::new(naming::BackingPropertyNaming),
@@ -218,7 +217,6 @@ impl Registry {
             Box::new(detekt::style::UseCheckNotNull),
             Box::new(detekt::style::UnusedLocalVariable),
             Box::new(detekt::style::UnusedImport),
-            Box::new(detekt::style::UnusedParameter),
             Box::new(detekt::style::RedundantVisibilityModifierRule),
             Box::new(detekt::style::RedundantExplicitType),
             Box::new(detekt::style::ForbiddenVoid),
@@ -236,7 +234,6 @@ impl Registry {
             Box::new(detekt::potential_bugs::MapGetWithNotNullAssertionOperator),
             Box::new(detekt::potential_bugs::MissingPackageDeclaration),
             Box::new(detekt::potential_bugs::UnusedImports),
-            Box::new(detekt::style::UnusedParameter),
             Box::new(detekt::potential_bugs::UnsafeCallOnNullableType),
             Box::new(detekt::potential_bugs::UnnecessaryNotNullAssertion),
             Box::new(detekt::potential_bugs::WrongEqualsTypeParameter),

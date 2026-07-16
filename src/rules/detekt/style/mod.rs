@@ -1748,5 +1748,3 @@ pub mod unused_local_variable;
 pub use unused_local_variable::UnusedLocalVariable;
 pub mod unused_import;
 pub use unused_import::UnusedImport;
-pub mod unused_parameter;
-pub use unused_parameter::UnusedParameter;

@@ -1,7 +1,13 @@
 # Performance
 
 **Apple M2 · release build · rayon parallel**
-Benchmarked 2026-07-12 with `scripts/bench.sh --release`.
+Benchmarked 2026-07-15.
+
+### Performance Improvements (Jul 2026)
+- **O(1) engine init**: RuleEngine built once (was per-file)
+- **Iterative CST walks**: no stack overflow on deep files
+- **Incremental cache**: 2.3× speedup on repeated runs (`.ktlint-rs/cache.json`)
+- **Scoped rayon pool**: threads exit after lint, CPU → 0
 
 > detekt comparison: `brew install detekt` (requires `--all-rules` + minimal config).
 > Raw data in `bench_results.tsv`.
