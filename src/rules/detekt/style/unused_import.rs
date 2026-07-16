@@ -8,7 +8,9 @@ use std::collections::HashSet;
 pub struct UnusedImport;
 
 impl Rule for UnusedImport {
-    fn id(&self) -> &'static str { "detekt:style:UnusedImport" }
+    fn id(&self) -> &'static str {
+        "detekt:style:UnusedImport"
+    }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
@@ -26,14 +28,21 @@ impl Rule for UnusedImport {
                         let mut is_skip = false;
                         let mut cur = node.parent();
                         while let Some(p) = cur {
-                            if SKIP.contains(&p.kind()) { is_skip = true; break; }
+                            if SKIP.contains(&p.kind()) {
+                                is_skip = true;
+                                break;
+                            }
                             cur = p.parent();
                         }
-                        if !is_skip { u.insert(name.to_string()); }
+                        if !is_skip {
+                            u.insert(name.to_string());
+                        }
                     }
                 }
                 for i in (0..node.child_count()).rev() {
-                    if let Some(c) = node.child(i) { stack.push(c); }
+                    if let Some(c) = node.child(i) {
+                        stack.push(c);
+                    }
                 }
             }
             u
@@ -48,7 +57,9 @@ impl Rule for UnusedImport {
                     let t = line.trim();
                     if t.starts_with("import ") && t.contains(alias.as_str()) {
                         violations.push(Violation {
-                            file: String::new(), line: i + 1, col: 1,
+                            file: String::new(),
+                            line: i + 1,
+                            col: 1,
                             rule_id: "detekt:style:UnusedImport".into(),
                             message: format!("Import '{}' is never used", alias),
                             auto_fixable: true,
@@ -73,6 +84,12 @@ mod tests {
         UnusedImport.check(&p.parse(s), s)
     }
 
-    #[test] fn used_import_ok() { assert!(c("import com.Foo\nclass Bar(val x: Foo)\n").is_empty()); }
-    #[test] fn unused_import_bad() { assert!(!c("import com.Foo\nclass Bar {}\n").is_empty()); }
+    #[test]
+    fn used_import_ok() {
+        assert!(c("import com.Foo\nclass Bar(val x: Foo)\n").is_empty());
+    }
+    #[test]
+    fn unused_import_bad() {
+        assert!(!c("import com.Foo\nclass Bar {}\n").is_empty());
+    }
 }

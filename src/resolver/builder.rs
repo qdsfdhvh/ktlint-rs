@@ -79,7 +79,14 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                             let name = c.utf8_text(bytes).unwrap_or("").to_string();
                             if !name.is_empty() {
                                 let pos = n.start_position();
-                                table.add_symbol(name, SymbolKind::Property, Visibility::Implicit, pos.row + 1, pos.column + 1, sid);
+                                table.add_symbol(
+                                    name,
+                                    SymbolKind::Property,
+                                    Visibility::Implicit,
+                                    pos.row + 1,
+                                    pos.column + 1,
+                                    sid,
+                                );
                             }
                             break;
                         }
@@ -96,7 +103,14 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                         if c.kind() == "simple_identifier" || c.kind() == "identifier" {
                             let name = c.utf8_text(bytes).unwrap_or("").to_string();
                             if !name.is_empty() {
-                                table.add_symbol(name, SymbolKind::Property, Visibility::Implicit, pos.row + 1, pos.column + 1, sid);
+                                table.add_symbol(
+                                    name,
+                                    SymbolKind::Property,
+                                    Visibility::Implicit,
+                                    pos.row + 1,
+                                    pos.column + 1,
+                                    sid,
+                                );
                             }
                             break;
                         }
@@ -113,7 +127,14 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                         if c.kind() == "simple_identifier" || c.kind() == "identifier" {
                             let name = c.utf8_text(bytes).unwrap_or("").to_string();
                             if !name.is_empty() {
-                                table.add_symbol(name, SymbolKind::Property, Visibility::Implicit, pos.row + 1, pos.column + 1, sid);
+                                table.add_symbol(
+                                    name,
+                                    SymbolKind::Property,
+                                    Visibility::Implicit,
+                                    pos.row + 1,
+                                    pos.column + 1,
+                                    sid,
+                                );
                             }
                             break;
                         }
