@@ -872,3 +872,5 @@ mod tests {
 }
 pub mod protected_member;
 pub use protected_member::ProtectedMemberInFinalClass;
+pub mod unused_private_member;
+pub use unused_private_member::UnusedPrivateMember;
