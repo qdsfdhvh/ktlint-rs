@@ -9,9 +9,8 @@ pub struct Registry;
 impl Registry {
     pub fn all_rules(config: &KtlintConfig) -> Vec<Box<dyn Rule>> {
         use crate::rules::{
-            detekt, final_rules, imports, naming, phase1_more, phase3b_rules,
-            spacing, structure, wrapping, FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces,
-            NoWildcardImports,
+            detekt, final_rules, imports, naming, phase1_more, phase3b_rules, spacing, structure,
+            wrapping, FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces, NoWildcardImports,
         };
 
         vec![
@@ -154,6 +153,9 @@ impl Registry {
             Box::new(detekt::naming::InvalidPackageDeclaration),
             Box::new(detekt::naming::NoNameShadowing),
             Box::new(detekt::naming::PropertyUsedBeforeDeclaration),
+            Box::new(detekt::naming::UnusedPrivateMember),
+            Box::new(detekt::naming::ProtectedMemberInFinalClass),
+            Box::new(detekt::naming::MemberNameEqualsClassName),
             // ── detekt comments ──
             Box::new(detekt::comments::DeprecatedBlockTag),
             Box::new(detekt::comments::EndOfSentenceFormat),
@@ -209,6 +211,8 @@ impl Registry {
             Box::new(detekt::style::VarCouldBeVal),
             Box::new(detekt::style::TrimMultilineRawString),
             Box::new(detekt::style::RedundantSemicolons),
+            Box::new(detekt::style::ExplicitApiVisibility),
+            Box::new(detekt::style::RedundantModifier),
             Box::new(detekt::style::UseCheckNotNull),
             Box::new(detekt::style::RedundantVisibilityModifierRule),
             Box::new(detekt::style::RedundantExplicitType),

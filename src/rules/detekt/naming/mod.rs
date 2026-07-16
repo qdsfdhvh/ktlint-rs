@@ -870,3 +870,7 @@ mod tests {
         assert!(!c(&NoNameShadowing, "val x = 1\nfun f() {\nval x = 2\n}\n").is_empty());
     }
 }
+pub mod protected_member;
+pub use protected_member::ProtectedMemberInFinalClass;
+pub mod unused_private_member;
+pub use unused_private_member::UnusedPrivateMember;
