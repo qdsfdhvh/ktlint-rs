@@ -42,7 +42,8 @@ fn main() -> anyhow::Result<()> {
     let engine = RuleEngine::new(&config);
 
     // Cache root: parent directory of the first file (target project dir)
-    let cache_root: PathBuf = files.first()
+    let cache_root: PathBuf = files
+        .first()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()))
         .unwrap_or_else(|| config.project_root.clone());
 

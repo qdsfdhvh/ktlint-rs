@@ -41,8 +41,11 @@ pub fn cache_path(project_root: &Path) -> PathBuf {
 /// Try to load cached violations for a file. Returns None if cache miss.
 pub fn get_cached(path: &Path, project_root: &Path) -> Option<Vec<Violation>> {
     let meta = path.metadata().ok()?;
-    let mtime = meta.modified().ok()?
-        .duration_since(UNIX_EPOCH).ok()?
+    let mtime = meta
+        .modified()
+        .ok()?
+        .duration_since(UNIX_EPOCH)
+        .ok()?
         .as_secs();
     let size = meta.len();
 
@@ -55,14 +58,20 @@ pub fn get_cached(path: &Path, project_root: &Path) -> Option<Vec<Violation>> {
         return None;
     }
 
-    Some(cached.violations.iter().map(|v| Violation {
-        file: path.to_string_lossy().to_string(),
-        line: v.line,
-        col: v.col,
-        rule_id: v.rule_id.clone(),
-        message: v.message.clone(),
-        auto_fixable: v.auto_fixable,
-    }).collect())
+    Some(
+        cached
+            .violations
+            .iter()
+            .map(|v| Violation {
+                file: path.to_string_lossy().to_string(),
+                line: v.line,
+                col: v.col,
+                rule_id: v.rule_id.clone(),
+                message: v.message.clone(),
+                auto_fixable: v.auto_fixable,
+            })
+            .collect(),
+    )
 }
 
 /// Save violations for a file to the cache.
@@ -71,7 +80,11 @@ pub fn save_cached(path: &Path, violations: &[Violation], project_root: &Path) {
         Ok(m) => m,
         Err(_) => return,
     };
-    let mtime = match meta.modified().ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()) {
+    let mtime = match meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+    {
         Some(t) => t.as_secs(),
         None => return,
     };
@@ -83,17 +96,23 @@ pub fn save_cached(path: &Path, violations: &[Violation], project_root: &Path) {
     });
 
     let key = cache_key(path, project_root);
-    cache.entries.insert(key, CachedViolations {
-        mtime_secs: mtime,
-        file_size: size,
-        violations: violations.iter().map(|v| CachedViolation {
-            line: v.line,
-            col: v.col,
-            rule_id: v.rule_id.clone(),
-            message: v.message.clone(),
-            auto_fixable: v.auto_fixable,
-        }).collect(),
-    });
+    cache.entries.insert(
+        key,
+        CachedViolations {
+            mtime_secs: mtime,
+            file_size: size,
+            violations: violations
+                .iter()
+                .map(|v| CachedViolation {
+                    line: v.line,
+                    col: v.col,
+                    rule_id: v.rule_id.clone(),
+                    message: v.message.clone(),
+                    auto_fixable: v.auto_fixable,
+                })
+                .collect(),
+        },
+    );
 
     save_cache(&cache, project_root);
 }
@@ -109,7 +128,11 @@ fn load_cache(project_root: &Path) -> Option<CacheFile> {
     let path = cache_path(project_root);
     let data = std::fs::read_to_string(&path).ok()?;
     let cache: CacheFile = serde_json::from_str(&data).ok()?;
-    if cache.version != CACHE_VERSION { None } else { Some(cache) }
+    if cache.version != CACHE_VERSION {
+        None
+    } else {
+        Some(cache)
+    }
 }
 
 fn save_cache(cache: &CacheFile, project_root: &Path) {
