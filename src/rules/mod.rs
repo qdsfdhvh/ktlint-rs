@@ -34,9 +34,13 @@ pub struct Violation {
 
 pub trait Rule: Send + Sync {
     fn id(&self) -> &'static str;
-    fn auto_fixable(&self) -> bool { true }
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     /// Rules that need Kotlin type resolution (L2). Skipped when --skip-type-resolution is set.
-    fn requires_type_resolution(&self) -> bool { false }
+    fn requires_type_resolution(&self) -> bool {
+        false
+    }
     fn check(&self, tree: &Tree, source: &str) -> Vec<Violation>;
 }
 
