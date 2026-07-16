@@ -37,6 +37,10 @@ pub trait Rule: Send + Sync {
     fn auto_fixable(&self) -> bool {
         true
     }
+    /// Rules that need Kotlin type resolution (L2). Skipped when --skip-type-resolution is set.
+    fn requires_type_resolution(&self) -> bool {
+        false
+    }
     fn check(&self, tree: &Tree, source: &str) -> Vec<Violation>;
 }
 
@@ -61,6 +65,10 @@ impl RuleEngine {
                 continue;
             }
             if !self.rule_set_allows(rule.id()) {
+                continue;
+            }
+            // Skip rules that need type resolution when flag is set
+            if rule.requires_type_resolution() && self.config.skip_type_resolution {
                 continue;
             }
             for mut v in rule.check(tree, source) {

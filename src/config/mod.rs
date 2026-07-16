@@ -26,6 +26,7 @@ pub struct KtlintConfig {
     pub trim_trailing_whitespace: bool,
     /// Rule set filter (ktlint-only, detekt-only, or both)
     pub rule_set: RuleSet,
+    pub skip_type_resolution: bool,
     /// Category-level overrides from YAML (e.g., "detekt:complexity" → RuleConfig)
     pub category_overrides: HashMap<String, RuleConfig>,
 }
@@ -64,6 +65,7 @@ impl Default for KtlintConfig {
             insert_final_newline: true,
             trim_trailing_whitespace: true,
             rule_set: RuleSet::KtlintOnly,
+            skip_type_resolution: true,
             category_overrides: HashMap::new(),
         }
     }
