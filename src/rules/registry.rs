@@ -154,6 +154,8 @@ impl Registry {
             Box::new(detekt::naming::InvalidPackageDeclaration),
             Box::new(detekt::naming::NoNameShadowing),
             Box::new(detekt::naming::PropertyUsedBeforeDeclaration),
+            Box::new(detekt::naming::ProtectedMemberInFinalClass),
+            Box::new(detekt::naming::MemberNameEqualsClassName),
             // ── detekt comments ──
             Box::new(detekt::comments::DeprecatedBlockTag),
             Box::new(detekt::comments::EndOfSentenceFormat),
