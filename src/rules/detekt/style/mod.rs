@@ -1746,5 +1746,3 @@ pub mod l1_batch;
 pub use l1_batch::LibraryCodeMustSpecifyReturnType;
 pub mod unused_local_variable;
 pub use unused_local_variable::UnusedLocalVariable;
-pub mod unused_import;
-pub use unused_import::UnusedImport;
