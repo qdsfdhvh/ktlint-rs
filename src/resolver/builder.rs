@@ -172,6 +172,29 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                 push_children(&n, &mut stack, sid);
             }
 
+            // ── Enum constants ──
+            "enum_entry" => {
+                for ci in 0..n.child_count() {
+                    if let Some(c) = n.child(ci) {
+                        if c.kind() == "simple_identifier" || c.kind() == "identifier" {
+                            let name = c.utf8_text(bytes).unwrap_or("").to_string();
+                            if !name.is_empty() {
+                                table.add_symbol(
+                                    name,
+                                    SymbolKind::Property,
+                                    Visibility::Implicit,
+                                    c.start_position().row + 1,
+                                    c.start_position().column + 1,
+                                    sid,
+                                );
+                            }
+                            break;
+                        }
+                    }
+                }
+                push_children(&n, &mut stack, sid);
+            }
+
             _ => {
                 push_children(&n, &mut stack, sid);
             }
