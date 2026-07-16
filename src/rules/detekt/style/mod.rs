@@ -1738,3 +1738,5 @@ mod tests {
         assert!(!c(&ImportOrdering, "import com.B\nimport com.A\n").is_empty());
     }
 }
+pub mod explicit_visibility;
+pub use explicit_visibility::ExplicitApiVisibility;
