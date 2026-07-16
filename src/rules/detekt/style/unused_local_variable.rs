@@ -1,0 +1,94 @@
+//! detekt:style:UnusedLocalVariable — flags unused local variables.
+//! Requires function_body scope tracking (L1).
+
+use crate::resolver::builder::build_symbol_table;
+use crate::rules::{Rule, Violation};
+use std::collections::HashSet;
+
+pub struct UnusedLocalVariable;
+
+impl Rule for UnusedLocalVariable {
+    fn id(&self) -> &'static str {
+        "detekt:style:UnusedLocalVariable"
+    }
+
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let table = build_symbol_table(source, tree.root_node());
+
+        // Collect all identifier references
+        let used: HashSet<String> = {
+            let mut u = HashSet::new();
+            let bytes = source.as_bytes();
+            let mut stack = vec![tree.root_node()];
+            while let Some(node) = stack.pop() {
+                if node.kind() == "simple_identifier" || node.kind() == "identifier" {
+                    if let Ok(name) = node.utf8_text(bytes) {
+                        let is_decl = node.parent().map_or(false, |p| {
+                            matches!(
+                                p.kind(),
+                                "variable_declaration"
+                                    | "value_parameter"
+                                    | "class_declaration"
+                                    | "function_declaration"
+                                    | "property_declaration"
+                            )
+                        });
+                        if !is_decl && !name.starts_with('_') {
+                            u.insert(name.to_string());
+                        }
+                    }
+                }
+                for i in (0..node.child_count()).rev() {
+                    if let Some(c) = node.child(i) {
+                        stack.push(c);
+                    }
+                }
+            }
+            u
+        };
+
+        // Find variables inside function bodies (scope_id != 0, parent is not a class scope)
+        for scope in &table.scopes {
+            if scope.parent_id.is_none() || scope.parent_id == Some(0) {
+                continue;
+            }
+            // This scope is inside a function body — check its local variables
+            for &sym_id in &scope.symbols {
+                let sym = &table.symbols[sym_id];
+                if sym.kind == crate::resolver::SymbolKind::Property && !used.contains(&sym.name) {
+                    violations.push(Violation {
+                        file: String::new(),
+                        line: sym.line,
+                        col: sym.col,
+                        rule_id: "detekt:style:UnusedLocalVariable".into(),
+                        message: format!("Local variable '{}' is never used", sym.name),
+                        auto_fixable: false,
+                    });
+                }
+            }
+        }
+
+        violations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn c(s: &str) -> Vec<Violation> {
+        let mut p = KotlinParser::new();
+        UnusedLocalVariable.check(&p.parse(s), s)
+    }
+
+    #[test]
+    fn unused_local_bad() {
+        assert!(!c("fun foo() { val x = 1 }").is_empty());
+    }
+    #[test]
+    fn used_local_ok() {
+        assert!(c("fun foo() { val x = 1; println(x) }").is_empty());
+    }
+}
