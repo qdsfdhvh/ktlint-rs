@@ -76,12 +76,21 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
             "variable_declaration" => {
                 let pos = n.start_position();
                 if let Some(name) = extract_property_name(&n, bytes) {
-                    table.add_symbol(name, SymbolKind::Property, Visibility::Implicit, pos.row + 1, pos.column + 1, sid);
+                    table.add_symbol(
+                        name,
+                        SymbolKind::Property,
+                        Visibility::Implicit,
+                        pos.row + 1,
+                        pos.column + 1,
+                        sid,
+                    );
                 }
                 push_children(&n, &mut stack, sid);
             }
 
-            _ => { push_children(&n, &mut stack, sid); }
+            _ => {
+                push_children(&n, &mut stack, sid);
+            }
         }
     }
 }
