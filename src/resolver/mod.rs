@@ -133,6 +133,23 @@ impl SymbolTable {
         None
     }
 
+    /// Walk up the scope chain and return the first scope that contains
+    /// a class/object symbol (i.e., the enclosing class body scope).
+    pub fn enclosing_class_scope(&self, scope_id: usize) -> Option<usize> {
+        let mut sid = Some(scope_id);
+        while let Some(id) = sid {
+            // Check if this scope is a class body
+            for &sym_id in &self.scopes[id].symbols {
+                let sym = &self.symbols[sym_id];
+                if matches!(sym.kind, SymbolKind::Class | SymbolKind::Object) {
+                    return Some(id);
+                }
+            }
+            sid = self.scopes[id].parent_id;
+        }
+        None
+    }
+
     /// Find all symbols of a given kind that are private and unused.
     pub fn private_symbols(&self) -> Vec<&Symbol> {
         self.symbols
