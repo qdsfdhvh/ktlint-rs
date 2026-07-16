@@ -1,4 +1,5 @@
 mod baseline;
+mod cache;
 mod cli;
 mod config;
 mod discovery;
@@ -19,6 +20,7 @@ use discovery::FileCollector;
 use parser::KotlinParser;
 use reporter::DiagnosticReporter;
 use rules::{RuleEngine, Violation};
+use std::path::PathBuf;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -37,11 +39,14 @@ fn main() -> anyhow::Result<()> {
     }
 
     let files = FileCollector::new(&cli, &config).collect()?;
-
-    // Build RuleEngine ONCE (was per-file — O(n) to O(1))
     let engine = RuleEngine::new(&config);
 
-    // Scoped thread pool with 4MB stacks — threads exit after scope
+    // Cache root: parent directory of the first file (target project dir)
+    let cache_root: PathBuf = files.first()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| config.project_root.clone());
+
+    // ── Scoped thread pool with cache ──
     let all_violations: Vec<Violation> = rayon::ThreadPoolBuilder::new()
         .stack_size(4 * 1024 * 1024)
         .build()?
@@ -50,10 +55,15 @@ fn main() -> anyhow::Result<()> {
             files
                 .par_iter()
                 .flat_map(|path| {
+                    if let Some(cached) = cache::get_cached(path, &cache_root) {
+                        return cached;
+                    }
                     let source = std::fs::read_to_string(path).unwrap_or_default();
                     let mut parser = KotlinParser::new();
                     let tree = parser.parse(&source);
-                    engine.check(&path.to_string_lossy(), &tree, &source)
+                    let violations = engine.check(&path.to_string_lossy(), &tree, &source);
+                    cache::save_cached(path, &violations, &cache_root);
+                    violations
                 })
                 .collect::<Vec<_>>()
         });
