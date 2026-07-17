@@ -8,7 +8,11 @@ pub struct UnusedPrivateMember;
 
 impl Rule for UnusedPrivateMember {
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
-        self.check_with_symbols(tree, source, None)
+        {
+            use crate::resolver::builder::build_symbol_table;
+            let sym = build_symbol_table(source, tree.root_node());
+            self.check_with_symbols(tree, source, Some(&sym))
+        }
     }
 
     fn id(&self) -> &'static str {

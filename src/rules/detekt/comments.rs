@@ -247,12 +247,14 @@ impl Rule for UndocumentedPublicClass {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
+        let bytes = source.as_bytes();
         walk_undocumented_shared(
             tree.root_node(),
             &mut [&mut v, &mut Vec::new(), &mut Vec::new()],
             None,
+            bytes,
         );
         v
     }
@@ -267,12 +269,14 @@ impl Rule for UndocumentedPublicFunction {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
+        let bytes = source.as_bytes();
         walk_undocumented_shared(
             tree.root_node(),
             &mut [&mut Vec::new(), &mut v, &mut Vec::new()],
             None,
+            bytes,
         );
         v
     }
@@ -287,12 +291,14 @@ impl Rule for UndocumentedPublicProperty {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
+        let bytes = source.as_bytes();
         walk_undocumented_shared(
             tree.root_node(),
             &mut [&mut Vec::new(), &mut Vec::new(), &mut v],
             None,
+            bytes,
         );
         v
     }
@@ -304,6 +310,7 @@ fn walk_undocumented_shared(
     n: tree_sitter::Node,
     v: &mut [&mut Vec<Violation>; 3],
     last_comment_end: Option<usize>,
+    bytes: &[u8],
 ) -> Option<usize> {
     let mut next_last = last_comment_end;
 
@@ -318,22 +325,22 @@ fn walk_undocumented_shared(
 
     // Check declarations for missing KDoc
     match n.kind() {
-        "class_declaration" => check_undoc(&n, &mut v[0], last_comment_end, "UndocumentedPublicClass", "Public class is missing KDoc"),
-        "function_declaration" => check_undoc(&n, &mut v[1], last_comment_end, "UndocumentedPublicFunction", "Public function is missing KDoc"),
-        "property_declaration" => check_undoc(&n, &mut v[2], last_comment_end, "UndocumentedPublicProperty", "Public property is missing KDoc"),
+        "class_declaration" => check_undoc(bytes, &n, &mut v[0], last_comment_end, "UndocumentedPublicClass", "Public class is missing KDoc"),
+        "function_declaration" => check_undoc(bytes, &n, &mut v[1], last_comment_end, "UndocumentedPublicFunction", "Public function is missing KDoc"),
+        "property_declaration" => check_undoc(bytes, &n, &mut v[2], last_comment_end, "UndocumentedPublicProperty", "Public property is missing KDoc"),
         _ => {},
     }
 
     // Recurse into children in order; last comment end propagates forward
     for i in 0..n.child_count() {
         if let Some(c) = n.child(i) {
-            next_last = walk_undocumented_shared(c, v, next_last);
+            next_last = walk_undocumented_shared(c, v, next_last, bytes);
         }
     }
     next_last
 }
 
-fn check_undoc(
+fn check_undoc(bytes: &[u8], 
     n: &tree_sitter::Node,
     v: &mut Vec<Violation>,
     prev_comment_end: Option<usize>,
@@ -344,7 +351,10 @@ fn check_undoc(
         let start = n.start_position().row;
         end + 1 == start || end == start
     });
-    if !has_kdoc {
+    // Skip private, inner, override declarations (detekt-compatible)
+    let node_text = n.utf8_text(bytes).unwrap_or("");
+    let is_non_public = node_text.split_whitespace().any(|w| w == "private" || w == "inner" || w == "override");
+    if !has_kdoc && !is_non_public {
         let pos = n.start_position();
         v.push(Violation {
             file: String::new(),

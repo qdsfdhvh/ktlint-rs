@@ -8,7 +8,11 @@ pub struct UnusedParameter;
 
 impl Rule for UnusedParameter {
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
-        self.check_with_symbols(tree, source, None)
+        {
+            use crate::resolver::builder::build_symbol_table;
+            let sym = build_symbol_table(source, tree.root_node());
+            self.check_with_symbols(tree, source, Some(&sym))
+        }
     }
 
     fn id(&self) -> &'static str {
@@ -87,6 +91,7 @@ fn refs(root: tree_sitter::Node, source: &str) -> HashSet<String> {
 mod tests {
     use super::*;
     use crate::parser::KotlinParser;
+    use crate::resolver::builder::build_symbol_table;
     #[test]
     fn builder_tracks_param() {
         let src = "fun f(x: Int) {}";
