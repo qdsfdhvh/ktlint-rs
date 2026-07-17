@@ -1,3 +1,5 @@
+//! detekt:naming:UnusedPrivateMember — flags unused private functions/properties.
+//! Perf: no Node::parent() calls; uses DFS flag propagation.
 use crate::resolver::builder::build_symbol_table;
 use crate::resolver::Visibility;
 use crate::rules::{Rule, Violation};
@@ -40,36 +42,34 @@ impl Rule for UnusedPrivateMember {
 fn collect_references(root: tree_sitter::Node, source: &str) -> HashSet<String> {
     let mut used = HashSet::new();
     let bytes = source.as_bytes();
-    let mut stack = vec![root];
 
-    const DECL_KINDS: &[&str] = &[
-        "class_declaration",
-        "function_declaration",
-        "property_declaration",
-        "object_declaration",
-        "enum_entry",
-        "type_alias",
-        "import_header",
-        "package_header",
-        "class_parameter",
-        "value_parameter",
+    const DECL: &[&str] = &[
+        "class_declaration", "function_declaration", "property_declaration",
+        "object_declaration", "enum_entry", "type_alias",
+        "import_header", "package_header", "class_parameter", "value_parameter",
     ];
 
-    while let Some(node) = stack.pop() {
+    let mut stack: Vec<(_, Option<usize>)> = vec![(root, None)];
+    while let Some((node, decl_depth)) = stack.pop() {
+        let is_decl = decl_depth == Some(0);
+        let child_depth = if DECL.contains(&node.kind()) {
+            Some(0)
+        } else {
+            decl_depth.map(|d| d + 1)
+        };
         let k = node.kind();
-        if k == "simple_identifier" || k == "type_identifier" || k == "identifier" {
+        if !is_decl
+            && (k == "simple_identifier" || k == "type_identifier" || k == "identifier")
+        {
             if let Ok(name) = node.utf8_text(bytes) {
-                let is_decl = node
-                    .parent()
-                    .map_or(false, |p| DECL_KINDS.contains(&p.kind()));
-                if !is_decl && !name.starts_with('_') {
+                if !name.starts_with('_') {
                     used.insert(name.to_string());
                 }
             }
         }
         for i in (0..node.child_count()).rev() {
             if let Some(c) = node.child(i) {
-                stack.push(c);
+                stack.push((c, child_depth));
             }
         }
     }

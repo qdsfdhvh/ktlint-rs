@@ -1,3 +1,6 @@
+//! detekt:style:UnusedParameter — flags unused function parameters.
+//! Perf: no Node::parent() calls; uses DFS flag propagation.
+
 use crate::resolver::builder::build_symbol_table;
 use crate::rules::{Rule, Violation};
 use std::collections::HashSet;
@@ -38,28 +41,34 @@ impl Rule for UnusedParameter {
     }
 }
 
+/// Collect all simple_identifier references, skipping declaration names.
+/// Uses DFS flag propagation instead of Node::parent() calls.
 fn refs(root: tree_sitter::Node, source: &str) -> HashSet<String> {
     let mut u = HashSet::new();
     let b = source.as_bytes();
-    let mut s = vec![root];
     const D: &[&str] = &[
         "class_declaration",
         "function_declaration",
         "property_declaration",
         "parameter",
         "variable_declaration",
+        "class_parameter",
+        "value_parameter",
     ];
-    while let Some(n) = s.pop() {
-        if n.kind() == "simple_identifier" || n.kind() == "identifier" {
+    let mut stack: Vec<(_, Option<usize>)> = vec![(root, None)];
+    while let Some((n, decl_depth)) = stack.pop() {
+        let is_decl = decl_depth == Some(0);
+        let child_depth = if D.contains(&n.kind()) { Some(0) } else { decl_depth.map(|d| d + 1) };
+        if !is_decl
+            && (n.kind() == "simple_identifier" || n.kind() == "identifier")
+        {
             if let Ok(name) = n.utf8_text(b) {
-                if !n.parent().is_some_and(|p| D.contains(&p.kind())) {
-                    u.insert(name.to_string());
-                }
+                u.insert(name.to_string());
             }
         }
         for i in (0..n.child_count()).rev() {
             if let Some(c) = n.child(i) {
-                s.push(c);
+                stack.push((c, child_depth));
             }
         }
     }
@@ -76,7 +85,7 @@ mod tests {
         let tree = KotlinParser::new().parse(src);
         let table = build_symbol_table(src, tree.root_node());
         let used = refs(tree.root_node(), src);
-        let mut unused: Vec<_> = table
+        let unused: Vec<_> = table
             .symbols
             .iter()
             .filter(|s| s.kind == crate::resolver::SymbolKind::Property && !used.contains(&s.name))

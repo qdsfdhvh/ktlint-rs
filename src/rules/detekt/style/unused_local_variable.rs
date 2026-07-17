@@ -1,5 +1,6 @@
 //! detekt:style:UnusedLocalVariable — flags unused local variables.
 //! Requires function_body scope tracking (L1).
+//! Perf: no Node::parent() calls; uses DFS flag propagation.
 
 use crate::resolver::builder::build_symbol_table;
 use crate::rules::{Rule, Violation};
@@ -16,44 +17,46 @@ impl Rule for UnusedLocalVariable {
         let mut violations = Vec::new();
         let table = build_symbol_table(source, tree.root_node());
 
-        // Collect all identifier references
+        // Collect all identifier references — only skip the _direct_ child
+        // of a declaration node (depth == 0), not grandchildren.
         let used: HashSet<String> = {
             let mut u = HashSet::new();
             let bytes = source.as_bytes();
-            let mut stack = vec![tree.root_node()];
-            while let Some(node) = stack.pop() {
-                if node.kind() == "simple_identifier" || node.kind() == "identifier" {
+            const DECL: &[&str] = &[
+                "variable_declaration", "value_parameter", "class_declaration",
+                "function_declaration", "property_declaration",
+            ];
+            let mut stack: Vec<(_, Option<usize>)> = vec![(tree.root_node(), None)];
+            while let Some((node, decl_depth)) = stack.pop() {
+                let is_decl = decl_depth == Some(0);
+                let child_depth = if DECL.contains(&node.kind()) {
+                    Some(0)
+                } else {
+                    decl_depth.map(|d| d + 1)
+                };
+                if !is_decl
+                    && (node.kind() == "simple_identifier" || node.kind() == "identifier")
+                {
                     if let Ok(name) = node.utf8_text(bytes) {
-                        let is_decl = node.parent().map_or(false, |p| {
-                            matches!(
-                                p.kind(),
-                                "variable_declaration"
-                                    | "value_parameter"
-                                    | "class_declaration"
-                                    | "function_declaration"
-                                    | "property_declaration"
-                            )
-                        });
-                        if !is_decl && !name.starts_with('_') {
+                        if !name.starts_with('_') {
                             u.insert(name.to_string());
                         }
                     }
                 }
                 for i in (0..node.child_count()).rev() {
                     if let Some(c) = node.child(i) {
-                        stack.push(c);
+                        stack.push((c, child_depth));
                     }
                 }
             }
             u
         };
 
-        // Find variables inside function bodies (scope_id != 0, parent is not a class scope)
+        // Find variables inside function bodies
         for scope in &table.scopes {
             if scope.parent_id.is_none() || scope.parent_id == Some(0) {
                 continue;
             }
-            // This scope is inside a function body — check its local variables
             for &sym_id in &scope.symbols {
                 let sym = &table.symbols[sym_id];
                 if sym.kind == crate::resolver::SymbolKind::Property && !used.contains(&sym.name) {
@@ -68,7 +71,6 @@ impl Rule for UnusedLocalVariable {
                 }
             }
         }
-
         violations
     }
 }
@@ -79,8 +81,7 @@ mod tests {
     use crate::parser::KotlinParser;
 
     fn c(s: &str) -> Vec<Violation> {
-        let mut p = KotlinParser::new();
-        UnusedLocalVariable.check(&p.parse(s), s)
+        UnusedLocalVariable.check(&KotlinParser::new().parse(s), s)
     }
 
     #[test]
