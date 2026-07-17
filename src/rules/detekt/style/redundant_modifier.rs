@@ -2,20 +2,32 @@
 //! Flags redundant visibility/modality modifiers.
 //! Uses name resolution engine (L1).
 
-use crate::resolver::builder::build_symbol_table;
 use crate::resolver::Visibility;
 use crate::rules::{Rule, Violation};
 
 pub struct RedundantModifier;
 
 impl Rule for RedundantModifier {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        {
+            use crate::resolver::builder::build_symbol_table;
+            let sym = build_symbol_table(source, tree.root_node());
+            self.check_with_symbols(tree, source, Some(&sym))
+        }
+    }
+
     fn id(&self) -> &'static str {
         "detekt:style:RedundantModifier"
     }
 
-    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check_with_symbols(
+        &self,
+        tree: &tree_sitter::Tree,
+        source: &str,
+        sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
         let mut violations = Vec::new();
-        let table = build_symbol_table(source, tree.root_node());
+        let table = sym.expect("SymbolTable should be provided by engine");
 
         // Check for public members inside private/sealed/internal classes
         for sym in &table.symbols {

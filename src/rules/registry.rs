@@ -201,7 +201,6 @@ impl Registry {
             Box::new(detekt::style::UseDataClass),
             Box::new(detekt::style::SpacingAroundComma),
             Box::new(detekt::style::ImportOrdering),
-            Box::new(detekt::style::FunctionOnlyReturningConstant),
             Box::new(detekt::style::BracesOnIfStatements),
             Box::new(detekt::style::LoopWithTooManyJumpStatements),
             Box::new(detekt::style::EqualsOnSeparateLine),
@@ -223,6 +222,7 @@ impl Registry {
             Box::new(detekt::style::UnnecessaryInnerClass),
             Box::new(detekt::comments_l1::KDocReferencesNonPublicProperty),
             Box::new(detekt::comments_l1::OutdatedDocumentation),
+            Box::new(detekt::style::UnusedPrivateProperty),
             // potential-bugs
             Box::new(detekt::potential_bugs::DuplicateCaseInWhen),
             Box::new(detekt::potential_bugs::UnreachableCatchBlock),

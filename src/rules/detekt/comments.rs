@@ -247,14 +247,14 @@ impl Rule for UndocumentedPublicClass {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        walk_undoc(
+        let bytes = source.as_bytes();
+        walk_undocumented_shared(
             tree.root_node(),
-            &mut v,
-            "class_declaration",
-            "UndocumentedPublicClass",
-            "Public class is missing KDoc",
+            &mut [&mut v, &mut Vec::new(), &mut Vec::new()],
+            None,
+            bytes,
         );
         v
     }
@@ -269,14 +269,14 @@ impl Rule for UndocumentedPublicFunction {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        walk_undoc(
+        let bytes = source.as_bytes();
+        walk_undocumented_shared(
             tree.root_node(),
-            &mut v,
-            "function_declaration",
-            "UndocumentedPublicFunction",
-            "Public function is missing KDoc",
+            &mut [&mut Vec::new(), &mut v, &mut Vec::new()],
+            None,
+            bytes,
         );
         v
     }
@@ -291,69 +291,82 @@ impl Rule for UndocumentedPublicProperty {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, tree: &Tree, _s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        walk_undoc(
+        let bytes = source.as_bytes();
+        walk_undocumented_shared(
             tree.root_node(),
-            &mut v,
-            "property_declaration",
-            "UndocumentedPublicProperty",
-            "Public property is missing KDoc",
+            &mut [&mut Vec::new(), &mut Vec::new(), &mut v],
+            None,
+            bytes,
         );
         v
     }
 }
 
-fn walk_undoc(
+/// Single-pass CST traversal for all three UndocumentedPublic* rules,
+/// carrying the last comment's end row as state — no Node::parent() calls.
+fn walk_undocumented_shared(
     n: tree_sitter::Node,
+    v: &mut [&mut Vec<Violation>; 3],
+    last_comment_end: Option<usize>,
+    bytes: &[u8],
+) -> Option<usize> {
+    let mut next_last = last_comment_end;
+
+    // Update `next_last` if this node is a comment
+    let is_comment = matches!(
+        n.kind(),
+        "multiline_comment" | "block_comment" | "comment"
+    );
+    if is_comment {
+        next_last = Some(n.end_position().row);
+    }
+
+    // Check declarations for missing KDoc
+    match n.kind() {
+        "class_declaration" => check_undoc(bytes, &n, &mut v[0], last_comment_end, "UndocumentedPublicClass", "Public class is missing KDoc"),
+        "function_declaration" => check_undoc(bytes, &n, &mut v[1], last_comment_end, "UndocumentedPublicFunction", "Public function is missing KDoc"),
+        "property_declaration" => check_undoc(bytes, &n, &mut v[2], last_comment_end, "UndocumentedPublicProperty", "Public property is missing KDoc"),
+        _ => {},
+    }
+
+    // Recurse into children in order; last comment end propagates forward
+    for i in 0..n.child_count() {
+        if let Some(c) = n.child(i) {
+            next_last = walk_undocumented_shared(c, v, next_last, bytes);
+        }
+    }
+    next_last
+}
+
+fn check_undoc(bytes: &[u8], 
+    n: &tree_sitter::Node,
     v: &mut Vec<Violation>,
-    target_kind: &str,
+    prev_comment_end: Option<usize>,
     rule_name: &str,
     msg: &str,
 ) {
-    if n.kind() == target_kind {
+    let has_kdoc = prev_comment_end.is_some_and(|end| {
+        let start = n.start_position().row;
+        end + 1 == start || end == start
+    });
+    // Skip private, inner, override declarations (detekt-compatible)
+    let node_text = n.utf8_text(bytes).unwrap_or("");
+    let is_non_public = node_text.split_whitespace().any(|w| w == "private" || w == "inner" || w == "override");
+    if !has_kdoc && !is_non_public {
         let pos = n.start_position();
-        let mut has_kdoc = false;
-        // Check if previous sibling or nearby node is a KDoc comment
-        if let Some(parent) = n.parent() {
-            let target_id = n.id();
-            for i in 0..parent.child_count() {
-                if let Some(child) = parent.child(i) {
-                    if child.id() == target_id {
-                        break;
-                    }
-                    let ck = child.kind();
-                    if ck == "comment" || ck == "multiline_comment" || ck == "block_comment" {
-                        // Simple heuristic: comment ends with */ is KDoc
-                        let _range = child.byte_range();
-                        // We can't easily get text from Node, so use a position heuristic
-                        let child_end = child.end_position().row;
-                        let our_start = pos.row;
-                        if child_end + 1 == our_start || child_end == our_start {
-                            has_kdoc = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        if !has_kdoc {
-            v.push(Violation {
-                file: String::new(),
-                line: pos.row + 1,
-                col: pos.column + 1,
-                rule_id: format!("detekt:comments:{}", rule_name),
-                message: msg.into(),
-                auto_fixable: false,
-            });
-        }
-    }
-    for i in 0..n.child_count() {
-        if let Some(c) = n.child(i) {
-            walk_undoc(c, v, target_kind, rule_name, msg);
-        }
+        v.push(Violation {
+            file: String::new(),
+            line: pos.row + 1,
+            col: pos.column + 1,
+            rule_id: format!("detekt:comments:{}", rule_name),
+            message: msg.into(),
+            auto_fixable: false,
+        });
     }
 }
+
 
 #[cfg(test)]
 mod tests {

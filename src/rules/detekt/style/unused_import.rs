@@ -1,20 +1,32 @@
 //! detekt:style:UnusedImport — flags import statements not referenced in file.
 //! Uses name resolution engine (L1) for precise detection.
 
-use crate::resolver::builder::build_symbol_table;
 use crate::rules::{Rule, Violation};
 use std::collections::HashSet;
 
 pub struct UnusedImport;
 
 impl Rule for UnusedImport {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        {
+            use crate::resolver::builder::build_symbol_table;
+            let sym = build_symbol_table(source, tree.root_node());
+            self.check_with_symbols(tree, source, Some(&sym))
+        }
+    }
+
     fn id(&self) -> &'static str {
         "detekt:style:UnusedImport"
     }
 
-    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check_with_symbols(
+        &self,
+        tree: &tree_sitter::Tree,
+        source: &str,
+        sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
         let mut violations = Vec::new();
-        let table = build_symbol_table(source, tree.root_node());
+        let table = sym.expect("SymbolTable should be provided by engine");
 
         // Collect all referenced names. The skip flag is propagated down the
         // DFS — never walk Node::parent() per identifier: tree-sitter's
