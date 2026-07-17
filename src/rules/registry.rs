@@ -217,6 +217,12 @@ impl Registry {
             Box::new(detekt::style::UseCheckNotNull),
             Box::new(detekt::style::UnusedLocalVariable),
             Box::new(detekt::style::UnusedImport),
+            Box::new(detekt::style::ConstructorsOnTop),
+            Box::new(detekt::style::UnusedPrivateClass),
+            Box::new(detekt::style::NestedClassesVisibility),
+            Box::new(detekt::style::UnnecessaryInnerClass),
+            Box::new(detekt::comments_l1::KDocReferencesNonPublicProperty),
+            Box::new(detekt::comments_l1::OutdatedDocumentation),
             // potential-bugs
             Box::new(detekt::potential_bugs::DuplicateCaseInWhen),
             Box::new(detekt::potential_bugs::UnreachableCatchBlock),
@@ -234,6 +240,7 @@ impl Registry {
             Box::new(detekt::potential_bugs::UselessPostfixExpression),
             Box::new(detekt::potential_bugs::ImplicitUnitReturnType),
             Box::new(detekt::potential_bugs::UnconditionalJumpStatementInLoop),
+            Box::new(detekt::potential_bugs::SerialVersionUIDInSerializableClass),
             // ── detekt exceptions ──
             Box::new(detekt::exceptions::InstanceOfCheckForException),
             Box::new(detekt::exceptions::NotImplementedDeclaration),

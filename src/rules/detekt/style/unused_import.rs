@@ -16,32 +16,26 @@ impl Rule for UnusedImport {
         let mut violations = Vec::new();
         let table = build_symbol_table(source, tree.root_node());
 
-        // Collect all referenced names
+        // Collect all referenced names. The skip flag is propagated down the
+        // DFS — never walk Node::parent() per identifier: tree-sitter's
+        // parent() re-descends from the root each call, which is O(n²·depth)
+        // on deeply nested files.
         let used: HashSet<String> = {
             let mut u = HashSet::new();
             let bytes = source.as_bytes();
-            let mut stack = vec![tree.root_node()];
+            let mut stack = vec![(tree.root_node(), false)];
             const SKIP: &[&str] = &["import_header", "package_header"];
-            while let Some(node) = stack.pop() {
-                if node.kind() == "simple_identifier" || node.kind() == "type_identifier" {
+            while let Some((node, in_skip)) = stack.pop() {
+                let skip = in_skip || SKIP.contains(&node.kind());
+                if !skip && (node.kind() == "simple_identifier" || node.kind() == "type_identifier")
+                {
                     if let Ok(name) = node.utf8_text(bytes) {
-                        let mut is_skip = false;
-                        let mut cur = node.parent();
-                        while let Some(p) = cur {
-                            if SKIP.contains(&p.kind()) {
-                                is_skip = true;
-                                break;
-                            }
-                            cur = p.parent();
-                        }
-                        if !is_skip {
-                            u.insert(name.to_string());
-                        }
+                        u.insert(name.to_string());
                     }
                 }
                 for i in (0..node.child_count()).rev() {
                     if let Some(c) = node.child(i) {
-                        stack.push(c);
+                        stack.push((c, skip));
                     }
                 }
             }
@@ -69,7 +63,6 @@ impl Rule for UnusedImport {
                 }
             }
         }
-
         violations
     }
 }
@@ -91,5 +84,9 @@ mod tests {
     #[test]
     fn unused_import_bad() {
         assert!(!c("import com.Foo\nclass Bar {}\n").is_empty());
+    }
+    #[test]
+    fn aliased_import_used_ok() {
+        assert!(c("import java.util.UUID as Uid\n\nval id = Uid.randomUUID()\n").is_empty());
     }
 }

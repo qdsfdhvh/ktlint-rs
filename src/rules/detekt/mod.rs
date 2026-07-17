@@ -9,6 +9,7 @@
 //! - `potential-bugs` (3) — DuplicateCaseInWhen, UnreachableCatch, EqualsNull
 
 pub mod comments;
+pub mod comments_l1;
 pub mod complexity;
 pub mod empty_blocks;
 pub mod exceptions;
