@@ -2,19 +2,27 @@
 //! Flags protected members in classes that cannot be subclassed (final, non-open).
 //! Requires name resolution engine (L1) to track class modifiers and member visibility.
 
-use crate::resolver::builder::build_symbol_table;
 use crate::rules::{Rule, Violation};
 
 pub struct ProtectedMemberInFinalClass;
 
 impl Rule for ProtectedMemberInFinalClass {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
+    }
+
     fn id(&self) -> &'static str {
         "detekt:naming:ProtectedMemberInFinalClass"
     }
 
-    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check_with_symbols(
+        &self,
+        tree: &tree_sitter::Tree,
+        source: &str,
+        sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
         let mut violations = Vec::new();
-        let table = build_symbol_table(source, tree.root_node());
+        let table = sym.expect("SymbolTable should be provided by engine");
 
         // Find all protected symbols
         for sym in table

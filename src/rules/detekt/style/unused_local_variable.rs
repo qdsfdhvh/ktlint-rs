@@ -2,20 +2,28 @@
 //! Requires function_body scope tracking (L1).
 //! Perf: no Node::parent() calls; uses DFS flag propagation.
 
-use crate::resolver::builder::build_symbol_table;
 use crate::rules::{Rule, Violation};
 use std::collections::HashSet;
 
 pub struct UnusedLocalVariable;
 
 impl Rule for UnusedLocalVariable {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
+    }
+
     fn id(&self) -> &'static str {
         "detekt:style:UnusedLocalVariable"
     }
 
-    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check_with_symbols(
+        &self,
+        tree: &tree_sitter::Tree,
+        source: &str,
+        sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
         let mut violations = Vec::new();
-        let table = build_symbol_table(source, tree.root_node());
+        let table = sym.expect("SymbolTable should be provided by engine");
 
         // Collect all identifier references — only skip the _direct_ child
         // of a declaration node (depth == 0), not grandchildren.

@@ -1,6 +1,5 @@
 //! detekt:naming:UnusedPrivateMember — flags unused private functions/properties.
 //! Perf: no Node::parent() calls; uses DFS flag propagation.
-use crate::resolver::builder::build_symbol_table;
 use crate::resolver::Visibility;
 use crate::rules::{Rule, Violation};
 use std::collections::HashSet;
@@ -8,13 +7,22 @@ use std::collections::HashSet;
 pub struct UnusedPrivateMember;
 
 impl Rule for UnusedPrivateMember {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
+    }
+
     fn id(&self) -> &'static str {
         "detekt:naming:UnusedPrivateMember"
     }
 
-    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check_with_symbols(
+        &self,
+        tree: &tree_sitter::Tree,
+        source: &str,
+        sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
         let mut violations = Vec::new();
-        let table = build_symbol_table(source, tree.root_node());
+        let table = sym.expect("SymbolTable should be provided by engine");
         let used: HashSet<String> = collect_references(tree.root_node(), source);
 
         for sym in table.symbols.iter().filter(|s| {

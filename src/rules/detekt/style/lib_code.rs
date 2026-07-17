@@ -1,15 +1,23 @@
-use crate::resolver::builder::build_symbol_table;
 use crate::rules::{Rule, Violation};
 
 pub struct LibraryCodeMustSpecifyReturnType;
 
 impl Rule for LibraryCodeMustSpecifyReturnType {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
+    }
+
     fn id(&self) -> &'static str {
         "detekt:style:LibraryCodeMustSpecifyReturnType"
     }
-    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check_with_symbols(
+        &self,
+        tree: &tree_sitter::Tree,
+        source: &str,
+        sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
         let mut violations = Vec::new();
-        let table = build_symbol_table(source, tree.root_node());
+        let table = sym.expect("SymbolTable should be provided by engine");
         for sym in &table.symbols {
             if sym.kind != crate::resolver::SymbolKind::Function {
                 continue;

@@ -1,19 +1,27 @@
 //! detekt:style:UnusedParameter — flags unused function parameters.
 //! Perf: no Node::parent() calls; uses DFS flag propagation.
 
-use crate::resolver::builder::build_symbol_table;
 use crate::rules::{Rule, Violation};
 use std::collections::HashSet;
 
 pub struct UnusedParameter;
 
 impl Rule for UnusedParameter {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
+    }
+
     fn id(&self) -> &'static str {
         "detekt:style:UnusedParameter"
     }
-    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check_with_symbols(
+        &self,
+        tree: &tree_sitter::Tree,
+        source: &str,
+        sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
         let mut v = Vec::new();
-        let table = build_symbol_table(source, tree.root_node());
+        let table = sym.expect("SymbolTable should be provided by engine");
         let used = refs(tree.root_node(), source);
         for sym in &table.symbols {
             if sym.kind != crate::resolver::SymbolKind::Property {
