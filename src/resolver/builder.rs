@@ -132,42 +132,25 @@ fn walk_declarations(node: Node, bytes: &[u8], table: &mut SymbolTable, scope_id
                 push_children(&n, &mut stack, sid);
             }
 
-            // ── Function parameters ──
-            "value_parameter" => {
-                let pos = n.start_position();
-                for ci in 0..n.child_count() {
-                    if let Some(c) = n.child(ci) {
-                        if c.kind() == "simple_identifier" || c.kind() == "identifier" {
-                            let name = c.utf8_text(bytes).unwrap_or("").to_string();
-                            if !name.is_empty() {
-                                table.add_symbol(
-                                    name,
-                                    SymbolKind::Property,
-                                    Visibility::Implicit,
-                                    pos.row + 1,
-                                    pos.column + 1,
-                                    sid,
-                                );
-                            }
-                            break;
-                        }
-                    }
-                }
-                push_children(&n, &mut stack, sid);
-            }
-
             // ── Local variables (val/var inside functions) ──
             "variable_declaration" => {
-                let pos = n.start_position();
-                if let Some(name) = extract_property_name(&n, bytes) {
-                    table.add_symbol(
-                        name,
-                        SymbolKind::Property,
-                        Visibility::Implicit,
-                        pos.row + 1,
-                        pos.column + 1,
-                        sid,
-                    );
+                // Skip when directly under property_declaration — the name was
+                // already registered there (with its real visibility).
+                let under_prop = n
+                    .parent()
+                    .is_some_and(|p| p.kind() == "property_declaration");
+                if !under_prop {
+                    let pos = n.start_position();
+                    if let Some(name) = extract_property_name(&n, bytes) {
+                        table.add_symbol(
+                            name,
+                            SymbolKind::Property,
+                            Visibility::Implicit,
+                            pos.row + 1,
+                            pos.column + 1,
+                            sid,
+                        );
+                    }
                 }
                 push_children(&n, &mut stack, sid);
             }
@@ -292,11 +275,22 @@ fn extract_function_symbol(node: &Node, bytes: &[u8]) -> Option<ClassInfo> {
 }
 
 fn extract_property_name(node: &Node, bytes: &[u8]) -> Option<String> {
-    // val/var name: property_declaration → val/var → identifier
+    // val/var name: property_declaration → variable_declaration → identifier,
+    // or a direct identifier child (variable_declaration nodes themselves).
     for i in 0..node.child_count() {
         if let Some(child) = node.child(i) {
             if child.kind() == "simple_identifier" || child.kind() == "identifier" {
                 return Some(child.utf8_text(bytes).unwrap_or("").to_string());
+            }
+            // Descend into variable_declaration for the property name
+            if child.kind() == "variable_declaration" {
+                for j in 0..child.child_count() {
+                    if let Some(gc) = child.child(j) {
+                        if gc.kind() == "simple_identifier" || gc.kind() == "identifier" {
+                            return Some(gc.utf8_text(bytes).unwrap_or("").to_string());
+                        }
+                    }
+                }
             }
             // Skip val/var keywords
         }
@@ -339,13 +333,16 @@ fn extract_visibility(node: &Node, bytes: &[u8]) -> Visibility {
 }
 
 fn extract_imports(node: &Node, bytes: &[u8], table: &mut SymbolTable) {
-    // import_header → "import" + identifier (possibly with wildcard)
+    // import_header → "import" + identifier (possibly with wildcard or alias)
     let text = node.utf8_text(bytes).unwrap_or("");
-    let trimmed = text.strip_prefix("import").unwrap_or(&text).trim();
+    let trimmed = text.strip_prefix("import").unwrap_or(text).trim();
 
     if trimmed.ends_with(".*") {
         let pkg = &trimmed[..trimmed.len() - 2];
         table.add_star_import(pkg.to_string());
+    } else if let Some((path, alias)) = trimmed.split_once(" as ") {
+        // Aliased import: "com.example.Foo as Bar"
+        table.add_import(alias.trim().to_string(), path.trim().to_string());
     } else {
         // Named import: "com.example.Foo"
         if let Some(last) = trimmed.rsplit('.').next() {
@@ -389,8 +386,29 @@ mod tests {
     }
 
     #[test]
+    fn private_property_visibility() {
+        let t = build("class Foo { private val secret = 1 }");
+        let secret = t.symbols.iter().find(|s| s.name == "secret").unwrap();
+        assert_eq!(secret.visibility, Visibility::Private);
+    }
+
+    #[test]
+    fn property_not_duplicated() {
+        let t = build("class Foo { private val secret = 1 }");
+        let count = t.symbols.iter().filter(|s| s.name == "secret").count();
+        assert_eq!(count, 1, "symbols: {:?}", t.symbols);
+    }
+
+    #[test]
     fn imports() {
         let t = build("import com.example.Foo\nclass Bar { val x: Foo = Foo() }");
         assert_eq!(t.imports.get("Foo"), Some(&"com.example.Foo".into()));
+    }
+
+    #[test]
+    fn aliased_import() {
+        let t = build("import com.example.Foo as Bar\nval x = Bar()");
+        assert_eq!(t.imports.get("Bar"), Some(&"com.example.Foo".into()));
+        assert!(!t.imports.contains_key("Foo as Bar"));
     }
 }

@@ -614,6 +614,58 @@ impl Rule for UnconditionalJumpStatementInLoop {
     }
 }
 
+// ── SerialVersionUIDInSerializableClass ──
+pub struct SerialVersionUIDInSerializableClass;
+impl Rule for SerialVersionUIDInSerializableClass {
+    fn id(&self) -> &'static str {
+        "detekt:potential-bugs:SerialVersionUIDInSerializableClass"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
+        let mut v = Vec::new();
+        let bytes = source.as_bytes();
+        let mut stack = vec![tree.root_node()];
+        while let Some(n) = stack.pop() {
+            if n.kind() == "class_declaration" && implements_serializable(&n, bytes) {
+                let text = n.utf8_text(bytes).unwrap_or("");
+                if !text.contains("serialVersionUID") {
+                    let pos = n.start_position();
+                    v.push(Violation {
+                        file: String::new(),
+                        line: pos.row + 1,
+                        col: pos.column + 1,
+                        rule_id: "detekt:potential-bugs:SerialVersionUIDInSerializableClass".into(),
+                        message: "Serializable class should declare serialVersionUID".into(),
+                        auto_fixable: false,
+                    });
+                }
+            }
+            for i in (0..n.child_count()).rev() {
+                if let Some(c) = n.child(i) {
+                    stack.push(c);
+                }
+            }
+        }
+        v
+    }
+}
+
+/// Check if a class_declaration has `Serializable` in its supertype list.
+fn implements_serializable(n: &tree_sitter::Node, bytes: &[u8]) -> bool {
+    for i in 0..n.child_count() {
+        if let Some(c) = n.child(i) {
+            if c.kind() == "delegation_specifier" {
+                let t = c.utf8_text(bytes).unwrap_or("");
+                if t == "Serializable" || t.ends_with(".Serializable") {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -705,6 +757,30 @@ mod tests {
         assert!(!c(
             &UnconditionalJumpStatementInLoop,
             "fun f() {\nwhile(true) {\nreturn\n}\n}\n"
+        )
+        .is_empty());
+    }
+    #[test]
+    fn serial_uid_missing_bad() {
+        assert!(!c(
+            &SerialVersionUIDInSerializableClass,
+            "class Foo : Serializable {\n    val x = 1\n}\n"
+        )
+        .is_empty());
+    }
+    #[test]
+    fn serial_uid_present_ok() {
+        assert!(c(
+            &SerialVersionUIDInSerializableClass,
+            "class Foo : Serializable {\n    companion object { private const val serialVersionUID: Long = 1L }\n}\n"
+        )
+        .is_empty());
+    }
+    #[test]
+    fn serial_uid_not_serializable_ok() {
+        assert!(c(
+            &SerialVersionUIDInSerializableClass,
+            "class Foo {\n    val x = 1\n}\n"
         )
         .is_empty());
     }

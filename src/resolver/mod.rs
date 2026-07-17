@@ -80,7 +80,6 @@ impl SymbolTable {
             parent_id: Some(parent_id),
             symbols: Vec::new(),
         });
-        self.scopes[parent_id].symbols.push(id);
         id
     }
 
