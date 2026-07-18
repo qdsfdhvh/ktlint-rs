@@ -226,6 +226,7 @@ impl Registry {
             Box::new(detekt::style::UnnecessaryLet),
             Box::new(detekt::style::UseOrEmpty),
             Box::new(detekt::style::CanBeNonNullable),
+            Box::new(detekt::style::DataClassContainsFunctions),
             // potential-bugs
             Box::new(detekt::potential_bugs::DuplicateCaseInWhen),
             Box::new(detekt::potential_bugs::UnreachableCatchBlock),

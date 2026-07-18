@@ -1766,3 +1766,5 @@ pub mod use_or_empty;
 pub use use_or_empty::UseOrEmpty;
 pub mod can_be_non_nullable;
 pub use can_be_non_nullable::CanBeNonNullable;
+pub mod data_class_contains_functions;
+pub use data_class_contains_functions::DataClassContainsFunctions;
