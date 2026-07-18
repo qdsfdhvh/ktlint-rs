@@ -1762,3 +1762,5 @@ pub mod unnecessary_inner_class;
 pub use unnecessary_inner_class::UnnecessaryInnerClass;
 pub mod unnecessary_let;
 pub use unnecessary_let::UnnecessaryLet;
+pub mod use_or_empty;
+pub use use_or_empty::UseOrEmpty;

@@ -224,6 +224,7 @@ impl Registry {
             Box::new(detekt::comments_l1::OutdatedDocumentation),
             Box::new(detekt::style::UnusedPrivateProperty),
             Box::new(detekt::style::UnnecessaryLet),
+            Box::new(detekt::style::UseOrEmpty),
             // potential-bugs
             Box::new(detekt::potential_bugs::DuplicateCaseInWhen),
             Box::new(detekt::potential_bugs::UnreachableCatchBlock),
