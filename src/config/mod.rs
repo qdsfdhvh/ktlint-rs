@@ -27,6 +27,7 @@ pub struct KtlintConfig {
     /// Rule set filter (ktlint-only, detekt-only, or both)
     pub rule_set: RuleSet,
     pub skip_type_resolution: bool,
+    pub kotlinc_path: Option<String>,
     /// Category-level overrides from YAML (e.g., "detekt:complexity" → RuleConfig)
     pub category_overrides: HashMap<String, RuleConfig>,
 }
@@ -66,6 +67,7 @@ impl Default for KtlintConfig {
             trim_trailing_whitespace: true,
             rule_set: RuleSet::KtlintOnly,
             skip_type_resolution: true,
+            kotlinc_path: None,
             category_overrides: HashMap::new(),
         }
     }
@@ -199,6 +201,7 @@ impl KtlintConfig {
             rule_set: RuleSet::from_str(&cli.ruleset),
             ..Default::default()
         };
+        config.kotlinc_path = cli.kotlinc_path.clone();
 
         let anchor_path = if let Some(first) = cli.patterns.first() {
             PathBuf::from(first)
