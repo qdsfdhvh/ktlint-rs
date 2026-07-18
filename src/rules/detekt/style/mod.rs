@@ -1756,6 +1756,8 @@ pub mod unused_private_class;
 pub use unused_private_class::UnusedPrivateClass;
 pub mod unused_private_property;
 pub use unused_private_property::UnusedPrivateProperty;
+pub mod unused_private_function;
+pub use unused_private_function::UnusedPrivateFunction;
 pub mod nested_classes_visibility;
 pub use nested_classes_visibility::NestedClassesVisibility;
 pub mod unnecessary_inner_class;
