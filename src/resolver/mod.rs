@@ -2,6 +2,7 @@
 //! Tracks declarations, scopes, visibility, and import aliases.
 //! Enables ~50 L1 detekt rules (UnusedPrivate*, NoNameShadowing, etc.).
 pub mod builder;
+pub mod type_bridge;
 use std::collections::HashMap;
 
 /// A symbol in the source file.
