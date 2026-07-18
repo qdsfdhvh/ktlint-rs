@@ -1760,3 +1760,5 @@ pub mod nested_classes_visibility;
 pub use nested_classes_visibility::NestedClassesVisibility;
 pub mod unnecessary_inner_class;
 pub use unnecessary_inner_class::UnnecessaryInnerClass;
+pub mod unnecessary_let;
+pub use unnecessary_let::UnnecessaryLet;

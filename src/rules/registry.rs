@@ -223,6 +223,7 @@ impl Registry {
             Box::new(detekt::comments_l1::KDocReferencesNonPublicProperty),
             Box::new(detekt::comments_l1::OutdatedDocumentation),
             Box::new(detekt::style::UnusedPrivateProperty),
+            Box::new(detekt::style::UnnecessaryLet),
             // potential-bugs
             Box::new(detekt::potential_bugs::DuplicateCaseInWhen),
             Box::new(detekt::potential_bugs::UnreachableCatchBlock),

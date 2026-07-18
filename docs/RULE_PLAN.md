@@ -1,7 +1,7 @@
 # ktlint-rs Rule Plan
 
 > **Target**: 100% parity with JVM ktlint (formatting rules) + detekt (static analysis rules).
-> **Coverage**: 69/105 JVM ktlint rules ✅ | 147 detekt rules (L0+L1) ✅ | L2 ~51 rules (skip mechanism ready) ✅
+> **Coverage**: 69/105 JVM ktlint rules ✅ | 149 detekt rules (L0+L1) ✅ | L2 ~51 rules (skip mechanism ready) ✅
 
 ---
 
