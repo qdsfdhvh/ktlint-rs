@@ -22,8 +22,8 @@ impl Rule for RedundantModifier {
 
     fn check_with_symbols(
         &self,
-        _tree: &tree_sitter::Tree,
-        _source: &str,
+        tree: &tree_sitter::Tree,
+        source: &str,
         sym: Option<&crate::resolver::SymbolTable>,
     ) -> Vec<Violation> {
         let mut violations = Vec::new();

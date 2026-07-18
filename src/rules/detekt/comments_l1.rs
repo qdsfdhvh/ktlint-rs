@@ -20,7 +20,7 @@ impl Rule for KDocReferencesNonPublicProperty {
         &self,
         tree: &Tree,
         source: &str,
-        _sym: Option<&crate::resolver::SymbolTable>,
+        sym: Option<&crate::resolver::SymbolTable>,
     ) -> Vec<Violation> {
         let table = sym.expect("SymbolTable should be provided by engine");
         let mut non_public: HashSet<String> = table
