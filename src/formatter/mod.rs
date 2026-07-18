@@ -6,7 +6,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub fn auto_fix(files: &[PathBuf], violations: &[Violation]) -> Result<()> {
+pub fn auto_fix(_files: &[PathBuf], violations: &[Violation]) -> Result<()> {
     let mut by_file: HashMap<&str, Vec<&Violation>> = HashMap::new();
     for v in violations {
         if v.auto_fixable {

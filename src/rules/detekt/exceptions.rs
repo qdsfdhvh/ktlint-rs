@@ -269,7 +269,7 @@ impl Rule for TooGenericExceptionCaught {
             .enumerate()
             .filter_map(|(i, line)| {
                 let t = line.trim();
-                if (t.contains(": Exception)") || t.contains(": Throwable)")) {
+                if t.contains(": Exception)") || t.contains(": Throwable)") {
                     Some(Violation {
                         file: String::new(),
                         line: i + 1,

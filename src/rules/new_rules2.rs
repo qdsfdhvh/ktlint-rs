@@ -9,7 +9,7 @@ impl Rule for AnnotationRule {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         vec![]
     } // disabled — too noisy
 }
@@ -19,7 +19,7 @@ impl Rule for FunctionLiteralRule {
     fn id(&self) -> &'static str {
         "standard:function-literal"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
         for (i, ln) in l.iter().enumerate() {
@@ -44,7 +44,7 @@ impl Rule for NoUnitReturnRule {
     fn id(&self) -> &'static str {
         "standard:no-unit-return"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
             if l.trim() == "return Unit" || l.trim() == "return" {
@@ -67,7 +67,7 @@ impl Rule for NoSingleLineBlockCommentRule {
     fn id(&self) -> &'static str {
         "standard:no-single-line-block-comment"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
             if l.trim().starts_with("/*") && l.trim().ends_with("*/") {
@@ -90,15 +90,15 @@ impl Rule for BlankLineBeforeDeclarationRule {
     fn id(&self) -> &'static str {
         "standard:blank-line-before-declaration"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
         for i in 1..l.len() {
             let t = l[i].trim();
-            if (t.starts_with("fun ")
+            if t.starts_with("fun ")
                 || t.starts_with("class ")
                 || t.starts_with("val ")
-                || t.starts_with("var "))
+                || t.starts_with("var ")
             {
                 let prev = l[i - 1].trim();
                 if !prev.is_empty() && !prev.starts_with("//") && !prev.starts_with("@") {
@@ -122,7 +122,7 @@ impl Rule for SpacingAroundAngleBracketsRule {
     fn id(&self) -> &'static str {
         "standard:spacing-around-angle-brackets"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         let bytes = s.as_bytes();
         for (i, l) in s.lines().enumerate() {
@@ -157,7 +157,7 @@ impl Rule for SpacingAroundUnaryOperatorRule {
     fn id(&self) -> &'static str {
         "standard:spacing-around-unary-operator"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
             if l.contains("! ") && !l.contains("!!") && !l.contains("\"") {
@@ -180,7 +180,7 @@ impl Rule for FunKeywordSpacingRule {
     fn id(&self) -> &'static str {
         "standard:fun-keyword-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
             let t = l.trim();
@@ -204,7 +204,7 @@ impl Rule for PackageImportSpacingRule {
     fn id(&self) -> &'static str {
         "standard:package-import-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
         let mut saw_package = false;
@@ -246,7 +246,7 @@ impl Rule for MixedConditionOperatorsRule {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
             if l.contains("&&") && l.contains("||") {

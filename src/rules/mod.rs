@@ -20,9 +20,9 @@ pub mod spacing;
 pub mod structure;
 pub mod suppress;
 pub mod wrapping;
-pub use phase3b_rules::*;
+// pub use phase3b_rules::*; // re-exported by individual rules
 pub mod final_rules;
-pub use final_rules::*;
+// pub use final_rules::*; // re-exported by individual rules
 
 #[derive(Debug, Clone)]
 pub struct Violation {

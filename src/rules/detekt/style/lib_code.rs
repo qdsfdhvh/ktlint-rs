@@ -16,8 +16,8 @@ impl Rule for LibraryCodeMustSpecifyReturnType {
     }
     fn check_with_symbols(
         &self,
-        tree: &tree_sitter::Tree,
-        source: &str,
+        _tree: &tree_sitter::Tree,
+        _source: &str,
         sym: Option<&crate::resolver::SymbolTable>,
     ) -> Vec<Violation> {
         let mut violations = Vec::new();
