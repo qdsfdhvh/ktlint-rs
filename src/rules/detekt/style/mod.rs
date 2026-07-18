@@ -1764,3 +1764,5 @@ pub mod unnecessary_let;
 pub use unnecessary_let::UnnecessaryLet;
 pub mod use_or_empty;
 pub use use_or_empty::UseOrEmpty;
+pub mod can_be_non_nullable;
+pub use can_be_non_nullable::CanBeNonNullable;
