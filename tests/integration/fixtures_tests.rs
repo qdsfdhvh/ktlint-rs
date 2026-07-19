@@ -11,10 +11,7 @@ mod fixture_tests {
     }
 
     fn ensure_built() {
-        if !bin().exists() {
-            let s = Command::new("cargo").args(["build"]).status().unwrap();
-            assert!(s.success(), "failed to build ktlint-rs");
-        }
+        // Skip in CI — binary is pre-built by workflow
     }
 
     fn fixture(name: &str) -> PathBuf {
