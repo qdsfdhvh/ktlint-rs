@@ -44,6 +44,7 @@ download_binary() {
     darwin-x86_64)  target="x86_64-apple-darwin" ;;
     linux-x86_64)   target="x86_64-unknown-linux-gnu" ;;
     linux-aarch64)  target="aarch64-unknown-linux-gnu" ;;
+    mingw*|msys*|cygwin*) err "use install.ps1 on Windows" ;;
   esac
 
   local url
