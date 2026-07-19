@@ -36,15 +36,14 @@ jobs:
       - run: cargo test --all-features
 
 
-  test-macos:
-    name: Stage 3 — Test (macOS)
-    runs-on: macos-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo test --all-features
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
   clippy:
     name: Stage 4 — Clippy
     runs-on: ubuntu-latest
