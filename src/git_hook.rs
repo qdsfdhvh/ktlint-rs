@@ -16,7 +16,7 @@ elif [[ -f "$(dirname "$0")/../../target/release/ktlint-rs" ]]; then
 elif [[ -f "$(dirname "$0")/../../target/debug/ktlint-rs" ]]; then
     KTLINT="$(cd "$(dirname "$0")/../.." && pwd)/target/debug/ktlint-rs"
 else
-    echo "ktlint-rs: not found. Install with: cargo install ktlint-rs" >&2
+    echo "ktlint-rs: not found. Install from: https://github.com/qdsfdhvh/ktlint-rs/releases" >&2
     exit 1
 fi
 
