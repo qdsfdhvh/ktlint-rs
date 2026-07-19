@@ -5,39 +5,40 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 
 [![Rust](https://img.shields.io/badge/rust-1.85+-orange.svg)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![ktlint](https://img.shields.io/badge/ktlint-1.8.0-green.svg)](https://github.com/pinterest/ktlint)
-[![Rules](https://img.shields.io/badge/rules-78-blue.svg)](https://github.com/qdsfdhvh/ktlint-rs)
-[![Tests](https://img.shields.io/badge/tests-193-green.svg)](https://github.com/qdsfdhvh/ktlint-rs)
+[![Rules](https://img.shields.io/badge/rules-225-blue.svg)](https://github.com/qdsfdhvh/ktlint-rs)
+[![Tests](https://img.shields.io/badge/tests-447-green.svg)](https://github.com/qdsfdhvh/ktlint-rs)
 [![CI](https://github.com/qdsfdhvh/ktlint-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/qdsfdhvh/ktlint-rs/actions)
 
 ## Why
 
-Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms. Drop-in compatible with the JVM ktlint CLI.
+Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms.
 
-- **78 rules** covering spacing, structure, imports, naming, wrapping, and KDoc
-- **340-rule parity tracker** — [docs/RULE_PLAN.md](docs/RULE_PLAN.md) covers JVM ktlint (105) + detekt (217)
+- **225 rules** (69 ktlint + 147 detekt + 9 other)
+- **31 auto-fix passes** for spacing, wrapping, indentation
 - **Drop-in CLI** compatible with JVM ktlint
-- **4 reporters**: plain, JSON, SARIF, summary
+- **6 reporters**: plain, JSON, SARIF, checkstyle, HTML, markdown
 - **`.editorconfig`** support with ktlint properties
-- **Auto-fix** for fixable violations (`--format`)
+- **Zero JVM**: pure Rust, single binary < 12MB
 
-## Quick Start
+## Install
 
 ### macOS / Linux
 
 ```bash
+# Preferred: cargo install from git (needs Rust toolchain)
+cargo install --git https://github.com/qdsfdhvh/ktlint-rs --tag v0.1.0 ktlint-rs
+
+# Or: pre-built binary
 curl -fsSL https://github.com/qdsfdhvh/ktlint-rs/releases/latest/download/install.sh | bash
-ktlint-rs --version
 ```
 
 ### Windows
 
 ```powershell
 iwr -useb https://github.com/qdsfdhvh/ktlint-rs/releases/latest/download/install.ps1 | iex
-ktlint-rs --version
 ```
 
-### Usage
+## Quick Start
 
 ```bash
 # Lint
@@ -47,68 +48,67 @@ ktlint-rs **/*.kt
 ktlint-rs --format **/*.kt
 
 # JSON output
-ktlint-rs --reporter=json **/*.kt
+ktlint-rs --reporter json **/*.kt
+
+# Detekt rules only
+ktlint-rs --ruleset detekt
 ```
 
-| demo-gradle | 8 | 9ms / 2.11s | **235×** |
+> Full CLI reference: **[docs/command.md](docs/command.md)**  
+> Design philosophy: **[docs/DESIGN.md](docs/DESIGN.md)**  
+> Performance data: **[docs/PERFORMANCE.md](docs/PERFORMANCE.md)**
 
-> Full per-project breakdown: **[docs/PERFORMANCE.md](docs/PERFORMANCE.md)** — violations, rules, files hit, throughput, detekt comparison.
+## Performance
+
+| Project | Files | ktlint-rs | JVM ktlint | Speedup |
+|---|---|---|---|---|
+| nowinandroid | 350 | **0.29s** | 7.1s | **24×** |
+| okhttp | 569 | 0.66s | 11.5s | **17×** |
+
+## Rule Coverage
+
+| Category | ktlint | detekt | Total |
+|---|---|---|---|
+| Spacing | 17 | — | 17 |
+| Structure | 15 | — | 15 |
+| Imports | 4 | — | 4 |
+| Naming | 6 | 18 | 24 |
+| Wrapping | 8 | — | 8 |
+| Empty-blocks | — | 14 | 14 |
+| Complexity | — | 15 | 15 |
+| Style | — | 53 | 53 |
+| Comments | — | 9 | 9 |
+| Exceptions | — | 9 | 9 |
+| Potential-bugs | — | 16 | 16 |
+| **Total** | **50** | **134** | **225** |
 
 ## Advanced Features
 
 ### Baselines
-Suppress known violations in legacy projects:
+
 ```bash
-ktlint-rs --create-baseline --baseline baseline.xml  # generate
-ktlint-rs --baseline baseline.xml                     # lint with suppression
+ktlint-rs --create-baseline --baseline baseline.xml
+ktlint-rs --baseline baseline.xml
 ```
 
-### Git Hooks
-Auto-lint staged files before each commit:
-```bash
-```
-
-## Rule Coverage
-
-| Category | Count | Examples |
-|---|---|---|
-| Spacing | 17 | curly, operator, comma, paren, colon, dot, keyword, annotation, modifier-order |
-| Structure | 28 | indent, trailing, blank-lines, max-line, trailing-comma, kdoc |
-| Imports | 4 | wildcard, ordering, unused |
-| Naming | 6 | class, function, property, filename, package |
-| Wrapping | 7 | chain, multiline-if-else, try-catch, when |
-| KDoc | 3 | formatting, no-empty, no-trailing |
-| **Total** | **65** | |
-
-
-## .editorconfig Support
+### .editorconfig
 
 ```ini
 [*.kt]
-ktlint_code_style = android_studio
 indent_size = 4
 max_line_length = 140
-insert_final_newline = true
 
 # Disable specific rules
 ktlint_standard_no_wildcard_imports = disabled
-ktlint_standard_trailing_comma = disabled
 ```
 
 ## Development
 
 ```bash
-# Build
-cargo build
-
-# Run tests (179+)
-cargo test # 185 tests
-
-# Run on fixtures
-cargo run -- tests/fixtures/compose-samples/
-
-# Build release
-cargo build --release
+cargo check              # Fast type check
+cargo test --all-features # 447 tests
+cargo fmt --all          # Format code
+cargo build --release    # Release build
 ```
 
 ## License
