@@ -2,6 +2,7 @@
 
 use crate::rules::{Rule, Violation};
 use tree_sitter::Tree;
+use crate::resolver::type_bridge::TypeInfo;
 
 fn walk_node(
     n: tree_sitter::Node,
@@ -666,6 +667,52 @@ fn implements_serializable(n: &tree_sitter::Node, bytes: &[u8]) -> bool {
     }
     false
 }
+// ── UnnecessarySafeCallOnNonNullable (L2, Phase 13 TypeInfo bridge) ──
+pub struct UnnecessarySafeCallOnNonNullable;
+impl Rule for UnnecessarySafeCallOnNonNullable {
+    fn id(&self) -> &'static str { "detekt:potential-bugs:UnnecessarySafeCallOnNonNullable" }
+    fn auto_fixable(&self) -> bool { false }
+    fn requires_type_resolution(&self) -> bool { true }
+
+    fn check_with_symbols(&self, _tree: &Tree, source: &str, _sym: Option<&crate::resolver::SymbolTable>) -> Vec<Violation> {
+        eprintln!("[UnnecessarySafeCall] called, {} lines", source.lines().count());
+        let mut v = Vec::new();
+        let ti = TypeInfo::extract(source);
+        eprintln!("[UnnecessarySafeCall] types: {:?}", ti.declarations.keys().collect::<Vec<_>>());
+        for (i, line) in source.lines().enumerate() {
+            let t = line.trim();
+            if t.contains("?.") {
+                eprintln!("[UnnecessarySafeCall] line {}: found ?.", i+1);
+                let pos = t.find("?.").unwrap();
+                let before = &t[..pos];
+                let words: Vec<&str> = before.split(|c: char| !c.is_alphanumeric() && c != '_').filter(|w| !w.is_empty()).collect();
+                eprintln!("[UnnecessarySafeCall] words before ?.: {:?}", words);
+                for word in &words {
+                    if let Some(dt) = ti.type_of(*word) {
+                        eprintln!("[UnnecessarySafeCall] {}: type={}, nullable={}", word, dt.type_name, dt.is_nullable);
+                        if !dt.is_nullable {
+                            v.push(Violation {
+                                file: String::new(), line: i + 1, col: pos + 1,
+                                rule_id: "detekt:potential-bugs:UnnecessarySafeCallOnNonNullable".into(),
+                                message: format!("Safe call on non-nullable type '{}' (use '.' instead of '?.')", word),
+                                auto_fixable: false,
+                            });
+                            eprintln!("[UnnecessarySafeCall] VIOLATION pushed");
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        eprintln!("[UnnecessarySafeCall] returning {} violations", v.len());
+        v
+    }
+
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

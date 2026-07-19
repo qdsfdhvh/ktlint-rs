@@ -247,6 +247,7 @@ impl Registry {
             Box::new(detekt::potential_bugs::ImplicitUnitReturnType),
             Box::new(detekt::potential_bugs::UnconditionalJumpStatementInLoop),
             Box::new(detekt::potential_bugs::SerialVersionUIDInSerializableClass),
+            Box::new(detekt::potential_bugs::UnnecessarySafeCallOnNonNullable),
             // ── detekt exceptions ──
             Box::new(detekt::exceptions::InstanceOfCheckForException),
             Box::new(detekt::exceptions::NotImplementedDeclaration),
