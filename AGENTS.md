@@ -1,47 +1,85 @@
-# AGENTS.md — ktlint-rs 开发与 LSP 指南
+# AGENTS.md — ktlint-rs Development Guide
 
-> **设计目标**: AI Agent 的快速 Kotlin 预检工具  
-> **核心理念**: 纯 Rust，0 JVM，<1s 扫描  
-> **详细**: 见 [docs/DESIGN.md](docs/DESIGN.md)
+> **Design goal**: Fast Kotlin pre-check tool for AI agents
+> **Core principles**: Pure Rust, zero JVM, <1s scan
+> **Details**: see [docs/DESIGN.md](docs/DESIGN.md)
 
-## Agent LSP配置
+## Project Overview
 
-推荐使用 **rust-analyzer** 作为 LSP。以 rust-analyzer 标准方式调用即可：
+**ktlint-rs** is a pure-Rust rewrite of Pinterest ktlint and detekt.
+It aims for drop-in CLI compatibility and `.editorconfig` support,
+with startup under 50ms and per-file lint under 5ms.
 
-- **类型检查**: `rust-analyzer diagnostics` 或 `cargo check`
-- **自动补全**: rust-analyzer 标准 completion API
-- **跳转定义**: rust-analyzer 标准 goto-definition
-- **查找引用**: rust-analyzer 标准 find-references
+**Performance Constraints (hard requirements):**
+- **Low memory**: Free memory immediately after linting. No caching of file contents.
+- **Low CPU**: CPU usage drops to zero after lint completes. No background threads/rayon pool.
+- **Clean exit**: Process must exit cleanly (exit 0/1/2). No daemon or event loop.
+- **Rule lightweight**: Each rule's `check()` must be O(n) and side-effect free.
+- **Binary size**: release binary < 15MB.
+- **No daemon**: Process must have a clear exit point. No server/watch mode.
+- **Cache**: Uses `.cache/ktlint-rs/` directory for parser results/config to speed up repeated runs.
 
-Agent 开发时的快捷命令:
+## Architecture
+
+```
+ktlint-rs/
+├── src/
+│   ├── rules/             # 69 ktlint + 147 detekt rules
+│   ├── resolver/          # SymbolTable + TypeInfo extractor
+│   ├── formatter/         # 31 auto-fix passes
+│   ├── config/            # .editorconfig + YAML config
+│   ├── cli/               # Clap CLI arguments
+│   └── main.rs
+├── tests/
+│   ├── fixtures/          # Real-world Kotlin projects (nowinandroid, okhttp, etc.)
+│   └── integration/       # Integration test binary
+├── .github/workflows/     # CI pipeline
+├── scripts/               # install.sh, install.ps1
+└── docs/                  # DESIGN.md, LIMITATIONS.md, RULE_PLAN.md
+```
+
+## Agent LSP Configuration
+
+Use **rust-analyzer** as the LSP. It is the official Rust language server:
+
+- **Type checking**: `rust-analyzer diagnostics` or `cargo check`
+- **Auto-completion**: rust-analyzer standard completion API
+- **Go-to-definition**: rust-analyzer standard goto-definition
+- **Find references**: rust-analyzer standard find-references
+
+Quick commands for agent development:
 
 ```bash
-# 快速类型检查 (推荐，比 cargo check 快 2x)
+# Fast type check (recommended, 2x faster than cargo check)
 cargo check
 
-# 严格 lint (启用所有警告)
+# Strict lint (enable all warnings)
 cargo clippy --all-features -- -D warnings
 
-# 运行全部测试
+# Run all tests
 cargo test --all-features
 
-# 格式化代码
+# Format code
 cargo fmt --all
 
-# 自检 (检测 rust lint 后格式化)
+# Format check
 cargo fmt --all -- --check
 ```
 
-## 项目约束
+## TypeInfo Bridge (Phase 13)
 
-- **纯 Rust**: 零 JVM / kotlinc / Gradle 依赖
-- **二进制 < 15MB**: release 模式
-- **启动 < 50ms**: 无 daemon / rayon pool
-- **内存释放**: lint 完成后即时释放
-- **禁止 daemon**: 进程必须有明确退出点
-EOF
-git add AGENTS.md && git commit -m "docs: agent LSP guide — rust-analyzer + dev commands
+Pure Rust type resolution via CST heuristics (`src/resolver/type_bridge.rs`):
 
-- Removed unused rust-project.json (Cargo project)
-- Added agent quick commands (check, clippy, test, fmt)
-- Kept existing development workflow" && git push
+- Extracts property types (`val x: String`)
+- Extracts function return types (`fun foo(): Int`)
+- Extracts constructor parameter types (`class Foo(val x: Int)`)
+- Extracts parameter types (`fun bar(x: Int, y: String?)`)
+- L2 rules use `check_with_symbols()` to access TypeInfo
+
+## Constraints
+
+- **Pure Rust**: Zero JVM / kotlinc / Gradle dependencies
+- **Binary < 15MB**: Release mode
+- **Startup < 50ms**: No daemon / rayon pool warmup
+- **Memory release**: Immediate release after lint completes
+- **No daemon**: Process must have clear exit point
