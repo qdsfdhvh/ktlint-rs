@@ -39,6 +39,7 @@ fn fix_all_spacing(source: &str) -> String {
         text = fix_colons(&text);
         text = fix_comment_spacing(&text);
         text = fix_blank_lines(&text);
+        text = fix_blank_line_in_list(&text);
         text = fix_brace_between(&text);
         text = fix_double_spaces(&text);
         if text == before { break; }
@@ -174,6 +175,26 @@ fn fix_blank_lines(source: &str) -> String {
     let mut s = source.to_string();
     while s.contains("\n\n\n") { s = s.replace("\n\n\n", "\n\n"); }
     s
+}
+
+fn fix_blank_line_in_list(source: &str) -> String {
+    // Remove blank lines between list items (inside brackets)
+    let lines: Vec<&str> = source.lines().collect();
+    let mut result = Vec::new();
+    let mut bracket_depth = 0i32;
+    for (i, line) in lines.iter().enumerate() {
+        let t = line.trim();
+        // Track bracket depth
+        bracket_depth += t.chars().filter(|&c| c == '(' || c == '[').count() as i32;
+        bracket_depth -= t.chars().filter(|&c| c == ')' || c == ']').count() as i32;
+        
+        // Remove empty lines inside brackets
+        if t.is_empty() && bracket_depth > 0 {
+            continue;
+        }
+        result.push(line.to_string());
+    }
+    result.join("\n")
 }
 
 fn fix_brace_between(source: &str) -> String {
