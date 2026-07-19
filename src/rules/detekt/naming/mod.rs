@@ -750,7 +750,9 @@ impl Rule for PropertyUsedBeforeDeclaration {
         let mut declared: Vec<String> = Vec::new();
         for (i, line) in source.lines().enumerate() {
             let t = line.trim();
-            if t.starts_with("val ") || t.starts_with("var ") {
+            // Only track top-level/class-level val/var (not local variables inside functions)
+            let indent = line.len() - t.len();
+            if indent <= 4 && (t.starts_with("val ") || t.starts_with("var ")) {
                 if let Some(name) = t[4..].split_whitespace().next() {
                     let nm = name.split(':').next().unwrap_or(name).to_string();
                     if !nm.is_empty() {
