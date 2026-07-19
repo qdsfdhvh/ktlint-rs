@@ -33,21 +33,21 @@ impl Rule for NoEmptyFirstLineInClassBody {
 
 /// Check if a trimmed line starts a class-like declaration.
 fn is_class_like_declaration(line: &str) -> bool {
-    line.starts_with("class ")
-        || line.starts_with("interface ")
-        || line.starts_with("object ")
-        || line.starts_with("enum class ")
-        || line.starts_with("companion object ")
-        || line.starts_with("data class ")
-        || line.starts_with("sealed class ")
-        || line.starts_with("sealed interface ")
-        || line.starts_with("abstract class ")
-        || line.starts_with("open class ")
-        || line.starts_with("inline class ")
-        || line.starts_with("value class ")
-        || line.starts_with("expect class ")
-        || line.starts_with("actual class ")
-        || line.starts_with("annotation class ")
+    line.contains("class ")
+        || line.contains("interface ")
+        || line.contains("object ")
+        || line.contains("enum class ")
+        || line.contains("companion object ")
+        || line.contains("data class ")
+        || line.contains("sealed class ")
+        || line.contains("sealed interface ")
+        || line.contains("abstract class ")
+        || line.contains("open class ")
+        || line.contains("inline class ")
+        || line.contains("value class ")
+        || line.contains("expect class ")
+        || line.contains("actual class ")
+        || line.contains("annotation class ")
 }
 
 #[cfg(test)]
