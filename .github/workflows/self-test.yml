@@ -1,0 +1,23 @@
+name: ktlint self-test
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ktlint:
+    name: Lint fixtures with ktlint-rs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release
+        run: cargo build --release
+      - name: Lint (ktlint)
+        run: ./target/release/ktlint-rs --ruleset ktlint tests/fixtures/nowinandroid
+      - name: Lint (detekt)
+        run: ./target/release/ktlint-rs --ruleset detekt tests/fixtures/nowinandroid
+      - name: Format self-test
+        run: ./target/release/ktlint-rs --format src/rules/detekt/style/unused_import.rs

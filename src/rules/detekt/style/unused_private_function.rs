@@ -6,7 +6,9 @@ use std::collections::HashSet;
 pub struct UnusedPrivateFunction;
 
 impl Rule for UnusedPrivateFunction {
-    fn id(&self) -> &'static str { "detekt:style:UnusedPrivateFunction" }
+    fn id(&self) -> &'static str {
+        "detekt:style:UnusedPrivateFunction"
+    }
 
     fn check_with_symbols(
         &self,
@@ -18,8 +20,7 @@ impl Rule for UnusedPrivateFunction {
         let used: HashSet<String> = collect_refs(tree.root_node(), source);
         let mut v = Vec::new();
         for sym in table.symbols.iter().filter(|s| {
-            s.visibility == Visibility::Private
-                && s.kind == crate::resolver::SymbolKind::Function
+            s.visibility == Visibility::Private && s.kind == crate::resolver::SymbolKind::Function
         }) {
             if !used.contains(&sym.name) {
                 v.push(Violation {
@@ -46,20 +47,33 @@ fn collect_refs(root: tree_sitter::Node, source: &str) -> HashSet<String> {
     let mut u = HashSet::new();
     let bytes = source.as_bytes();
     const DECL: &[&str] = &[
-        "class_declaration", "function_declaration", "property_declaration",
-        "parameter", "variable_declaration", "class_parameter", "value_parameter",
+        "class_declaration",
+        "function_declaration",
+        "property_declaration",
+        "parameter",
+        "variable_declaration",
+        "class_parameter",
+        "value_parameter",
     ];
     let mut stack: Vec<(_, Option<usize>)> = vec![(root, None)];
     while let Some((n, decl_depth)) = stack.pop() {
         let is_decl = decl_depth == Some(0);
-        let child_depth = if DECL.contains(&n.kind()) { Some(0) } else { decl_depth.map(|d| d + 1) };
+        let child_depth = if DECL.contains(&n.kind()) {
+            Some(0)
+        } else {
+            decl_depth.map(|d| d + 1)
+        };
         if !is_decl && (n.kind() == "simple_identifier" || n.kind() == "identifier") {
             if let Ok(name) = n.utf8_text(bytes) {
-                if !name.starts_with('_') { u.insert(name.to_string()); }
+                if !name.starts_with('_') {
+                    u.insert(name.to_string());
+                }
             }
         }
         for i in (0..n.child_count()).rev() {
-            if let Some(c) = n.child(i) { stack.push((c, child_depth)); }
+            if let Some(c) = n.child(i) {
+                stack.push((c, child_depth));
+            }
         }
     }
     u

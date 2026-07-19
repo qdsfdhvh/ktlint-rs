@@ -24,7 +24,12 @@ Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms. Drop-in 
 ## Quick Start
 
 ```bash
-# Install
+# Install (pre-compiled binary, zero dependencies)
+# Download from: https://github.com/qdsfdhvh/ktlint-rs/releases
+curl -sL https://github.com/qdsfdhvh/ktlint-rs/releases/latest/download/ktlint-rs-aarch64-apple-darwin.tar.gz | tar xz
+sudo cp ktlint-rs /usr/local/bin/
+
+# Or via cargo (needs Rust toolchain):
 cargo install ktlint-rs
 
 # Lint

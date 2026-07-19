@@ -20,4 +20,3 @@ use_field_init_shorthand = true
 force_explicit_abi = true
 
 # Auto-generated stubs with syntax errors — not compiled
-ignore = ["src/ktlint_conformance.rs"]

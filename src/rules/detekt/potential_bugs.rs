@@ -1,8 +1,8 @@
 //! detekt potential-bugs rules.
 
+use crate::resolver::type_bridge::TypeInfo;
 use crate::rules::{Rule, Violation};
 use tree_sitter::Tree;
-use crate::resolver::type_bridge::TypeInfo;
 
 fn walk_node(
     n: tree_sitter::Node,
@@ -374,25 +374,49 @@ impl Rule for UnnecessaryNotNullAssertion {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
-        source
-            .lines()
-            .enumerate()
-            .filter_map(|(i, l)| {
-                if l.contains("!!") {
-                    Some(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: l.find("!!").unwrap_or(0) + 1,
-                        rule_id: "detekt:potential-bugs:UnnecessaryNotNullAssertion".into(),
-                        message: "Unnecessary !! on expression".into(),
-                        auto_fixable: false,
-                    })
-                } else {
-                    None
+    fn requires_type_resolution(&self) -> bool {
+        true
+    }
+
+    fn check_with_symbols(
+        &self,
+        _tree: &Tree,
+        source: &str,
+        _sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
+        let mut v = Vec::new();
+        let ti = TypeInfo::extract(source);
+        for (i, line) in source.lines().enumerate() {
+            let t = line.trim();
+            if let Some(pos) = t.find("!!") {
+                let before = &t[..pos];
+                for word in before
+                    .split(|c: char| !c.is_alphanumeric() && c != '_')
+                    .filter(|w| !w.is_empty())
+                {
+                    if let Some(dt) = ti.type_of(word) {
+                        if !dt.is_nullable {
+                            v.push(Violation {
+                                file: String::new(),
+                                line: i + 1,
+                                col: pos + 1,
+                                rule_id: "detekt:potential-bugs:UnnecessaryNotNullAssertion".into(),
+                                message: format!(
+                                    "Unnecessary '!!' on non-nullable type '{}' ({})",
+                                    word, dt.type_name
+                                ),
+                                auto_fixable: false,
+                            });
+                            break;
+                        }
+                    }
                 }
-            })
-            .collect()
+            }
+        }
+        v
+    }
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
     }
 }
 
@@ -670,31 +694,60 @@ fn implements_serializable(n: &tree_sitter::Node, bytes: &[u8]) -> bool {
 // ── UnnecessarySafeCallOnNonNullable (L2, Phase 13 TypeInfo bridge) ──
 pub struct UnnecessarySafeCallOnNonNullable;
 impl Rule for UnnecessarySafeCallOnNonNullable {
-    fn id(&self) -> &'static str { "detekt:potential-bugs:UnnecessarySafeCallOnNonNullable" }
-    fn auto_fixable(&self) -> bool { false }
-    fn requires_type_resolution(&self) -> bool { true }
+    fn id(&self) -> &'static str {
+        "detekt:potential-bugs:UnnecessarySafeCallOnNonNullable"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
+    fn requires_type_resolution(&self) -> bool {
+        true
+    }
 
-    fn check_with_symbols(&self, _tree: &Tree, source: &str, _sym: Option<&crate::resolver::SymbolTable>) -> Vec<Violation> {
-        eprintln!("[UnnecessarySafeCall] called, {} lines", source.lines().count());
+    fn check_with_symbols(
+        &self,
+        _tree: &Tree,
+        source: &str,
+        _sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
+        eprintln!(
+            "[UnnecessarySafeCall] called, {} lines",
+            source.lines().count()
+        );
         let mut v = Vec::new();
         let ti = TypeInfo::extract(source);
-        eprintln!("[UnnecessarySafeCall] types: {:?}", ti.declarations.keys().collect::<Vec<_>>());
+        eprintln!(
+            "[UnnecessarySafeCall] types: {:?}",
+            ti.declarations.keys().collect::<Vec<_>>()
+        );
         for (i, line) in source.lines().enumerate() {
             let t = line.trim();
             if t.contains("?.") {
-                eprintln!("[UnnecessarySafeCall] line {}: found ?.", i+1);
+                eprintln!("[UnnecessarySafeCall] line {}: found ?.", i + 1);
                 let pos = t.find("?.").unwrap();
                 let before = &t[..pos];
-                let words: Vec<&str> = before.split(|c: char| !c.is_alphanumeric() && c != '_').filter(|w| !w.is_empty()).collect();
+                let words: Vec<&str> = before
+                    .split(|c: char| !c.is_alphanumeric() && c != '_')
+                    .filter(|w| !w.is_empty())
+                    .collect();
                 eprintln!("[UnnecessarySafeCall] words before ?.: {:?}", words);
                 for word in &words {
                     if let Some(dt) = ti.type_of(*word) {
-                        eprintln!("[UnnecessarySafeCall] {}: type={}, nullable={}", word, dt.type_name, dt.is_nullable);
+                        eprintln!(
+                            "[UnnecessarySafeCall] {}: type={}, nullable={}",
+                            word, dt.type_name, dt.is_nullable
+                        );
                         if !dt.is_nullable {
                             v.push(Violation {
-                                file: String::new(), line: i + 1, col: pos + 1,
-                                rule_id: "detekt:potential-bugs:UnnecessarySafeCallOnNonNullable".into(),
-                                message: format!("Safe call on non-nullable type '{}' (use '.' instead of '?.')", word),
+                                file: String::new(),
+                                line: i + 1,
+                                col: pos + 1,
+                                rule_id: "detekt:potential-bugs:UnnecessarySafeCallOnNonNullable"
+                                    .into(),
+                                message: format!(
+                                    "Safe call on non-nullable type '{}' (use '.' instead of '?.')",
+                                    word
+                                ),
                                 auto_fixable: false,
                             });
                             eprintln!("[UnnecessarySafeCall] VIOLATION pushed");
@@ -773,7 +826,11 @@ mod tests {
     }
     #[test]
     fn unnec_notnull() {
-        assert!(!c(&UnnecessaryNotNullAssertion, "x!!\n").is_empty());
+        assert!(!c(
+            &UnnecessaryNotNullAssertion,
+            "val x: String = \"hi\"\nval y = x!!\n"
+        )
+        .is_empty());
     }
     #[test]
     fn wrong_eqs() {

@@ -5,8 +5,12 @@ use tree_sitter::Node;
 pub struct CanBeNonNullable;
 
 impl Rule for CanBeNonNullable {
-    fn id(&self) -> &'static str { "detekt:style:CanBeNonNullable" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:style:CanBeNonNullable"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
@@ -21,7 +25,9 @@ fn walk(n: Node, bytes: &[u8], v: &mut Vec<Violation>) {
         check_property(&n, bytes, v);
     }
     for i in 0..n.child_count() {
-        if let Some(c) = n.child(i) { walk(c, bytes, v); }
+        if let Some(c) = n.child(i) {
+            walk(c, bytes, v);
+        }
     }
 }
 
@@ -29,10 +35,16 @@ fn check_property(n: &Node, bytes: &[u8], v: &mut Vec<Violation>) {
     let text = n.utf8_text(bytes).unwrap_or("");
 
     // Must be a val (not var) with nullable type and an initializer
-    if !text.contains("val ") { return; }
-    if !text.contains("?") || !text.contains(" = ") { return; }
+    if !text.contains("val ") {
+        return;
+    }
+    if !text.contains("?") || !text.contains(" = ") {
+        return;
+    }
     // Skip lateinit, delegates, getters
-    if text.contains("lateinit") || text.contains(" by ") { return; }
+    if text.contains("lateinit") || text.contains(" by ") {
+        return;
+    }
 
     // Check: type has `?` but initializer is non-null literal
     // Pattern: val name: Type? = <non-null-literal>
@@ -40,7 +52,9 @@ fn check_property(n: &Node, bytes: &[u8], v: &mut Vec<Violation>) {
     if let Some(init_part) = text.rsplit(" = ").next() {
         let init = init_part.trim();
         // Skip if init contains null, ?, or is a function call returning nullable
-        if init == "null" || init.contains('?') || init.contains("get(") { return; }
+        if init == "null" || init.contains('?') || init.contains("get(") {
+            return;
+        }
 
         // Check that the type declaration has `?`
         let type_part = text.split(" = ").next().unwrap_or("");

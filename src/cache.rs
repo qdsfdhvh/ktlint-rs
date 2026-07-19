@@ -1,6 +1,6 @@
 //! Incremental lint cache — skips unchanged files on repeated runs.
 //! Stores violations per file keyed by (path, mtime, file_size).
-//! Cache lives in `.ktlint-rs/cache.json` at the project root.
+//! Cache lives in `.cache/ktlint-rs/cache.json` at the project root.
 
 use crate::rules::Violation;
 use serde::{Deserialize, Serialize};
@@ -33,9 +33,9 @@ struct CachedViolation {
     auto_fixable: bool,
 }
 
-/// Determine the cache path: `.ktlint-rs/cache.json` under the project root.
+/// Determine the cache path: `.cache/ktlint-rs/cache.json` under the project root.
 pub fn cache_path(project_root: &Path) -> PathBuf {
-    project_root.join(".ktlint-rs").join("cache.json")
+    project_root.join(".cache/ktlint-rs").join("cache.json")
 }
 
 /// Try to load cached violations for a file. Returns None if cache miss.

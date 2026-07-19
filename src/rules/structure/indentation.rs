@@ -1,7 +1,7 @@
 use crate::rules::{Rule, Violation};
 
 /// JVM-compatible indentation check.
-/// 
+///
 /// Core logic: for each line of code, check that the indentation (leading spaces)
 /// is a multiple of the indent_size. Skip empty lines, comments, annotations,
 /// KDoc, and KTS files.
@@ -30,19 +30,29 @@ impl Rule for Indentation {
         let is_kts = !lines.iter().any(|l| {
             let t = l.trim();
             let kw = t.split_whitespace().next().unwrap_or("");
-            matches!(kw, "class" | "fun" | "object" | "interface" | "enum" | "data")
-                && !t.starts_with("//") && !t.starts_with("/*") && !t.starts_with("*")
+            matches!(
+                kw,
+                "class" | "fun" | "object" | "interface" | "enum" | "data"
+            ) && !t.starts_with("//")
+                && !t.starts_with("/*")
+                && !t.starts_with("*")
         });
-        if is_kts { return violations; }
+        if is_kts {
+            return violations;
+        }
 
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
             let spaces = line.len() - trimmed.len();
 
             // Track block comments
-            if trimmed.starts_with("/*") { in_block_comment = true; }
+            if trimmed.starts_with("/*") {
+                in_block_comment = true;
+            }
             if in_block_comment {
-                if trimmed.ends_with("*/") { in_block_comment = false; }
+                if trimmed.ends_with("*/") {
+                    in_block_comment = false;
+                }
                 continue;
             }
 
@@ -131,7 +141,8 @@ mod tests {
 
     #[test]
     fn else_if_combo() {
-        let src = "fun f() {\n    if (x) {\n        a()\n    } else if (y) {\n        b()\n    }\n}\n";
+        let src =
+            "fun f() {\n    if (x) {\n        a()\n    } else if (y) {\n        b()\n    }\n}\n";
         assert!(check(src, 4).is_empty());
     }
 
