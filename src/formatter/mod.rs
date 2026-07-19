@@ -5,24 +5,52 @@ use std::path::PathBuf;
 
 pub fn auto_fix(files: &[PathBuf], violations: &[Violation]) -> anyhow::Result<()> {
     let fixable: Vec<&Violation> = violations.iter().filter(|v| v.auto_fixable).collect();
-    if fixable.is_empty() { return Ok(()); }
+    if fixable.is_empty() {
+        return Ok(());
+    }
 
     let mut file_set: HashSet<&str> = HashSet::new();
-    for v in &fixable { if !v.file.is_empty() { file_set.insert(&v.file); } }
+    for v in &fixable {
+        if !v.file.is_empty() {
+            file_set.insert(&v.file);
+        }
+    }
 
     for file_path in &file_set {
-        let rules: Vec<&str> = fixable.iter().filter(|v| v.file == *file_path).map(|v| v.rule_id.as_str()).collect();
-        let any_spacing = rules.iter().any(|r| r.contains("spacing") || r.contains("curly") || r.contains("op-") || r.contains("paren") || r.contains("colon") || r.contains("comma") || r.contains("comment"));
-        let any_wrapping = rules.iter().any(|r| r.contains("wrapping") || r.contains("when-entry-bracing") || r.contains("try-catch"));
+        let rules: Vec<&str> = fixable
+            .iter()
+            .filter(|v| v.file == *file_path)
+            .map(|v| v.rule_id.as_str())
+            .collect();
+        let any_spacing = rules.iter().any(|r| {
+            r.contains("spacing")
+                || r.contains("curly")
+                || r.contains("op-")
+                || r.contains("paren")
+                || r.contains("colon")
+                || r.contains("comma")
+                || r.contains("comment")
+        });
+        let any_wrapping = rules.iter().any(|r| {
+            r.contains("wrapping") || r.contains("when-entry-bracing") || r.contains("try-catch")
+        });
         let any_indent = rules.iter().any(|r| r.contains("indent"));
 
         let original = std::fs::read_to_string(file_path)?;
         let mut text = original.clone();
-        if any_spacing { text = fix_all_spacing(&text); }
-        if any_wrapping { text = fix_all_wrapping(&text); }
-        if any_indent { text = fix_indentation(&text); }
+        if any_spacing {
+            text = fix_all_spacing(&text);
+        }
+        if any_wrapping {
+            text = fix_all_wrapping(&text);
+        }
+        if any_indent {
+            text = fix_indentation(&text);
+        }
         text = fix_trailing_ws(&text);
-        if text != original { std::fs::write(file_path, text)?; }
+        if text != original {
+            std::fs::write(file_path, text)?;
+        }
     }
     Ok(())
 }
@@ -42,7 +70,9 @@ fn fix_all_spacing(source: &str) -> String {
         text = fix_blank_line_in_list(&text);
         text = fix_brace_between(&text);
         text = fix_double_spaces(&text);
-        if text == before { break; }
+        if text == before {
+            break;
+        }
     }
     text
 }
@@ -57,7 +87,9 @@ fn fix_all_wrapping(source: &str) -> String {
         text = fix_try_catch(&text);
         text = fix_when_entry_bracing(&text);
         text = fix_string_template(&text);
-        if text == before { break; }
+        if text == before {
+            break;
+        }
     }
     text
 }
@@ -65,7 +97,8 @@ fn fix_all_wrapping(source: &str) -> String {
 fn fix_indentation(source: &str) -> String {
     let lines: Vec<&str> = source.lines().collect();
     // Detect base indent from first non-empty line
-    let base = lines.iter()
+    let base = lines
+        .iter()
         .find(|l| !l.trim().is_empty())
         .map(|l| l.len() - l.trim_start().len())
         .unwrap_or(0);
@@ -74,19 +107,30 @@ fn fix_indentation(source: &str) -> String {
     let sz = 4;
     for line in &lines {
         let t = line.trim();
-        if t.is_empty() { out.push(String::new()); continue; }
+        if t.is_empty() {
+            out.push(String::new());
+            continue;
+        }
         // Decrease level BEFORE outputting closing brace
-        if t.starts_with('}') { level = level.saturating_sub(1); }
+        if t.starts_with('}') {
+            level = level.saturating_sub(1);
+        }
         let actual = base + level * sz;
         out.push(format!("{}{}", " ".repeat(actual), t));
         // Increase level AFTER outputting opening brace
-        if t.ends_with('{') && !t.contains("//") && !t.contains("/*") { level += 1; }
+        if t.ends_with('{') && !t.contains("//") && !t.contains("/*") {
+            level += 1;
+        }
     }
     out.join("\n")
 }
 
 fn fix_trailing_ws(source: &str) -> String {
-    source.lines().map(|l| l.trim_end()).collect::<Vec<_>>().join("\n")
+    source
+        .lines()
+        .map(|l| l.trim_end())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 // ── Spacing helpers ──
@@ -113,15 +157,17 @@ fn fix_curly_braces(source: &str) -> String {
 
 fn fix_operators(source: &str) -> String {
     let mut s = source.to_string();
-    let ops = ["==", "!=", "<=", ">=", "&&", "||", "+=", "-=", "*=", "/=", "=", "+", "-", "*", "/", "%"];
+    let ops = [
+        "==", "!=", "<=", ">=", "&&", "||", "+=", "-=", "*=", "/=", "=", "+", "-", "*", "/", "%",
+    ];
     for op in &ops {
         let chars: Vec<char> = s.chars().collect();
         let mut i = 0;
         while i < chars.len() {
             if i > 0 && i + op.len() <= chars.len() {
-                let rest: String = chars[i..i+op.len()].iter().collect();
+                let rest: String = chars[i..i + op.len()].iter().collect();
                 if rest == *op {
-                    let prev = chars[i-1];
+                    let prev = chars[i - 1];
                     let next = chars.get(i + op.len()).copied().unwrap_or(' ');
                     if prev.is_alphanumeric() && prev != ' ' {
                         s.insert(i, ' ');
@@ -141,7 +187,9 @@ fn fix_operators(source: &str) -> String {
 
 fn fix_commas(source: &str) -> String {
     let mut s = source.to_string();
-    if !s.contains(", ") { s = s.replace(",", ", "); }
+    if !s.contains(", ") {
+        s = s.replace(",", ", ");
+    }
     s
 }
 
@@ -159,7 +207,11 @@ fn fix_colons(source: &str) -> String {
     let chars: Vec<char> = s.chars().collect();
     let mut i = 1;
     while i < chars.len().saturating_sub(1) {
-        if chars[i] == ':' && chars[i-1].is_alphanumeric() && chars[i+1].is_alphanumeric() && chars[i+1] != ' ' {
+        if chars[i] == ':'
+            && chars[i - 1].is_alphanumeric()
+            && chars[i + 1].is_alphanumeric()
+            && chars[i + 1] != ' '
+        {
             s.insert(i + 1, ' ');
         }
         i += 1;
@@ -173,7 +225,9 @@ fn fix_comment_spacing(source: &str) -> String {
 
 fn fix_blank_lines(source: &str) -> String {
     let mut s = source.to_string();
-    while s.contains("\n\n\n") { s = s.replace("\n\n\n", "\n\n"); }
+    while s.contains("\n\n\n") {
+        s = s.replace("\n\n\n", "\n\n");
+    }
     s
 }
 
@@ -187,7 +241,7 @@ fn fix_blank_line_in_list(source: &str) -> String {
         // Track bracket depth
         bracket_depth += t.chars().filter(|&c| c == '(' || c == '[').count() as i32;
         bracket_depth -= t.chars().filter(|&c| c == ')' || c == ']').count() as i32;
-        
+
         // Remove empty lines inside brackets
         if t.is_empty() && bracket_depth > 0 {
             continue;
@@ -198,7 +252,8 @@ fn fix_blank_line_in_list(source: &str) -> String {
 }
 
 fn fix_brace_between(source: &str) -> String {
-    source.replace("\n} else {", "} else {")
+    source
+        .replace("\n} else {", "} else {")
         .replace("\n} else if", "} else if")
         .replace("\n} catch", "} catch")
         .replace("\n} finally", "} finally")
@@ -206,7 +261,9 @@ fn fix_brace_between(source: &str) -> String {
 
 fn fix_double_spaces(source: &str) -> String {
     let mut s = source.to_string();
-    while s.contains("  ") { s = s.replace("  ", " "); }
+    while s.contains("  ") {
+        s = s.replace("  ", " ");
+    }
     s
 }
 
@@ -219,11 +276,11 @@ fn fix_multiline_if_else(source: &str) -> String {
     for i in 0..lines.len().saturating_sub(1) {
         let t = lines[i].trim();
         if t.starts_with("if (") || t.starts_with("if(") {
-            let body = lines[i+1].trim();
+            let body = lines[i + 1].trim();
             if !body.contains('{') && !body.contains("if") && body.len() < 60 {
                 let replacement = format!("{} {}", t, body);
                 result = result.replace(&format!("{}\n    {}", t, body), &replacement);
-                result = result.replace(&format!("{}\n{}", lines[i], lines[i+1]), &replacement);
+                result = result.replace(&format!("{}\n{}", lines[i], lines[i + 1]), &replacement);
                 break;
             }
         }
@@ -245,7 +302,9 @@ fn fix_chain_wrapping(source: &str) -> String {
             break;
         }
     }
-    if !has_multiline { return source.to_string(); }
+    if !has_multiline {
+        return source.to_string();
+    }
 
     // Rebuild: put each .call() on its own indented line
     let mut result = Vec::new();
@@ -282,8 +341,16 @@ fn fix_when_expression_break(source: &str) -> String {
             while i < lines.len() && lines[i].trim() != "}" {
                 let body = lines[i].trim();
                 if body.contains("->") && !body.ends_with('{') {
-                    let next = if i + 1 < lines.len() { lines[i+1].trim() } else { "" };
-                    if !next.is_empty() && next != "}" && !next.contains("->") && !next.starts_with("//") {
+                    let next = if i + 1 < lines.len() {
+                        lines[i + 1].trim()
+                    } else {
+                        ""
+                    };
+                    if !next.is_empty()
+                        && next != "}"
+                        && !next.contains("->")
+                        && !next.starts_with("//")
+                    {
                         // Merge single-line body onto the -> line with proper indent
                         let indent = " ".repeat(body.len() - body.trim_start().len() + 4);
                         result.push(format!("{} {{ {} }}", body, next));
@@ -294,7 +361,10 @@ fn fix_when_expression_break(source: &str) -> String {
                 result.push(lines[i].to_string());
                 i += 1;
             }
-            if i < lines.len() { result.push(lines[i].to_string()); i += 1; }
+            if i < lines.len() {
+                result.push(lines[i].to_string());
+                i += 1;
+            }
         } else {
             result.push(lines[i].to_string());
             i += 1;
@@ -324,7 +394,11 @@ fn fix_when_entry_bracing(source: &str) -> String {
         if t.contains("-> {") {
             let rest = t.split("-> {").nth(1).unwrap_or("");
             if rest.trim_end().ends_with("}") {
-                let inner = rest.trim_start().trim_end_matches('}').trim().trim_end_matches(';');
+                let inner = rest
+                    .trim_start()
+                    .trim_end_matches('}')
+                    .trim()
+                    .trim_end_matches(';');
                 let prefix = &t[..t.find("-> {").unwrap() + 3];
                 result.push(format!("{} {}", prefix, inner));
                 i += 1;
@@ -368,13 +442,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fix_operator_equals() { assert_eq!(fix_all_spacing("val x=1"), "val x = 1"); }
+    fn fix_operator_equals() {
+        assert_eq!(fix_all_spacing("val x=1"), "val x = 1");
+    }
     #[test]
-    fn fix_curly_brace() { assert_eq!(fix_all_spacing("fun foo(){x}"), "fun foo() {x}"); }
+    fn fix_curly_brace() {
+        assert_eq!(fix_all_spacing("fun foo(){x}"), "fun foo() {x}");
+    }
     #[test]
-    fn fix_colon_spacing() { assert!(fix_all_spacing("val x:String").contains("x: String")); }
+    fn fix_colon_spacing() {
+        assert!(fix_all_spacing("val x:String").contains("x: String"));
+    }
     #[test]
-    fn fix_trailing_ws_test() { assert_eq!(fix_trailing_ws("val x = 1   \n   "), "val x = 1\n"); }
+    fn fix_trailing_ws_test() {
+        assert_eq!(fix_trailing_ws("val x = 1   \n   "), "val x = 1\n");
+    }
     #[test]
     fn fix_indent() {
         let r = fix_indentation("class Foo {\nval x = 1\n}");
@@ -394,8 +476,10 @@ mod tests {
     #[test]
     fn fix_try_catch_wrap() {
         assert_eq!(
-            fix_try_catch("}
-catch(e: E) { b() }"),
+            fix_try_catch(
+                "}
+catch(e: E) { b() }"
+            ),
             "} catch(e: E) { b() }"
         );
     }
