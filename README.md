@@ -113,4 +113,4 @@ cargo build --release    # Release build
 
 ## License
 
-MIT
+[MIT](LICENSE)
