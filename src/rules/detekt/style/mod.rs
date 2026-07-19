@@ -454,26 +454,32 @@ impl Rule for RedundantExplicitType {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
-        source
-            .lines()
-            .enumerate()
-            .filter_map(|(i, l)| {
-                let t = l.trim();
-                if t.starts_with("val ") && t.contains(": Int = ") && !t.contains(": Int?") {
-                    Some(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: "detekt:style:RedundantExplicitType".into(),
-                        message: "Explicit type is redundant".into(),
-                        auto_fixable: false,
-                    })
-                } else {
-                    None
+    fn check_with_symbols(&self, _tree: &Tree, source: &str, _sym: Option<&crate::resolver::SymbolTable>) -> Vec<Violation> {
+        let mut v = Vec::new();
+        let ti = crate::resolver::type_bridge::TypeInfo::extract(source);
+        for (i, line) in source.lines().enumerate() {
+            let t = line.trim();
+            if t.starts_with("val ") && t.contains(" = ") {
+                if let Some((name, type_name, _)) = parse_val_decl(t) {
+                    // Check if type matches a simple inferred type
+                    let is_redundant = matches!(type_name.as_str(),
+                        "Int" | "Long" | "String" | "Boolean" | "Double" | "Float" | "Char" | "Byte" | "Short"
+                    );
+                    if is_redundant && !t.contains(&format!(": {}?", type_name)) {
+                        v.push(Violation {
+                            file: String::new(), line: i + 1, col: 1,
+                            rule_id: "detekt:style:RedundantExplicitType".into(),
+                            message: format!("Explicit type '{}' is redundant — type can be inferred", type_name),
+                            auto_fixable: false,
+                        });
+                    }
                 }
-            })
-            .collect()
+            }
+        }
+        v
+    }
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
     }
 }
 
@@ -1535,6 +1541,18 @@ impl Rule for ImportOrdering {
     }
 }
 
+/// Parse "val name: Type = ..." → Some(("name", "Type", false))
+fn parse_val_decl(line: &str) -> Option<(String, String, bool)> {
+    let rest = line.trim_start_matches("val ").trim_start_matches("var ");
+    let parts: Vec<&str> = rest.splitn(2, ':').collect();
+    if parts.len() != 2 { return None; }
+    let name = parts[0].trim().to_string();
+    if name.contains(' ') || name.is_empty() { return None; }
+    let type_part = parts[1].split('=').next().unwrap_or(parts[1]).trim();
+    let is_nullable = type_part.ends_with('?');
+    let type_name = type_part.trim_end_matches('?').trim().to_string();
+    Some((name, type_name, is_nullable))
+}
 #[cfg(test)]
 mod tests {
     use super::*;
