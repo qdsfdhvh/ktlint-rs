@@ -35,6 +35,7 @@ fn fix_all_spacing(source: &str) -> String {
         text = fix_operators(&text);
         text = fix_commas(&text);
         text = fix_parens(&text);
+        text = fix_angle_brackets(&text);
         text = fix_colons(&text);
         text = fix_comment_spacing(&text);
         text = fix_blank_lines(&text);
@@ -141,6 +142,10 @@ fn fix_commas(source: &str) -> String {
     let mut s = source.to_string();
     if !s.contains(", ") { s = s.replace(",", ", "); }
     s
+}
+
+fn fix_angle_brackets(source: &str) -> String {
+    source.replace("< ", "<").replace(" >", ">")
 }
 
 fn fix_parens(source: &str) -> String {
