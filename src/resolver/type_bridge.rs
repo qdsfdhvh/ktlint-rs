@@ -25,14 +25,28 @@ impl TypeInfo {
             let t = line.trim();
             if t.starts_with("val ") || t.starts_with("var ") {
                 if let Some((name, type_name, is_nullable)) = parse_property(t) {
-                    ti.declarations.insert(name, DeclType { type_name, is_nullable, line: i + 1 });
+                    ti.declarations.insert(
+                        name,
+                        DeclType {
+                            type_name,
+                            is_nullable,
+                            line: i + 1,
+                        },
+                    );
                 }
             }
             // Constructor parameters: class Foo(val x: Int, val y: String)
             if t.starts_with("class ") && !t.contains('{') {
                 let class_line = format!("{} {}", prev_line, t);
                 for (name, type_name, is_nullable) in extract_params(class_line.trim()) {
-                    ti.declarations.insert(name, DeclType { type_name, is_nullable, line: i + 1 });
+                    ti.declarations.insert(
+                        name,
+                        DeclType {
+                            type_name,
+                            is_nullable,
+                            line: i + 1,
+                        },
+                    );
                 }
             }
             if t.starts_with("fun ") {
@@ -42,7 +56,14 @@ impl TypeInfo {
             }
             if t.contains('(') && (t.starts_with("fun ") || t.starts_with("class ")) {
                 for (name, type_name, is_nullable) in extract_params(t) {
-                    ti.declarations.insert(name, DeclType { type_name, is_nullable, line: i + 1 });
+                    ti.declarations.insert(
+                        name,
+                        DeclType {
+                            type_name,
+                            is_nullable,
+                            line: i + 1,
+                        },
+                    );
                 }
             }
         }
@@ -57,9 +78,13 @@ impl TypeInfo {
 fn parse_property(line: &str) -> Option<(String, String, bool)> {
     let rest = line.trim_start_matches("val ").trim_start_matches("var ");
     let parts: Vec<&str> = rest.splitn(2, ':').collect();
-    if parts.len() != 2 { return None; }
+    if parts.len() != 2 {
+        return None;
+    }
     let name = parts[0].trim().to_string();
-    if name.contains(' ') || name.is_empty() { return None; }
+    if name.contains(' ') || name.is_empty() {
+        return None;
+    }
     let type_part = parts[1].split('=').next().unwrap_or(parts[1]).trim();
     let is_nullable = type_part.ends_with('?');
     let type_name = type_part.trim_end_matches('?').trim().to_string();
@@ -74,18 +99,34 @@ fn parse_function_return(line: &str) -> Option<(String, String)> {
     let close = after_open.find(')')?;
     let after = &after_open[close + 1..];
     let ret = after.trim().trim_start_matches(':').trim();
-    let ret = ret.split(|c: char| c == ' ' || c == '{').next().unwrap_or(ret).trim();
-    if ret.is_empty() { return None; }
+    let ret = ret
+        .split(|c: char| c == ' ' || c == '{')
+        .next()
+        .unwrap_or(ret)
+        .trim();
+    if ret.is_empty() {
+        return None;
+    }
     Some((name, ret.to_string()))
 }
 
 fn extract_params(line: &str) -> Vec<(String, String, bool)> {
     let mut params = Vec::new();
-    let start = match line.find('(') { Some(p) => p, None => return params };
-    let end = match line.rfind(')') { Some(p) => p, None => return params };
-    if end <= start + 1 { return params; }
+    let start = match line.find('(') {
+        Some(p) => p,
+        None => return params,
+    };
+    let end = match line.rfind(')') {
+        Some(p) => p,
+        None => return params,
+    };
+    if end <= start + 1 {
+        return params;
+    }
     for param in line[start + 1..end].split(',') {
-        if let Some((name, type_name, is_nullable)) = parse_property(&format!("val {}", param.trim())) {
+        if let Some((name, type_name, is_nullable)) =
+            parse_property(&format!("val {}", param.trim()))
+        {
             params.push((name, type_name, is_nullable));
         }
     }

@@ -32,7 +32,7 @@ pub struct Cli {
     pub create_baseline: bool,
 
     /// Install a git pre-commit hook that runs ktlint-rs
-    #[arg(long, )]
+    #[arg(long)]
     pub install_git_hook: bool,
 
     /// Install a git pre-commit hook (uninstall)
