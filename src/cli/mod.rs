@@ -3,7 +3,7 @@ use clap::Parser;
 /// ktlint-rs — A fast Kotlin linter and formatter written in Rust
 #[derive(Parser, Debug)]
 #[command(
-    name = "ktlint",
+    name = "ktlint-rs",
     version,
     about = "An anti-bikeshedding Kotlin linter with built-in formatter",
     long_about = "Drop-in compatible with Pinterest ktlint CLI. \
@@ -66,6 +66,18 @@ pub struct Cli {
     /// File / directory patterns to check
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     pub patterns: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn version_contains_ktlint_rs() {
+        // clap generates --version from the crate name + version
+        let bin_name = env!("CARGO_PKG_NAME");
+        assert_eq!(bin_name, "ktlint-rs", "binary name should be ktlint-rs");
+    }
 }
 
 impl Cli {
