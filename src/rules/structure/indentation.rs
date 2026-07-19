@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn wrong_indent() {
-        assert!(!check("fun a() {\nval x = 1\n}\n", 4).is_empty());
+        assert!(!check("fun a() {\n   val x = 1\n}\n", 4).is_empty());
     }
 
     #[test]
