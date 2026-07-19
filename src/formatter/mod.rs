@@ -68,14 +68,17 @@ fn fix_indentation(source: &str) -> String {
         .map(|l| l.len() - l.trim_start().len())
         .unwrap_or(0);
     let mut out = Vec::new();
-    let mut indent = base;
+    let mut level = 0usize; // indent level relative to base
     let sz = 4;
     for line in &lines {
         let t = line.trim();
         if t.is_empty() { out.push(String::new()); continue; }
-        if t.starts_with('}') || t == ")" { indent = indent.saturating_sub(sz); }
-        out.push(format!("{}{}", " ".repeat(indent), t));
-        if t.ends_with('{') && !t.contains("//") && !t.contains("/*") { indent += sz; }
+        // Decrease level BEFORE outputting closing brace
+        if t.starts_with('}') { level = level.saturating_sub(1); }
+        let actual = base + level * sz;
+        out.push(format!("{}{}", " ".repeat(actual), t));
+        // Increase level AFTER outputting opening brace
+        if t.ends_with('{') && !t.contains("//") && !t.contains("/*") { level += 1; }
     }
     out.join("\n")
 }
@@ -92,7 +95,8 @@ fn fix_curly_braces(source: &str) -> String {
     for &pos in indices.iter().rev() {
         if pos > 0 {
             let prev = s[..pos].chars().last().unwrap_or(' ');
-            if prev != ' ' && prev != '\n' && prev != '(' {
+            // Skip string interpolation ${}, annotations @X({}), and ({}
+            if prev != ' ' && prev != '\n' && prev != '$' && prev != '(' && prev != '[' {
                 s.insert(pos, ' ');
             }
         }
@@ -100,6 +104,8 @@ fn fix_curly_braces(source: &str) -> String {
     for kw in &["else", "catch", "finally"] {
         s = s.replace(&format!("}}{}", kw), &format!("}} {}", kw));
     }
+    // Merge }\nelse if onto one line
+    s = s.replace("}\nelse if", "} else if");
     s
 }
 
@@ -167,6 +173,7 @@ fn fix_blank_lines(source: &str) -> String {
 
 fn fix_brace_between(source: &str) -> String {
     source.replace("\n} else {", "} else {")
+        .replace("\n} else if", "} else if")
         .replace("\n} catch", "} catch")
         .replace("\n} finally", "} finally")
 }
@@ -250,9 +257,10 @@ fn fix_when_expression_break(source: &str) -> String {
                 let body = lines[i].trim();
                 if body.contains("->") && !body.ends_with('{') {
                     let next = if i + 1 < lines.len() { lines[i+1].trim() } else { "" };
-                    if !next.is_empty() && next != "}" && !next.contains("->") {
-                        // Merge single-line body onto the -> line
-                        result.push(format!("    {} {{ {} }}", body, next));
+                    if !next.is_empty() && next != "}" && !next.contains("->") && !next.starts_with("//") {
+                        // Merge single-line body onto the -> line with proper indent
+                        let indent = " ".repeat(body.len() - body.trim_start().len() + 4);
+                        result.push(format!("{} {{ {} }}", body, next));
                         i += 2;
                         continue;
                     }
