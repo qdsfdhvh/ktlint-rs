@@ -1,11 +1,8 @@
 fn main() {
-    let src = r#"
-val x = foo.let { it.bar() }
-val y = bar.let { baz(it) }
-"#;
+    let src = std::fs::read_to_string("/tmp/test_class.kt").unwrap();
     let mut parser = tree_sitter::Parser::new();
     parser.set_language(&tree_sitter_kotlin_sg::LANGUAGE.into()).unwrap();
-    let tree = parser.parse(src, None).unwrap();
+    let tree = parser.parse(&src, None).unwrap();
     print_node(tree.root_node(), src.as_bytes(), 0);
 }
 fn print_node(n: tree_sitter::Node, b: &[u8], d: usize) {
