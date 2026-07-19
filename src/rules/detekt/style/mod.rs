@@ -1346,32 +1346,35 @@ impl Rule for UtilityClassWithPublicConstructor {
 
 pub struct VarCouldBeVal;
 impl Rule for VarCouldBeVal {
-    fn id(&self) -> &'static str {
-        "detekt:style:VarCouldBeVal"
-    }
-    fn auto_fixable(&self) -> bool {
-        false
-    }
+    fn id(&self) -> &'static str { "detekt:style:VarCouldBeVal" }
+    fn auto_fixable(&self) -> bool { false }
+
     fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
-        source
-            .lines()
-            .enumerate()
-            .filter_map(|(i, l)| {
-                let t = l.trim();
-                if t.starts_with("var ") {
-                    Some(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: "detekt:style:VarCouldBeVal".into(),
-                        message: "'var' could be 'val' if never reassigned".into(),
-                        auto_fixable: false,
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect()
+        let mut v = Vec::new();
+        let lines: Vec<&str> = source.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
+            let t = line.trim();
+            if !t.starts_with("var ") { continue; }
+            if t.contains('=') && t.split('=').nth(1).unwrap_or("").trim() == t.split('=').next().unwrap_or("") { continue; }
+            // Extract var name
+            let rest = &t[4..]; // skip "var "
+            let name = rest.split(|c: char| c == ':' || c == '=' || c == ' ' || c == '\n').next().unwrap_or("");
+            if name.is_empty() { continue; }
+            // Scan rest of file for reassignment
+            let reassigned = lines[i+1..].iter().any(|l| {
+                let lt = l.trim();
+                !lt.starts_with("var ") && !lt.starts_with("val ") && lt.contains(&format!("{} =", name))
+            });
+            if !reassigned {
+                v.push(Violation {
+                    file: String::new(), line: i + 1, col: 1,
+                    rule_id: "detekt:style:VarCouldBeVal".into(),
+                    message: format!("'var' could be 'val' — '{}' is never reassigned", name),
+                    auto_fixable: false,
+                });
+            }
+        }
+        v
     }
 }
 
