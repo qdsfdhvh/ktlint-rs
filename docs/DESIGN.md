@@ -1,45 +1,45 @@
-# ktlint-rs 设计目标
+# ktlint-rs Design Goals
 
-## 核心定位
+## Core Positioning
 
-**ktlint-rs 是 AI 编程 Agent 的快速 Kotlin 预检工具。**
+**ktlint-rs is a fast Kotlin pre-check tool for AI coding agents。**
 
-Agent 在提交代码前需要检查代码质量。调用 JVM 工具链（Gradle/ktlint/detekt）需要：
-- JVM 冷启动: 2-5 秒
-- Gradle 配置: 3-10 秒
-- ktlint 运行: 5-30 秒
+Agents need to validate code quality before committing。调用 JVM toolchain (Gradle/ktlint/detekt) requires：
+- JVM cold start: 2-5 秒
+- Gradle config: 3-10 秒
+- ktlint runtime: 5-30 秒
 
-**总计: 10-45 秒/次**
+**Total: 10-45 seconds per run**
 
-ktlint-rs 的目标是把这些时间压缩到 **<1 秒**：
+ktlint-rs reduces this to **<1 second**：
 
-| 操作 | JVM 工具链 | ktlint-rs |
+| Operation | JVM | ktlint-rs |
 |---|---|---|
-| 启动 | 2-5s (JVM) | <2ms |
-| lint nowinandroid | 7-30s | **0.29s** |
-| detekt nowinandroid | 10-60s | **0.36s** |
-| 二进制大小 | N/A | **11MB** |
+| Startup | 2-5s | <2ms |
+| Lint nowinandroid | 7-30s | **0.29s** |
+| Detekt nowinandroid | 10-60s | **0.36s** |
+| Binary size | N/A | **11MB** |
 
-## 不追求 100% 对齐
+## Not aiming for 100% alignment
 
-ktlint-rs 不需要和 JVM ktlint/detekt 完全一致，它只需要**提前发现大部分问题**，让 agent 少调用 JVM 工具：
+ktlint-rs does not need perfect JVM parity，It only needs to **catch most issues early**, reducing agent JVM tool calls：
 
-| 规则 | 对齐率 | 效果 |
+| 规则 | Alignment | Status |
 |---|---|---|
-| indent | 100% | ✅ 完全覆盖 |
-| blank-line-before-declaration | 90%+ | ✅ 覆盖大部分 |
-| no-empty-first-line | 100% | ✅ 完全覆盖 |
-| annotation | 76% | 🟡 基本覆盖 |
+| indent | 100% | ✅ Full coverage |
+| blank-line-before-declaration | 90%+ | ✅ Most covered |
+| no-empty-first-line | 100% | ✅ Full coverage |
+| annotation | 76% | 🟡 Base coverage |
 
-Agent 工作流：
-1. ktlint-rs 快速扫描 (<1s) → 发现大部分问题，agent 直接修复
-2. 如果 ktlint-rs 通过，大概率 JVM 检查也会通过
-3. 少数漏检的情况，JVM 工具链作为最终兜底
+Agent workflow：
+1. 1. ktlint-rs fast scan (<1s) → catch most issues, agent fixes them directly
+2. If ktlint-rs passes, JVM check will likely pass too
+3. JVM toolchain as final fallback for edge cases
 
-## 纯 Rust 约束
+## Pure Rust constraints
 
-- ❌ 不依赖 JVM / kotlinc / Gradle
-- ❌ 不依赖外部进程
-- ✅ 单一二进制 < 15MB
-- ✅ 启动 < 50ms
-- ✅ 内存即时释放
+- - ❌ No JVM / kotlinc / Gradle dependency
+- - ❌ No external process dependency
+- - ✅ Single binary < 15MB
+- - ✅ Startup < 50ms
+- - ✅ Immediate memory release
