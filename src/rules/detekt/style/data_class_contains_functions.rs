@@ -5,8 +5,12 @@ use tree_sitter::Node;
 pub struct DataClassContainsFunctions;
 
 impl Rule for DataClassContainsFunctions {
-    fn id(&self) -> &'static str { "detekt:style:DataClassContainsFunctions" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:style:DataClassContainsFunctions"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
@@ -17,7 +21,9 @@ impl Rule for DataClassContainsFunctions {
                 check_data_class(&n, bytes, &mut v);
             }
             for i in (0..n.child_count()).rev() {
-                if let Some(c) = n.child(i) { stack.push(c); }
+                if let Some(c) = n.child(i) {
+                    stack.push(c);
+                }
             }
         }
         v
@@ -26,7 +32,9 @@ impl Rule for DataClassContainsFunctions {
 
 fn check_data_class(n: &Node, bytes: &[u8], v: &mut Vec<Violation>) {
     let text = n.utf8_text(bytes).unwrap_or("");
-    if !text.starts_with("data ") { return; }
+    if !text.starts_with("data ") {
+        return;
+    }
 
     // Find class_body, then count functions
     for i in 0..n.child_count() {

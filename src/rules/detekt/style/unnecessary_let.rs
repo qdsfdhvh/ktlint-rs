@@ -5,8 +5,12 @@ use tree_sitter::Node;
 pub struct UnnecessaryLet;
 
 impl Rule for UnnecessaryLet {
-    fn id(&self) -> &'static str { "detekt:style:UnnecessaryLet" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:style:UnnecessaryLet"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
@@ -17,7 +21,9 @@ impl Rule for UnnecessaryLet {
                 check_call(&n, bytes, &mut v);
             }
             for i in (0..n.child_count()).rev() {
-                if let Some(c) = n.child(i) { stack.push(c); }
+                if let Some(c) = n.child(i) {
+                    stack.push(c);
+                }
             }
         }
         v
@@ -35,9 +41,14 @@ fn check_call(n: &Node, bytes: &[u8], v: &mut Vec<Violation>) {
             }
         }
     }
-    let nav_node = match nav { Some(nn) => nn, None => return };
+    let nav_node = match nav {
+        Some(nn) => nn,
+        None => return,
+    };
     let nav_text = nav_node.utf8_text(bytes).unwrap_or("");
-    if !nav_text.ends_with(".let") { return; }
+    if !nav_text.ends_with(".let") {
+        return;
+    }
 
     // Find the lambda literal body
     let mut lambda = None;
@@ -49,9 +60,16 @@ fn check_call(n: &Node, bytes: &[u8], v: &mut Vec<Violation>) {
             }
         }
     }
-    let body = match lambda { Some(b) => b, None => return };
+    let body = match lambda {
+        Some(b) => b,
+        None => return,
+    };
     let body_text = body.utf8_text(bytes).unwrap_or("").trim().to_string();
-    let body_text = body_text.trim_start_matches('{').trim_end_matches('}').trim().to_string();
+    let body_text = body_text
+        .trim_start_matches('{')
+        .trim_end_matches('}')
+        .trim()
+        .to_string();
 
     if body_text == "it" || body_text.starts_with("it.") {
         let pos = n.start_position();

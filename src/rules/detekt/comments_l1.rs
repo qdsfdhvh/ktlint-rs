@@ -14,7 +14,9 @@ impl Rule for KDocReferencesNonPublicProperty {
     fn id(&self) -> &'static str {
         "detekt:comments:KDocReferencesNonPublicProperty"
     }
-    fn auto_fixable(&self) -> bool { false }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
 
     fn check_with_symbols(
         &self,
@@ -122,7 +124,9 @@ impl Rule for OutdatedDocumentation {
     fn id(&self) -> &'static str {
         "detekt:comments:OutdatedDocumentation"
     }
-    fn auto_fixable(&self) -> bool { false }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
 
     fn check_with_symbols(
         &self,
@@ -177,7 +181,10 @@ fn check_kdoc_params(comment: &Node, bytes: &[u8], v: &mut Vec<Violation>) {
                                 line: start_line + off + 1,
                                 col: 1,
                                 rule_id: "detekt:comments:OutdatedDocumentation".into(),
-                                message: format!("@param '{}' does not match any declared parameter", name),
+                                message: format!(
+                                    "@param '{}' does not match any declared parameter",
+                                    name
+                                ),
                                 auto_fixable: false,
                             });
                         }
@@ -204,7 +211,9 @@ fn decl_param_names(decl: &Node, bytes: &[u8]) -> Vec<String> {
                 }
             }
         }
-        if n.kind() == "class_body" || n.kind() == "function_body" { continue; }
+        if n.kind() == "class_body" || n.kind() == "function_body" {
+            continue;
+        }
         for i in (0..n.child_count()).rev() {
             if let Some(c) = n.child(i) {
                 stack.push(c);
@@ -215,16 +224,57 @@ fn decl_param_names(decl: &Node, bytes: &[u8]) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod tests { use super::*; use crate::parser::KotlinParser;
-    fn kdoc_ref(s: &str) -> Vec<Violation> { KDocReferencesNonPublicProperty.check(&KotlinParser::new().parse(s), s) }
-    fn outdated(s: &str) -> Vec<Violation> { OutdatedDocumentation.check(&KotlinParser::new().parse(s), s) }
-    #[test] fn kdoc_ref_private_bad() { assert!(!kdoc_ref("/**\n * Uses [secret] here.\n */\nclass Foo { private val secret = 1 }\n").is_empty()); }
-    #[test] fn kdoc_ref_ctor_private_bad() { assert!(!kdoc_ref("/**\n * Uses [token].\n */\nclass Auth(private val token: String)\n").is_empty()); }
-    #[test] fn kdoc_ref_public_ok() { assert!(kdoc_ref("/**\n * Uses [name].\n */\nclass Foo { val name = \"x\" }\n").is_empty()); }
-    #[test] fn kdoc_ref_no_refs_ok() { assert!(kdoc_ref("/** Plain doc. */\nclass Foo { private val secret = 1 }\n").is_empty()); }
-    #[test] fn outdated_param_bad() { assert!(!outdated("/**\n * @param wrong desc\n */\nfun f(right: Int) = right\n").is_empty()); }
-    #[test] fn outdated_param_ok() { assert!(outdated("/**\n * @param right desc\n */\nfun f(right: Int) = right\n").is_empty()); }
-    #[test] fn outdated_class_param_ok() { assert!(outdated("/**\n * @param a doc\n */\nclass Foo(val a: Int)\n").is_empty()); }
-    #[test] fn outdated_class_param_bad() { assert!(!outdated("/**\n * @param b doc\n */\nclass Foo(val a: Int)\n").is_empty()); }
-    #[test] fn no_kdoc_ok() { assert!(outdated("fun f(x: Int) = x\n").is_empty()); }
+mod tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+    fn kdoc_ref(s: &str) -> Vec<Violation> {
+        KDocReferencesNonPublicProperty.check(&KotlinParser::new().parse(s), s)
+    }
+    fn outdated(s: &str) -> Vec<Violation> {
+        OutdatedDocumentation.check(&KotlinParser::new().parse(s), s)
+    }
+    #[test]
+    fn kdoc_ref_private_bad() {
+        assert!(!kdoc_ref(
+            "/**\n * Uses [secret] here.\n */\nclass Foo { private val secret = 1 }\n"
+        )
+        .is_empty());
+    }
+    #[test]
+    fn kdoc_ref_ctor_private_bad() {
+        assert!(
+            !kdoc_ref("/**\n * Uses [token].\n */\nclass Auth(private val token: String)\n")
+                .is_empty()
+        );
+    }
+    #[test]
+    fn kdoc_ref_public_ok() {
+        assert!(kdoc_ref("/**\n * Uses [name].\n */\nclass Foo { val name = \"x\" }\n").is_empty());
+    }
+    #[test]
+    fn kdoc_ref_no_refs_ok() {
+        assert!(kdoc_ref("/** Plain doc. */\nclass Foo { private val secret = 1 }\n").is_empty());
+    }
+    #[test]
+    fn outdated_param_bad() {
+        assert!(
+            !outdated("/**\n * @param wrong desc\n */\nfun f(right: Int) = right\n").is_empty()
+        );
+    }
+    #[test]
+    fn outdated_param_ok() {
+        assert!(outdated("/**\n * @param right desc\n */\nfun f(right: Int) = right\n").is_empty());
+    }
+    #[test]
+    fn outdated_class_param_ok() {
+        assert!(outdated("/**\n * @param a doc\n */\nclass Foo(val a: Int)\n").is_empty());
+    }
+    #[test]
+    fn outdated_class_param_bad() {
+        assert!(!outdated("/**\n * @param b doc\n */\nclass Foo(val a: Int)\n").is_empty());
+    }
+    #[test]
+    fn no_kdoc_ok() {
+        assert!(outdated("fun f(x: Int) = x\n").is_empty());
+    }
 }

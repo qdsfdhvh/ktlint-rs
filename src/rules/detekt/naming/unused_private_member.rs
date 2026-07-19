@@ -56,9 +56,16 @@ fn collect_references(root: tree_sitter::Node, source: &str) -> HashSet<String> 
     let bytes = source.as_bytes();
 
     const DECL: &[&str] = &[
-        "class_declaration", "function_declaration", "property_declaration",
-        "object_declaration", "enum_entry", "type_alias",
-        "import_header", "package_header", "class_parameter", "value_parameter",
+        "class_declaration",
+        "function_declaration",
+        "property_declaration",
+        "object_declaration",
+        "enum_entry",
+        "type_alias",
+        "import_header",
+        "package_header",
+        "class_parameter",
+        "value_parameter",
     ];
 
     let mut stack: Vec<(_, Option<usize>)> = vec![(root, None)];
@@ -70,9 +77,7 @@ fn collect_references(root: tree_sitter::Node, source: &str) -> HashSet<String> 
             decl_depth.map(|d| d + 1)
         };
         let k = node.kind();
-        if !is_decl
-            && (k == "simple_identifier" || k == "type_identifier" || k == "identifier")
-        {
+        if !is_decl && (k == "simple_identifier" || k == "type_identifier" || k == "identifier") {
             if let Ok(name) = node.utf8_text(bytes) {
                 if !name.starts_with('_') {
                     used.insert(name.to_string());

@@ -70,10 +70,12 @@ fn refs(root: tree_sitter::Node, source: &str) -> HashSet<String> {
     let mut stack: Vec<(_, Option<usize>)> = vec![(root, None)];
     while let Some((n, decl_depth)) = stack.pop() {
         let is_decl = decl_depth == Some(0);
-        let child_depth = if D.contains(&n.kind()) { Some(0) } else { decl_depth.map(|d| d + 1) };
-        if !is_decl
-            && (n.kind() == "simple_identifier" || n.kind() == "identifier")
-        {
+        let child_depth = if D.contains(&n.kind()) {
+            Some(0)
+        } else {
+            decl_depth.map(|d| d + 1)
+        };
+        if !is_decl && (n.kind() == "simple_identifier" || n.kind() == "identifier") {
             if let Ok(name) = n.utf8_text(b) {
                 u.insert(name.to_string());
             }

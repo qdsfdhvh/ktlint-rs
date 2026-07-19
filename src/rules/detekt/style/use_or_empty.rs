@@ -4,8 +4,12 @@ use crate::rules::{Rule, Violation};
 pub struct UseOrEmpty;
 
 impl Rule for UseOrEmpty {
-    fn id(&self) -> &'static str { "detekt:style:UseOrEmpty" }
-    fn auto_fixable(&self) -> bool { false }
+    fn id(&self) -> &'static str {
+        "detekt:style:UseOrEmpty"
+    }
+    fn auto_fixable(&self) -> bool {
+        false
+    }
 
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         source

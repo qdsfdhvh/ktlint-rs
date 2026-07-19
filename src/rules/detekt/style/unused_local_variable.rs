@@ -35,8 +35,11 @@ impl Rule for UnusedLocalVariable {
             let mut u = HashSet::new();
             let bytes = source.as_bytes();
             const DECL: &[&str] = &[
-                "variable_declaration", "value_parameter", "class_declaration",
-                "function_declaration", "property_declaration",
+                "variable_declaration",
+                "value_parameter",
+                "class_declaration",
+                "function_declaration",
+                "property_declaration",
             ];
             let mut stack: Vec<(_, Option<usize>)> = vec![(tree.root_node(), None)];
             while let Some((node, decl_depth)) = stack.pop() {
@@ -46,9 +49,7 @@ impl Rule for UnusedLocalVariable {
                 } else {
                     decl_depth.map(|d| d + 1)
                 };
-                if !is_decl
-                    && (node.kind() == "simple_identifier" || node.kind() == "identifier")
-                {
+                if !is_decl && (node.kind() == "simple_identifier" || node.kind() == "identifier") {
                     if let Ok(name) = node.utf8_text(bytes) {
                         if !name.starts_with('_') {
                             u.insert(name.to_string());

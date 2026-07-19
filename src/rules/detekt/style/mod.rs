@@ -454,7 +454,12 @@ impl Rule for RedundantExplicitType {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check_with_symbols(&self, _tree: &Tree, source: &str, _sym: Option<&crate::resolver::SymbolTable>) -> Vec<Violation> {
+    fn check_with_symbols(
+        &self,
+        _tree: &Tree,
+        source: &str,
+        _sym: Option<&crate::resolver::SymbolTable>,
+    ) -> Vec<Violation> {
         let mut v = Vec::new();
         let ti = crate::resolver::type_bridge::TypeInfo::extract(source);
         for (i, line) in source.lines().enumerate() {
@@ -462,14 +467,28 @@ impl Rule for RedundantExplicitType {
             if t.starts_with("val ") && t.contains(" = ") {
                 if let Some((name, type_name, _)) = parse_val_decl(t) {
                     // Check if type matches a simple inferred type
-                    let is_redundant = matches!(type_name.as_str(),
-                        "Int" | "Long" | "String" | "Boolean" | "Double" | "Float" | "Char" | "Byte" | "Short"
+                    let is_redundant = matches!(
+                        type_name.as_str(),
+                        "Int"
+                            | "Long"
+                            | "String"
+                            | "Boolean"
+                            | "Double"
+                            | "Float"
+                            | "Char"
+                            | "Byte"
+                            | "Short"
                     );
                     if is_redundant && !t.contains(&format!(": {}?", type_name)) {
                         v.push(Violation {
-                            file: String::new(), line: i + 1, col: 1,
+                            file: String::new(),
+                            line: i + 1,
+                            col: 1,
                             rule_id: "detekt:style:RedundantExplicitType".into(),
-                            message: format!("Explicit type '{}' is redundant — type can be inferred", type_name),
+                            message: format!(
+                                "Explicit type '{}' is redundant — type can be inferred",
+                                type_name
+                            ),
                             auto_fixable: false,
                         });
                     }
@@ -1545,9 +1564,13 @@ impl Rule for ImportOrdering {
 fn parse_val_decl(line: &str) -> Option<(String, String, bool)> {
     let rest = line.trim_start_matches("val ").trim_start_matches("var ");
     let parts: Vec<&str> = rest.splitn(2, ':').collect();
-    if parts.len() != 2 { return None; }
+    if parts.len() != 2 {
+        return None;
+    }
     let name = parts[0].trim().to_string();
-    if name.contains(' ') || name.is_empty() { return None; }
+    if name.contains(' ') || name.is_empty() {
+        return None;
+    }
     let type_part = parts[1].split('=').next().unwrap_or(parts[1]).trim();
     let is_nullable = type_part.ends_with('?');
     let type_name = type_part.trim_end_matches('?').trim().to_string();
