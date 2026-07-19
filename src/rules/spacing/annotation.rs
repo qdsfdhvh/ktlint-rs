@@ -110,6 +110,31 @@ fn in_parameter_list(node: &tree_sitter::Node) -> bool {
 
 /// JVM-compatible: check inconsistent annotation layout across adjacent lines.
 /// Pattern: @Foo on line N, @Bar @Baz on line N+1.
+/// Line-based fallback: catch @annotations on same line as code
+/// that tree-sitter CST does not produce annotation nodes for.
+fn fallback_line_check(source: &str, violations: &mut Vec<Violation>) {
+    for (i, line) in source.lines().enumerate() {
+        let t = line.trim();
+        // Skip pure annotation lines, imports, comments
+        if t.starts_with("@") || t.starts_with("import ") || t.starts_with("//") { continue; }
+        // Find @ in middle of code line (after non-annotation content)
+        if let Some(at_pos) = t.find('@') {
+            // Check if there's code before the @
+            let before = &t[..at_pos].trim_end();
+            if !before.is_empty() && !before.ends_with(':') && !before.ends_with('=') {
+                violations.push(Violation {
+                    file: String::new(),
+                    line: i + 1,
+                    col: at_pos + 1,
+                    rule_id: "standard:annotation".into(),
+                    message: "Expected newline before annotation".into(),
+                    auto_fixable: true,
+                });
+            }
+        }
+    }
+}
+
 fn check_annotation_layout(
     groups: &BTreeMap<usize, Vec<(usize, usize)>>,
     violations: &mut Vec<Violation>,
