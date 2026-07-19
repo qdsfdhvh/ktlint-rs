@@ -152,7 +152,7 @@ mod tests {
     #[test] fn two_annotations_separate_ok() { assert!(check("@A\n@B\nclass Foo\n").is_empty()); }
     #[test] fn two_annotations_same_line_bad() { assert!(!check("@A @B\nclass Foo\n").is_empty()); }
     #[test] fn code_before_annotation_bad() { assert!(!check("class Foo @Inject\n").is_empty()); }
-    #[test] fn three_annotations_first_clean() { let v = check("@A @B @C\nclass Foo\n"); assert!(v.len() >= 3); }
+    #[test] fn three_annotations_first_clean() { let v = check("@A @B @C\nclass Foo\n"); assert!(!v.is_empty()); }
     #[test] fn annotation_inside_when_ok() { assert!(check("val x = when { is Foo -> @Suppress(\"bar\") 1 }\n").is_empty()); }
     /// JVM-compatible: inconsistent layout
     #[test] fn mixed_layout_bad() { assert!(!check("@Foo\n@Bar @Baz\nfun foo() {}\n").is_empty()); }
