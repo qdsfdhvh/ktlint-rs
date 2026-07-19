@@ -13,7 +13,7 @@ pub fn auto_fix(files: &[PathBuf], violations: &[Violation]) -> anyhow::Result<(
     for file_path in &file_set {
         let rules: Vec<&str> = fixable.iter().filter(|v| v.file == *file_path).map(|v| v.rule_id.as_str()).collect();
         let any_spacing = rules.iter().any(|r| r.contains("spacing") || r.contains("curly") || r.contains("op-") || r.contains("paren") || r.contains("colon") || r.contains("comma") || r.contains("comment"));
-        let any_wrapping = rules.iter().any(|r| r.contains("wrapping"));
+        let any_wrapping = rules.iter().any(|r| r.contains("wrapping") || r.contains("when-entry-bracing") || r.contains("try-catch"));
         let any_indent = rules.iter().any(|r| r.contains("indent"));
 
         let original = std::fs::read_to_string(file_path)?;
