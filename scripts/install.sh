@@ -69,21 +69,6 @@ download_binary() {
   info "installed → $PREFIX/ktlint-rs"
 }
 
-# ── cargo fallback ─────────────────────────────────────────────────
-try_cargo() {
-  if ! command -v cargo >/dev/null 2>&1; then
-    return 1
-  fi
-  local ver="${VERSION}"
-  if [ "$ver" = "latest" ]; then ver=""; fi
-  info "installing via cargo..."
-  cargo install ktlint-rs ${ver:+--version "$ver"} 2>&1 || {
-    warn "cargo install failed — falling back to binary"
-    return 1
-  }
-  info "installed via cargo → $(command -v ktlint-rs 2>/dev/null || echo '~/.cargo/bin')"
-}
-
 # ── PATH check ─────────────────────────────────────────────────────
 check_path() {
   local dir="$(command -v ktlint-rs 2>/dev/null | xargs dirname 2>/dev/null || echo "$PREFIX")"
@@ -95,8 +80,5 @@ check_path() {
 
 # ── main ───────────────────────────────────────────────────────────
 download_binary
-if ! command -v ktlint-rs >/dev/null 2>&1; then
-  try_cargo || true
-fi
 check_path
 ktlint-rs --version 2>/dev/null || info "run: ktlint-rs --help"
