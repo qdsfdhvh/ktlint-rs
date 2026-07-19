@@ -17,7 +17,7 @@ set -euo pipefail
 REPO="${KTLINT_RS_REPO:-qdsfdhvh/ktlint-rs}"
 REPO_URL="https://github.com/${REPO}"
 VERSION="${KTLINT_RS_VERSION:-latest}"
-PREFIX="${KTLINT_RS_PREFIX:-$HOME/.cargo/bin}"
+PREFIX="${KTLINT_RS_PREFIX:-$HOME/.local/bin}"
 
 err() { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m::\033[0m %s\n' "$*"; }
@@ -78,7 +78,27 @@ check_path() {
   fi
 }
 
+# ── cargo install (preferred — builds from source) ──────────────────
+try_cargo() {
+  if ! command -v cargo >/dev/null 2>&1; then
+    return 1
+  fi
+  local ver="${VERSION}"
+  info "installing via cargo from git..."
+  cargo install --git "${REPO_URL}" --tag "${ver}" ktlint-rs 2>&1 || {
+    warn "cargo install failed — falling back to binary"
+    return 1
+  }
+  info "installed via cargo → $(command -v ktlint-rs 2>/dev/null || echo '~/.cargo/bin/ktlint-rs')"
+  return 0
+}
+
 # ── main ───────────────────────────────────────────────────────────
+if try_cargo; then
+  check_path
+  ktlint-rs --version 2>/dev/null || info "run: ktlint-rs --help"
+  exit 0
+fi
 download_binary
 check_path
 ktlint-rs --version 2>/dev/null || info "run: ktlint-rs --help"
