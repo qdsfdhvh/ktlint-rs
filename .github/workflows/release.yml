@@ -27,19 +27,17 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build release
         run: cargo build --release --target ${{ matrix.target }}
-      - name: Package
-        run: |
-          if [[ "${{ matrix.target }}" == *windows* ]]; then
-            cd target/${{ matrix.target }}/release && zip ktlint-rs-${{ matrix.target }}.zip ktlint-rs.exe
-          else
-            cd target/${{ matrix.target }}/release && tar -czf ktlint-rs-${{ matrix.target }}.tar.gz ktlint-rs
-          fi
+      - name: Package (Unix)
+        if: matrix.os != 'windows-latest'
+        run: cd target/${{ matrix.target }}/release && tar -czf ktlint-rs-${{ matrix.target }}.tar.gz ktlint-rs
+      - name: Package (Windows)
+        if: matrix.os == 'windows-latest'
+        run: Compress-Archive -Path target/${{ matrix.target }}/release/ktlint-rs.exe -DestinationPath target/${{ matrix.target }}/release/ktlint-rs-${{ matrix.target }}.zip
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
-          path: |
-            ${{ matrix.target == 'x86_64-pc-windows-msvc' && format('target/{0}/release/ktlint-rs-{0}.zip', matrix.target) || format('target/{0}/release/ktlint-rs-{0}.tar.gz', matrix.target) }}
+          path: target/${{ matrix.target }}/release/ktlint-rs-${{ matrix.target }}.*
 
   release:
     name: Create Release
