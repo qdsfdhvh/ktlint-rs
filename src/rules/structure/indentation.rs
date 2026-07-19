@@ -90,7 +90,7 @@ impl Rule for Indentation {
             }
 
             // After processing this line, if it opens a block, push expected indent
-            if opens_block {
+            if opens_block && is_kotlin_block_starter(trimmed) {
                 let next_expected = spaces + is;
                 stack.push(next_expected);
             }
@@ -282,6 +282,19 @@ fn violation(rule_id: &str, line: usize, actual: usize, expected: usize) -> Viol
         ),
         auto_fixable: true,
     }
+}
+
+/// Whether a trimmed line starts a real Kotlin block (not a DSL call).
+/// Used to distinguish Kotlin code from Gradle KTS DSL.
+fn is_kotlin_block_starter(trimmed: &str) -> bool {
+    let kw = trimmed.split_whitespace().next().unwrap_or("");
+    matches!(kw, "class" | "fun" | "if" | "for" | "while" | "when" | "try"
+        | "do" | "object" | "interface" | "enum" | "data" | "sealed"
+        | "abstract" | "open" | "companion" | "init" | "expect" | "actual")
+        || trimmed.starts_with("else")
+        || trimmed.starts_with("catch")
+        || trimmed.starts_with("}")
+        || trimmed.starts_with("finally")
 }
 
 #[cfg(test)]
