@@ -66,8 +66,6 @@ ktlint-rs --baseline baseline.xml                     # lint with suppression
 ### Git Hooks
 Auto-lint staged files before each commit:
 ```bash
-ktlint-rs --install-git-hook    # install pre-commit hook
-ktlint-rs --uninstall-git-hook  # remove it
 ```
 
 ## Rule Coverage

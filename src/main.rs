@@ -4,7 +4,6 @@ mod cli;
 mod config;
 mod discovery;
 mod formatter;
-mod git_hook;
 mod parser;
 mod reporter;
 mod resolver;
@@ -25,13 +24,6 @@ use std::path::PathBuf;
 fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse_args();
-
-    if cli.install_git_hook {
-        return git_hook::install_git_hook(&std::env::current_dir()?);
-    }
-    if cli.uninstall_git_hook {
-        return git_hook::uninstall_git_hook(&std::env::current_dir()?);
-    }
 
     let mut config = KtlintConfig::load(&cli)?;
     if let Some(ref config_path) = cli.config {
