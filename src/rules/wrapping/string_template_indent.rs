@@ -10,7 +10,7 @@ impl Rule for StringTemplateIndent {
     }
 
     fn auto_fixable(&self) -> bool {
-        false
+        true
     }
 
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {

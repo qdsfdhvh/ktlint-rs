@@ -54,6 +54,7 @@ fn fix_all_wrapping(source: &str) -> String {
         text = fix_when_expression_break(&text);
         text = fix_try_catch(&text);
         text = fix_when_entry_bracing(&text);
+        text = fix_string_template(&text);
         if text == before { break; }
     }
     text
@@ -61,8 +62,13 @@ fn fix_all_wrapping(source: &str) -> String {
 
 fn fix_indentation(source: &str) -> String {
     let lines: Vec<&str> = source.lines().collect();
+    // Detect base indent from first non-empty line
+    let base = lines.iter()
+        .find(|l| !l.trim().is_empty())
+        .map(|l| l.len() - l.trim_start().len())
+        .unwrap_or(0);
     let mut out = Vec::new();
-    let mut indent = 0usize;
+    let mut indent = base;
     let sz = 4;
     for line in &lines {
         let t = line.trim();
@@ -297,6 +303,32 @@ fn fix_when_entry_bracing(source: &str) -> String {
     result.join("\n")
 }
 
+// ── String template indent ──
+
+fn fix_string_template(source: &str) -> String {
+    // Add .trimIndent() to multiline string literals that lack it
+    let lines: Vec<&str> = source.lines().collect();
+    let mut result = Vec::new();
+    let mut in_multiline = false;
+    for (i, line) in lines.iter().enumerate() {
+        let t = line.trim();
+        if !in_multiline && t.contains("\"\"\"") && t.matches("\"\"\"").count() == 1 {
+            in_multiline = true;
+            // If the line ends with just the opening quotes, check for trim call
+            if !t.contains(".trimIndent()") && !t.contains(".trimMargin()") {
+                result.push(format!("{}.trimIndent()", line));
+                continue;
+            }
+        }
+        if in_multiline && t.contains("\"\"\"") {
+            in_multiline = false;
+        }
+        result.push(line.to_string());
+    }
+    result.join("\n")
+}
+
+#[cfg(test)]
 #[cfg(test)]
 mod tests {
     use super::*;

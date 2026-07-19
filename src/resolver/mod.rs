@@ -23,11 +23,11 @@ pub enum SymbolKind {
     Function,
     Property,
     Enum,
-    Interface,
+    // Interface — reserved for Phase 13
     Object,
-    TypeAlias,
+    // TypeAlias — reserved for Phase 13
     Constructor,
-    Init,
+    // Init — reserved for Phase 13
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
