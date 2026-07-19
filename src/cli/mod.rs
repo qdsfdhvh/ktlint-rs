@@ -31,15 +31,6 @@ pub struct Cli {
     #[arg(long)]
     pub create_baseline: bool,
 
-    /// Install a git pre-commit hook that runs ktlint-rs
-    #[arg(long)]
-    pub install_git_hook: bool,
-
-    /// Install a git pre-commit hook (uninstall)
-    #[arg(long)]
-    pub uninstall_git_hook: bool,
-
-    /// Path to YAML config file (detekt-style)
     #[arg(long)]
     pub config: Option<String>,
 
