@@ -48,19 +48,17 @@ fn walk(
 }
 
 fn is_decl_annotation(node: &tree_sitter::Node) -> bool {
+    // JVM-compatible: check all annotations except in imports.
     let mut cur = node.parent();
     while let Some(p) = cur {
         match p.kind() {
+            "import_header" => return false,
+            // Reached a declaration context — stop walking, include it
             "class_declaration" | "function_declaration" | "property_declaration"
             | "object_declaration" | "companion_object" | "enum_entry"
             | "primary_constructor" | "secondary_constructor" | "type_alias"
-            | "modifiers" => return true,
-            "import_header" => return false,
-            "class_parameters" | "function_value_parameters" => return true,
-            "user_type" | "nullable_type" | "type_arguments" | "type_projection"
-            | "function_type" | "annotated_type" | "value_arguments" | "call_expression"
-            | "when_entry" | "when_expression" | "binary_expression" | "lambda_literal"
-            | "return_expression" | "function_body" | "class_body" | "statements" => return false,
+            | "modifiers" | "class_parameters" | "function_value_parameters" => return true,
+            // Type references and everything else: continue walking up
             _ => {}
         }
         cur = p.parent();
@@ -153,7 +151,7 @@ mod tests {
     #[test] fn two_annotations_same_line_bad() { assert!(!check("@A @B\nclass Foo\n").is_empty()); }
     #[test] fn code_before_annotation_bad() { assert!(!check("class Foo @Inject\n").is_empty()); }
     #[test] fn three_annotations_first_clean() { let v = check("@A @B @C\nclass Foo\n"); assert!(!v.is_empty()); }
-    #[test] fn annotation_inside_when_ok() { assert!(check("val x = when { is Foo -> @Suppress(\"bar\") 1 }\n").is_empty()); }
+    #[test] fn annotation_in_when_flagged() { assert!(!check("val x = when { is Foo -> @Suppress(\"bar\") 1 }\n").is_empty()); }
     /// JVM-compatible: inconsistent layout
     #[test] fn mixed_layout_bad() { assert!(!check("@Foo\n@Bar @Baz\nfun foo() {}\n").is_empty()); }
     #[test] fn consistent_layout_ok() { assert!(check("@Foo\n@Bar\n@Baz\nfun foo() {}\n").is_empty()); }
