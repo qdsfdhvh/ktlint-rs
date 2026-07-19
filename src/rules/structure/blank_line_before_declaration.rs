@@ -100,8 +100,6 @@ impl Rule for BlankLineBeforeDeclaration {
 
 fn is_declaration(trimmed: &str) -> bool {
     trimmed.starts_with("fun ")
-        || trimmed.starts_with("val ")
-        || trimmed.starts_with("var ")
         || trimmed.starts_with("class ")
         || trimmed.starts_with("object ")
         || trimmed.starts_with("interface ")
