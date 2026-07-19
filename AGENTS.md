@@ -15,7 +15,7 @@ with startup under 50ms and per-file lint under 5ms.
 - **Low CPU**: CPU usage drops to zero after lint completes. No background threads/rayon pool.
 - **Clean exit**: Process must exit cleanly (exit 0/1/2). No daemon or event loop.
 - **Rule lightweight**: Each rule's `check()` must be O(n) and side-effect free.
-- **Binary size**: release binary < 15MB.
+- **Binary size**: release binary < 30MB.
 - **No daemon**: Process must have a clear exit point. No server/watch mode.
 - **Cache**: Uses `.cache/ktlint-rs/` directory for parser results/config to speed up repeated runs.
 
@@ -24,7 +24,7 @@ with startup under 50ms and per-file lint under 5ms.
 ```
 ktlint-rs/
 ├── src/
-│   ├── rules/             # 69 ktlint + 147 detekt rules
+│   ├── rules/             # 78 ktlint + 148 detekt rules (226 total)
 │   ├── resolver/          # SymbolTable + TypeInfo extractor
 │   ├── formatter/         # 31 auto-fix passes
 │   ├── config/            # .editorconfig + YAML config
@@ -66,6 +66,11 @@ cargo fmt --all
 cargo fmt --all -- --check
 ```
 
+## Git Workflow
+
+- **Always branch + PR**: never push directly to `main`. Create a feature branch (`feat/...`, `fix/...`, `docs/...`, `ci/...`), push, and open a PR.
+- Docs-only changes (`**.md`, `docs/**`) skip CI via `paths-ignore` — no need to wait for build.
+- Commit messages: conventional commits (`feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, `test:`).
 ## TypeInfo Bridge (Phase 13)
 
 Pure Rust type resolution via CST heuristics (`src/resolver/type_bridge.rs`):
@@ -79,7 +84,7 @@ Pure Rust type resolution via CST heuristics (`src/resolver/type_bridge.rs`):
 ## Constraints
 
 - **Pure Rust**: Zero JVM / kotlinc / Gradle dependencies
-- **Binary < 15MB**: Release mode
+- **Binary < 30MB**: Release mode
 - **Startup < 50ms**: No daemon / rayon pool warmup
 - **Memory release**: Immediate release after lint completes
 - **No daemon**: Process must have clear exit point

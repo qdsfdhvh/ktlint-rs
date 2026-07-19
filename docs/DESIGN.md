@@ -40,6 +40,6 @@ Agent workflow:
 
 - ❌ No JVM / kotlinc / Gradle dependency
 - ❌ No external process dependency
-- ✅ Single binary < 15MB
+- ✅ Single binary < 30MB
 - ✅ Startup < 50ms
 - ✅ Immediate memory release
