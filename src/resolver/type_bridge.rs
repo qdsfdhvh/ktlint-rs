@@ -76,13 +76,31 @@ impl TypeInfo {
 
     /// Check if a declared type is iterable (List, Set, Array, Iterable, etc.)
     pub fn is_iterable(&self, name: &str) -> bool {
-        self.type_of(name).map(|dt| {
-            matches!(dt.type_name.as_str(),
-                "List" | "MutableList" | "ArrayList" | "Set" | "MutableSet"
-                | "HashSet" | "LinkedHashSet" | "TreeSet" | "Iterable"
-                | "Collection" | "MutableCollection" | "Sequence"
-                | "Array" | "IntArray" | "LongArray" | "FloatArray" | "DoubleArray" | "BooleanArray")
-        }).unwrap_or(false)
+        self.type_of(name)
+            .map(|dt| {
+                matches!(
+                    dt.type_name.as_str(),
+                    "List"
+                        | "MutableList"
+                        | "ArrayList"
+                        | "Set"
+                        | "MutableSet"
+                        | "HashSet"
+                        | "LinkedHashSet"
+                        | "TreeSet"
+                        | "Iterable"
+                        | "Collection"
+                        | "MutableCollection"
+                        | "Sequence"
+                        | "Array"
+                        | "IntArray"
+                        | "LongArray"
+                        | "FloatArray"
+                        | "DoubleArray"
+                        | "BooleanArray"
+                )
+            })
+            .unwrap_or(false)
     }
 
     /// Check if a declared type is nullable
