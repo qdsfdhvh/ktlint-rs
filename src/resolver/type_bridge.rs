@@ -20,10 +20,18 @@ pub struct TypeInfo {
 impl TypeInfo {
     pub fn extract(source: &str) -> Self {
         let mut ti = TypeInfo::default();
+        let mut prev_line = "";
         for (i, line) in source.lines().enumerate() {
             let t = line.trim();
             if t.starts_with("val ") || t.starts_with("var ") {
                 if let Some((name, type_name, is_nullable)) = parse_property(t) {
+                    ti.declarations.insert(name, DeclType { type_name, is_nullable, line: i + 1 });
+                }
+            }
+            // Constructor parameters: class Foo(val x: Int, val y: String)
+            if t.starts_with("class ") && !t.contains('{') {
+                let class_line = format!("{} {}", prev_line, t);
+                for (name, type_name, is_nullable) in extract_params(class_line.trim()) {
                     ti.declarations.insert(name, DeclType { type_name, is_nullable, line: i + 1 });
                 }
             }
@@ -102,6 +110,12 @@ mod tests {
     fn parse_function_return_type() {
         let ti = TypeInfo::extract("fun foo(): Int { return 42 }");
         assert_eq!(ti.return_types.get("foo").unwrap(), "Int");
+    }
+    #[test]
+    fn parse_constructor_params() {
+        let ti = TypeInfo::extract("class Foo(val x: Int, val y: String?)");
+        assert_eq!(ti.type_of("x").unwrap().type_name, "Int");
+        assert!(ti.type_of("y").unwrap().is_nullable);
     }
     #[test]
     fn parse_function_params() {
