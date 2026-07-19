@@ -13,12 +13,6 @@ pub struct Cli {
     /// Auto-correct style violations
     #[arg(short = 'F', long)]
     pub format: bool,
-    /// Path to kotlinc binary for full type resolution (Phase 13)
-    #[arg(long, )]
-    pub kotlinc_path: Option<String>,
-
-    /// Read additional file patterns from stdin
-    #[arg(long)]
     pub patterns_from_stdin: bool,
 
     /// Path to the default .editorconfig

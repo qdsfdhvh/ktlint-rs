@@ -79,24 +79,3 @@ jobs:
           cp Cargo.toml /tmp/Cargo.toml.bak
           ./target/release/ktlint-rs --format src/rules/detekt/style/unused_import.rs
           echo "Formatter self-test passed"
-
-
-  kotlinc-plugin-validate:
-    name: kotlinc type extractor plugin
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-      - name: Install kotlinc
-        run: |
-          curl -sL https://github.com/JetBrains/kotlin/releases/download/v2.1.0/kotlin-compiler-2.1.0.zip -o /tmp/kotlin.zip
-          unzip -q /tmp/kotlin.zip -d /tmp/kotlin
-          echo "/tmp/kotlin/kotlinc/bin" >> $GITHUB_PATH
-      - name: Test plugin on fixture
-        run: |
-          echo "val x: String = \"hello\"" > /tmp/test.kt
-          echo "val y: String? = null" >> /tmp/test.kt
-          /tmp/kotlin/kotlinc/bin/kotlinc -script contrib/kotlinc-plugin/TypeExtractor.kt -- /tmp/test.kt 2>&1 | head -5

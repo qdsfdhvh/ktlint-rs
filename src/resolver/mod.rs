@@ -3,7 +3,6 @@
 //! Enables ~50 L1 detekt rules (UnusedPrivate*, NoNameShadowing, etc.).
 pub mod builder;
 pub mod type_bridge;
-pub mod type_ffi;
 use std::collections::HashMap;
 
 /// A symbol in the source file.
