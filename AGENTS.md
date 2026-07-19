@@ -1,5 +1,11 @@
 # AGENTS.md — ktlint-rs Development Guide
 
+> **设计目标**: AI 编程 Agent 的快速 Kotlin 预检工具  
+> **核心理念**: 纯 Rust，<1s 扫描，提前发现问题，减少 Agent 调用 JVM 工具链  
+> **不对齐要求**: 不需要 100% 匹配 JVM ktlint/detekt，覆盖大部分即可  
+> **详细**: 见 [docs/DESIGN.md](docs/DESIGN.md)
+
+
 ## Project Overview
 
 **ktlint-rs** is a pure-Rust rewrite of [Pinterest ktlint](https://github.com/ktlint/ktlint),
