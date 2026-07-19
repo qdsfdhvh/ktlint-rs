@@ -228,7 +228,8 @@ impl Registry {
             Box::new(detekt::style::CanBeNonNullable),
             Box::new(detekt::style::DataClassContainsFunctions),
             Box::new(detekt::style::UnusedPrivateFunction),
-            // potential-bugs
+            Box::new(detekt::style::ClassOrdering),
+            // potential-bugs// potential-bugs
             Box::new(detekt::potential_bugs::DuplicateCaseInWhen),
             Box::new(detekt::potential_bugs::UnreachableCatchBlock),
             Box::new(detekt::potential_bugs::EqualsNullCall),
