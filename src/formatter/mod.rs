@@ -52,6 +52,8 @@ fn fix_all_wrapping(source: &str) -> String {
         text = fix_multiline_if_else(&text);
         text = fix_chain_wrapping(&text);
         text = fix_when_expression_break(&text);
+        text = fix_try_catch(&text);
+        text = fix_when_entry_bracing(&text);
         if text == before { break; }
     }
     text
@@ -261,7 +263,40 @@ fn fix_when_expression_break(source: &str) -> String {
     result.join("\n")
 }
 
-#[cfg(test)]
+// ── Try-catch wrapping ──
+
+fn fix_try_catch(source: &str) -> String {
+    source
+        .replace("}\ncatch", "} catch")
+        .replace("}\nfinally", "} finally")
+        .replace("}\n    catch", "} catch")
+        .replace("}\n    finally", "} finally")
+}
+
+// ── When entry bracing ──
+
+fn fix_when_entry_bracing(source: &str) -> String {
+    let lines: Vec<&str> = source.lines().collect();
+    let mut result = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let t = lines[i].trim();
+        if t.contains("-> {") {
+            let rest = t.split("-> {").nth(1).unwrap_or("");
+            if rest.trim_end().ends_with("}") {
+                let inner = rest.trim_start().trim_end_matches('}').trim().trim_end_matches(';');
+                let prefix = &t[..t.find("-> {").unwrap() + 3];
+                result.push(format!("{} {}", prefix, inner));
+                i += 1;
+                continue;
+            }
+        }
+        result.push(lines[i].to_string());
+        i += 1;
+    }
+    result.join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -289,6 +324,19 @@ mod tests {
         let src = "when (x) {\n    1 -> println(\"one\")\n    else -> {\n        println(\"other\")\n    }\n}";
         let r = fix_when_expression_break(src);
         assert!(r.contains("->"), "got: {}", r);
+    }
+    #[test]
+    fn fix_try_catch_wrap() {
+        assert_eq!(
+            fix_try_catch("}
+catch(e: E) { b() }"),
+            "} catch(e: E) { b() }"
+        );
+    }
+    #[test]
+    fn fix_when_entry_brace() {
+        let r = fix_when_entry_bracing("x -> { doStuff() }");
+        assert!(r.contains("x ->  doStuff()"), "got: {}", r);
     }
     #[test]
     fn fix_wrapping_preserves() {
