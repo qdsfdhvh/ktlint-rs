@@ -50,6 +50,8 @@ fn fix_all_wrapping(source: &str) -> String {
     for _ in 0..3 {
         let before = text.clone();
         text = fix_multiline_if_else(&text);
+        text = fix_chain_wrapping(&text);
+        text = fix_when_expression_break(&text);
         if text == before { break; }
     }
     text
@@ -188,6 +190,78 @@ fn fix_multiline_if_else(source: &str) -> String {
     result
 }
 
+// ── Chain wrapping ──
+
+fn fix_chain_wrapping(source: &str) -> String {
+    // Normalize dot-call chains: if any call is on its own line
+    // (indented), ensure all are. If all on one line, keep.
+    let lines: Vec<&str> = source.lines().collect();
+    let mut has_multiline = false;
+    for line in &lines {
+        let t = line.trim();
+        if t.starts_with('.') && !t.starts_with("..") {
+            has_multiline = true;
+            break;
+        }
+    }
+    if !has_multiline { return source.to_string(); }
+
+    // Rebuild: put each .call() on its own indented line
+    let mut result = Vec::new();
+    for line in source.lines() {
+        let t = line.trim();
+        if t.starts_with('.') {
+            result.push(format!("    {}", t));
+        } else if t.ends_with(')') && result.last().map_or(false, |l| l.trim().starts_with('.')) {
+            // Previous line was a dot call — continue
+            let prev = result.pop().unwrap();
+            result.push(format!("    {}.{}", prev.trim(), t));
+        } else {
+            result.push(line.to_string());
+        }
+    }
+    result.join("\n")
+}
+
+// ── When expression break ──
+
+fn fix_when_expression_break(source: &str) -> String {
+    // Ensure when branches are consistently single-line or multiline.
+    // If any branch uses braces, convert all single-line branches
+    // to use braces with consistent indentation.
+    let lines: Vec<&str> = source.lines().collect();
+    let mut result = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let t = lines[i].trim();
+        if t.starts_with("when") && t.ends_with('{') {
+            result.push(lines[i].to_string());
+            i += 1;
+            // Collect when body
+            while i < lines.len() && lines[i].trim() != "}" {
+                let body = lines[i].trim();
+                if body.contains("->") && !body.ends_with('{') {
+                    let next = if i + 1 < lines.len() { lines[i+1].trim() } else { "" };
+                    if !next.is_empty() && next != "}" && !next.contains("->") {
+                        // Merge single-line body onto the -> line
+                        result.push(format!("    {} {{ {} }}", body, next));
+                        i += 2;
+                        continue;
+                    }
+                }
+                result.push(lines[i].to_string());
+                i += 1;
+            }
+            if i < lines.len() { result.push(lines[i].to_string()); i += 1; }
+        } else {
+            result.push(lines[i].to_string());
+            i += 1;
+        }
+    }
+    result.join("\n")
+}
+
+#[cfg(test)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,6 +278,17 @@ mod tests {
     fn fix_indent() {
         let r = fix_indentation("class Foo {\nval x = 1\n}");
         assert!(r.contains("    val x"), "got: {}", r);
+    }
+    #[test]
+    fn fix_chain_wrap() {
+        let r = fix_chain_wrapping("val x = foo\n    .bar()\n    .baz()");
+        assert!(r.contains(".bar()"), "got: {}", r);
+    }
+    #[test]
+    fn fix_when_break() {
+        let src = "when (x) {\n    1 -> println(\"one\")\n    else -> {\n        println(\"other\")\n    }\n}";
+        let r = fix_when_expression_break(src);
+        assert!(r.contains("->"), "got: {}", r);
     }
     #[test]
     fn fix_wrapping_preserves() {
