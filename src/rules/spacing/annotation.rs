@@ -44,6 +44,7 @@ fn is_decl_annotation(node: &tree_sitter::Node) -> bool {
             | "secondary_constructor"
             | "type_alias"
             | "modifiers" => return true,
+            "import_header" => return false,
             "class_parameters" | "function_value_parameters" => return true,
             "user_type" | "nullable_type" | "type_arguments" | "type_projection"
             | "function_type" | "annotated_type" | "value_arguments" | "call_expression"

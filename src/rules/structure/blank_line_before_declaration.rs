@@ -60,7 +60,7 @@ impl Rule for BlankLineBeforeDeclaration {
 
                 // Only flag if same indent level AND not separated by blank line
                 // AND the previous line is also a declaration
-                if prev_indent == current_indent && !found_blank {
+                if prev_indent == current_indent && current_indent == 0 && !found_blank {
                     // Special case: previous line has `{` at the end (opening brace)
                     // e.g., "class Foo {" — first declaration in a block is fine
                     if p.ends_with('{') {
