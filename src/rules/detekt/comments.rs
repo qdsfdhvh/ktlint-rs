@@ -315,20 +315,38 @@ fn walk_undocumented_shared(
     let mut next_last = last_comment_end;
 
     // Update `next_last` if this node is a comment
-    let is_comment = matches!(
-        n.kind(),
-        "multiline_comment" | "block_comment" | "comment"
-    );
+    let is_comment = matches!(n.kind(), "multiline_comment" | "block_comment" | "comment");
     if is_comment {
         next_last = Some(n.end_position().row);
     }
 
     // Check declarations for missing KDoc
     match n.kind() {
-        "class_declaration" => check_undoc(bytes, &n, &mut v[0], last_comment_end, "UndocumentedPublicClass", "Public class is missing KDoc"),
-        "function_declaration" => check_undoc(bytes, &n, &mut v[1], last_comment_end, "UndocumentedPublicFunction", "Public function is missing KDoc"),
-        "property_declaration" => check_undoc(bytes, &n, &mut v[2], last_comment_end, "UndocumentedPublicProperty", "Public property is missing KDoc"),
-        _ => {},
+        "class_declaration" => check_undoc(
+            bytes,
+            &n,
+            &mut v[0],
+            last_comment_end,
+            "UndocumentedPublicClass",
+            "Public class is missing KDoc",
+        ),
+        "function_declaration" => check_undoc(
+            bytes,
+            &n,
+            &mut v[1],
+            last_comment_end,
+            "UndocumentedPublicFunction",
+            "Public function is missing KDoc",
+        ),
+        "property_declaration" => check_undoc(
+            bytes,
+            &n,
+            &mut v[2],
+            last_comment_end,
+            "UndocumentedPublicProperty",
+            "Public property is missing KDoc",
+        ),
+        _ => {}
     }
 
     // Recurse into children in order; last comment end propagates forward
@@ -340,7 +358,8 @@ fn walk_undocumented_shared(
     next_last
 }
 
-fn check_undoc(bytes: &[u8], 
+fn check_undoc(
+    bytes: &[u8],
     n: &tree_sitter::Node,
     v: &mut Vec<Violation>,
     prev_comment_end: Option<usize>,
@@ -353,7 +372,9 @@ fn check_undoc(bytes: &[u8],
     });
     // Skip private, inner, override declarations (detekt-compatible)
     let node_text = n.utf8_text(bytes).unwrap_or("");
-    let is_non_public = node_text.split_whitespace().any(|w| w == "private" || w == "inner" || w == "override");
+    let is_non_public = node_text
+        .split_whitespace()
+        .any(|w| w == "private" || w == "inner" || w == "override");
     if !has_kdoc && !is_non_public {
         let pos = n.start_position();
         v.push(Violation {
@@ -366,7 +387,6 @@ fn check_undoc(bytes: &[u8],
         });
     }
 }
-
 
 #[cfg(test)]
 mod tests {
