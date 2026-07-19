@@ -25,7 +25,6 @@ fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse_args();
 
-
     let mut config = KtlintConfig::load(&cli)?;
     if let Some(ref config_path) = cli.config {
         yaml_config::load_and_apply(&mut config, std::path::Path::new(config_path))?;
