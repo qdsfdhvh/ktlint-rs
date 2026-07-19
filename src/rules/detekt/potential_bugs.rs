@@ -368,31 +368,36 @@ impl Rule for UnsafeCallOnNullableType {
 // ── 10. UnnecessaryNotNullAssertion ──
 pub struct UnnecessaryNotNullAssertion;
 impl Rule for UnnecessaryNotNullAssertion {
-    fn id(&self) -> &'static str {
-        "detekt:potential-bugs:UnnecessaryNotNullAssertion"
-    }
-    fn auto_fixable(&self) -> bool {
-        false
-    }
-    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
-        source
-            .lines()
-            .enumerate()
-            .filter_map(|(i, l)| {
-                if l.contains("!!") {
-                    Some(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: l.find("!!").unwrap_or(0) + 1,
-                        rule_id: "detekt:potential-bugs:UnnecessaryNotNullAssertion".into(),
-                        message: "Unnecessary !! on expression".into(),
-                        auto_fixable: false,
-                    })
-                } else {
-                    None
+    fn id(&self) -> &'static str { "detekt:potential-bugs:UnnecessaryNotNullAssertion" }
+    fn auto_fixable(&self) -> bool { false }
+    fn requires_type_resolution(&self) -> bool { true }
+
+    fn check_with_symbols(&self, _tree: &Tree, source: &str, _sym: Option<&crate::resolver::SymbolTable>) -> Vec<Violation> {
+        let mut v = Vec::new();
+        let ti = TypeInfo::extract(source);
+        for (i, line) in source.lines().enumerate() {
+            let t = line.trim();
+            if let Some(pos) = t.find("!!") {
+                let before = &t[..pos];
+                for word in before.split(|c: char| !c.is_alphanumeric() && c != '_').filter(|w| !w.is_empty()) {
+                    if let Some(dt) = ti.type_of(word) {
+                        if !dt.is_nullable {
+                            v.push(Violation {
+                                file: String::new(), line: i + 1, col: pos + 1,
+                                rule_id: "detekt:potential-bugs:UnnecessaryNotNullAssertion".into(),
+                                message: format!("Unnecessary '!!' on non-nullable type '{}' ({})", word, dt.type_name),
+                                auto_fixable: false,
+                            });
+                            break;
+                        }
+                    }
                 }
-            })
-            .collect()
+            }
+        }
+        v
+    }
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
+        self.check_with_symbols(tree, source, None)
     }
 }
 
@@ -773,7 +778,7 @@ mod tests {
     }
     #[test]
     fn unnec_notnull() {
-        assert!(!c(&UnnecessaryNotNullAssertion, "x!!\n").is_empty());
+        assert!(!c(&UnnecessaryNotNullAssertion, "val x: String = \"hi\"\nval y = x!!\n").is_empty());
     }
     #[test]
     fn wrong_eqs() {
