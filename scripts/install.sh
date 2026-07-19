@@ -17,7 +17,7 @@ set -euo pipefail
 REPO="${KTLINT_RS_REPO:-qdsfdhvh/ktlint-rs}"
 REPO_URL="https://github.com/${REPO}"
 VERSION="${KTLINT_RS_VERSION:-latest}"
-PREFIX="${KTLINT_RS_PREFIX:-$HOME/.local/bin}"
+PREFIX="${KTLINT_RS_PREFIX:-$HOME/.cargo/bin}"
 
 err() { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m::\033[0m %s\n' "$*"; }
