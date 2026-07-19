@@ -4,63 +4,99 @@
 # Usage:
 #   curl -fsSL https://github.com/qdsfdhvh/ktlint-rs/releases/latest/download/install.sh | bash
 #
+# Tries in order:
+#   1. GitHub Release binary download (no Rust toolchain needed)
+#   2. cargo install (fallback for Rust developers)
+#
 # Environment variables:
 #   KTLINT_RS_VERSION   pin a version (e.g. v0.1.0). Default: latest release.
 #   KTLINT_RS_REPO      override the source repo (default: qdsfdhvh/ktlint-rs).
 #   KTLINT_RS_PREFIX    install directory. Default: $HOME/.local/bin
-#   KTLINT_RS_FORCE_BINARY  set to 1 to force GitHub Release download.
 set -euo pipefail
 
 REPO="${KTLINT_RS_REPO:-qdsfdhvh/ktlint-rs}"
 REPO_URL="https://github.com/${REPO}"
 VERSION="${KTLINT_RS_VERSION:-latest}"
 PREFIX="${KTLINT_RS_PREFIX:-$HOME/.local/bin}"
-FORCE_BINARY="${KTLINT_RS_FORCE_BINARY:-0}"
 
 err() { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m::\033[0m %s\n' "$*"; }
+warn() { printf '\033[33m!\033[0m %s\n' "$*"; }
 
-# ── Detect platform ────────────────────────────────────────────────
-detect_platform() {
-  local arch=$(uname -m)
-  local os=$(uname -s | tr '[:upper:]' '[:lower:]')
-  case "$os-$arch" in
-    darwin-arm64|darwin-aarch64)  echo "aarch64-apple-darwin" ;;
-    darwin-x86_64)                echo "x86_64-apple-darwin" ;;
-    linux-x86_64)                 echo "x86_64-unknown-linux-gnu" ;;
-    linux-arm64|linux-aarch64)    echo "aarch64-unknown-linux-gnu" ;;
-    *) err "Unsupported platform: $os-$arch" ;;
-  esac
-}
-
-# ── Download binary from GitHub Release ─────────────────────────────
+# ── binary download ────────────────────────────────────────────────
 download_binary() {
-  local platform=$(detect_platform)
-  local tag="$VERSION"
-  if [ "$tag" = "latest" ]; then
-    tag=$(curl -fsSL "$REPO_URL/releases/latest" 2>/dev/null | grep -o 'tag/[^"]*' | head -1 | cut -d/ -f2)
-    [ -n "$tag" ] || err "Cannot determine latest version"
+  local uname_s="$(uname -s)" uname_m="$(uname -m)"
+  local os="" arch=""
+  case "$uname_s" in
+    Linux)  os="linux" ;;
+    Darwin) os="darwin" ;;
+    *) err "unsupported OS: $uname_s (use install.ps1 on Windows)" ;;
+  esac
+  case "$uname_m" in
+    x86_64|amd64) arch="x86_64" ;;
+    arm64|aarch64) arch="aarch64" ;;
+    *) err "unsupported arch: $uname_m" ;;
+  esac
+
+  local target
+  case "$os-$arch" in
+    darwin-aarch64) target="aarch64-apple-darwin" ;;
+    darwin-x86_64)  target="x86_64-apple-darwin" ;;
+    linux-x86_64)   target="x86_64-unknown-linux-gnu" ;;
+    linux-aarch64)  target="aarch64-unknown-linux-gnu" ;;
+  esac
+
+  local url
+  if [ "$VERSION" = "latest" ]; then
+    url="${REPO_URL}/releases/latest/download/ktlint-rs-${target}.tar.gz"
+  else
+    url="${REPO_URL}/releases/download/${VERSION}/ktlint-rs-${target}.tar.gz"
   fi
-  local url="${REPO_URL}/releases/download/${tag}/ktlint-rs-${platform}.tar.gz"
-  info "Downloading ktlint-rs ${tag} for ${platform}..."
+  info "downloading ktlint-rs ${VERSION} for ${target}..."
+
+  local tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' EXIT
+  curl -fsSL --retry 3 -o "$tmp/ktlint-rs.tar.gz" "$url" \
+    || err "download failed: $url"
+  tar -xzf "$tmp/ktlint-rs.tar.gz" -C "$tmp"
+
+  local bin
+  [ -f "$tmp/ktlint-rs" ] && bin="$tmp/ktlint-rs"
+  [ -z "${bin:-}" ] && err "tarball did not contain ktlint-rs binary"
+
   mkdir -p "$PREFIX"
-  curl -fsSL "$url" -o /tmp/ktlint-rs.tar.gz \
-    && tar -xzf /tmp/ktlint-rs.tar.gz -C "$PREFIX" ktlint-rs \
-    && chmod +x "$PREFIX/ktlint-rs" \
-    && rm -f /tmp/ktlint-rs.tar.gz \
-    && info "Installed ktlint-rs to $PREFIX/ktlint-rs" \
-    || err "Download failed: $url"
+  install -m 0755 "$bin" "$PREFIX/ktlint-rs"
+  info "installed → $PREFIX/ktlint-rs"
 }
 
-# ── Main ────────────────────────────────────────────────────────────
-if [ "$FORCE_BINARY" = "1" ]; then
-  download_binary
-else
-  download_binary
-fi
+# ── cargo fallback ─────────────────────────────────────────────────
+try_cargo() {
+  if ! command -v cargo >/dev/null 2>&1; then
+    return 1
+  fi
+  local ver="${VERSION}"
+  if [ "$ver" = "latest" ]; then ver=""; fi
+  info "installing via cargo..."
+  cargo install ktlint-rs ${ver:+--version "$ver"} 2>&1 || {
+    warn "cargo install failed — falling back to binary"
+    return 1
+  }
+  info "installed via cargo → $(command -v ktlint-rs 2>/dev/null || echo '~/.cargo/bin')"
+}
 
-# Check PATH
-if ! echo ":$PATH:" | grep -q ":$PREFIX:"; then
-  warn "Add $PREFIX to your PATH:"
-  printf '\033[33m  export PATH="%s:$PATH"\033[0m\n' "$PREFIX"
+# ── PATH check ─────────────────────────────────────────────────────
+check_path() {
+  local dir="$(command -v ktlint-rs 2>/dev/null | xargs dirname 2>/dev/null || echo "$PREFIX")"
+  if ! echo ":$PATH:" | grep -q ":$dir:"; then
+    warn "$dir is not in your PATH. Add it:"
+    printf '\033[33m  export PATH="%s:$PATH"\033[0m\n' "$dir"
+  fi
+}
+
+# ── main ───────────────────────────────────────────────────────────
+download_binary
+if ! command -v ktlint-rs >/dev/null 2>&1; then
+  try_cargo || true
 fi
+check_path
+ktlint-rs --version 2>/dev/null || info "run: ktlint-rs --help"
