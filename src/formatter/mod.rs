@@ -165,33 +165,51 @@ fn fix_operators(source: &str) -> String {
         "==", "!=", "<=", ">=", "&&", "||", "+=", "-=", "*=", "/=", "=", "+", "-", "*", "/", "%",
     ];
     for op in &ops {
+        // Phase 1: collect all positions
         let chars: Vec<char> = s.chars().collect();
+        let mut positions: Vec<usize> = Vec::new();
         let mut i = 0;
-        while i < chars.len() {
-            if i > 0 && i + op.len() <= chars.len() {
+        while i + op.len() <= chars.len() {
+            if i > 0 {
                 let rest: String = chars[i..i + op.len()].iter().collect();
                 if rest == *op {
                     // Issue #45: skip unary minus
-                    if *op == "-" {
-                        let prev = chars[i - 1];
-                        if !prev.is_alphanumeric() && prev != ')' && prev != ']' {
-                            i += 1;
-                            continue;
-                        }
-                    }
-                    let prev = chars[i - 1];
-                    let next = chars.get(i + op.len()).copied().unwrap_or(' ');
-                    if prev.is_alphanumeric() && prev != ' ' {
-                        s.insert(i, ' ');
-                        i += 1;
-                    }
-                    i += op.len();
-                    if next.is_alphanumeric() && next != ' ' {
-                        s.insert(i, ' ');
+                    let is_unary_minus = *op == "-"
+                        && (!chars[i - 1].is_alphanumeric()
+                            && chars[i - 1] != ')'
+                            && chars[i - 1] != ']');
+                    if !is_unary_minus {
+                        positions.push(i);
                     }
                 }
             }
             i += 1;
+        }
+        // Phase 2: apply fixes right-to-left (indices stay stable)
+        for &pos in positions.iter().rev() {
+            let cur: Vec<char> = s.chars().collect();
+            if pos >= cur.len() || pos + op.len() > cur.len() {
+                continue;
+            }
+            let cur_rest: String = cur[pos..pos + op.len()].iter().collect();
+            if cur_rest != *op {
+                continue;
+            }
+            let prev = cur[pos - 1];
+            let next = cur.get(pos + op.len()).copied().unwrap_or(' ');
+            if prev.is_alphanumeric() && prev != ' ' {
+                s.insert(pos, ' ');
+            }
+            // After insert, re-read positions
+            let cur2: Vec<char> = s.chars().collect();
+            let after = pos + op.len() + if prev.is_alphanumeric() && prev != ' ' { 1 } else { 0 };
+            if after < cur2.len() {
+                let actual_next = cur2[after];
+                // Align with rule: insert unless next is space ) \n ,
+                if actual_next != ' ' && actual_next != ')' && actual_next != '\n' && actual_next != ',' {
+                    s.insert(after, ' ');
+                }
+            }
         }
     }
     s
