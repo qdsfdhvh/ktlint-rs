@@ -55,6 +55,15 @@ impl OperatorSpacing {
         let pos = node.start_position();
         let s = node.start_byte();
         let e = node.end_byte();
+        // T4.x: Unary minus — skip (e.g. val x = -640f)
+        let is_unary_minus = node.kind() == "-"
+            && s > 0
+            && !(bytes[s - 1] as char).is_alphanumeric()
+            && bytes[s - 1] != b')'
+            && bytes[s - 1] != b']';
+        if is_unary_minus {
+            return;
+        }
         if s > 0 && bytes[s - 1] != b' ' && bytes[s - 1] != b'(' && bytes[s - 1] != b'\n' {
             v.push(Violation {
                 file: String::new(),
@@ -100,4 +109,30 @@ mod tests {
             0
         );
     }
+
+    // ── Issue #45: Unary minus ──
+
+    #[test]
+    fn unary_minus_after_equals() {
+        assert!(c("val offset = -640f\n").is_empty());
+    }
+    #[test]
+    fn unary_minus_after_paren() {
+        assert!(c("foo(-1)\n").is_empty());
+    }
+    #[test]
+    fn unary_minus_after_comma() {
+        // foo(1, -2) — the `-2` is in a different call context
+        let v = c("fun f() { foo(1, -2) }\n");
+        assert_eq!(v.iter().filter(|x| x.rule_id == "standard:op-spacing").count(), 0);
+    }
+    #[test]
+    fn binary_minus_still_flagged() {
+        let v = c("val x = 1-2\n");
+        assert!(!v.is_empty(), "binary minus should be flagged");
+    }
+    #[test]
+    fn binary_minus_spaced_ok() {
+        assert!(c("val x = a - b\n").is_empty());
+}
 }

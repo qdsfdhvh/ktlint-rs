@@ -3,7 +3,7 @@ use crate::rules::Violation;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-pub fn auto_fix(files: &[PathBuf], violations: &[Violation]) -> anyhow::Result<()> {
+pub fn auto_fix(_files: &[PathBuf], violations: &[Violation], indent_size: usize, insert_final_newline: bool) -> anyhow::Result<()> {
     let fixable: Vec<&Violation> = violations.iter().filter(|v| v.auto_fixable).collect();
     if fixable.is_empty() {
         return Ok(());
@@ -45,9 +45,13 @@ pub fn auto_fix(files: &[PathBuf], violations: &[Violation]) -> anyhow::Result<(
             text = fix_all_wrapping(&text);
         }
         if any_indent {
-            text = fix_indentation(&text);
+            text = fix_indentation(&text, indent_size);
         }
         text = fix_trailing_ws(&text);
+        // Issue #45: restore final newline if config requires it
+        if insert_final_newline && !text.ends_with('\n') {
+            text.push('\n');
+        }
         if text != original {
             std::fs::write(file_path, text)?;
         }
@@ -94,7 +98,7 @@ fn fix_all_wrapping(source: &str) -> String {
     text
 }
 
-fn fix_indentation(source: &str) -> String {
+fn fix_indentation(source: &str, indent_size: usize) -> String {
     let lines: Vec<&str> = source.lines().collect();
     // Detect base indent from first non-empty line
     let base = lines
@@ -104,7 +108,7 @@ fn fix_indentation(source: &str) -> String {
         .unwrap_or(0);
     let mut out = Vec::new();
     let mut level = 0usize; // indent level relative to base
-    let sz = 4;
+    let sz = indent_size;
     for line in &lines {
         let t = line.trim();
         if t.is_empty() {
@@ -167,6 +171,14 @@ fn fix_operators(source: &str) -> String {
             if i > 0 && i + op.len() <= chars.len() {
                 let rest: String = chars[i..i + op.len()].iter().collect();
                 if rest == *op {
+                    // Issue #45: skip unary minus
+                    if *op == "-" {
+                        let prev = chars[i - 1];
+                        if !prev.is_alphanumeric() && prev != ')' && prev != ']' {
+                            i += 1;
+                            continue;
+                        }
+                    }
                     let prev = chars[i - 1];
                     let next = chars.get(i + op.len()).copied().unwrap_or(' ');
                     if prev.is_alphanumeric() && prev != ' ' {
@@ -236,7 +248,7 @@ fn fix_blank_line_in_list(source: &str) -> String {
     let lines: Vec<&str> = source.lines().collect();
     let mut result = Vec::new();
     let mut bracket_depth = 0i32;
-    for (i, line) in lines.iter().enumerate() {
+    for (_i, line) in lines.iter().enumerate() {
         let t = line.trim();
         // Track bracket depth
         bracket_depth += t.chars().filter(|&c| c == '(' || c == '[').count() as i32;
@@ -352,7 +364,7 @@ fn fix_when_expression_break(source: &str) -> String {
                         && !next.starts_with("//")
                     {
                         // Merge single-line body onto the -> line with proper indent
-                        let indent = " ".repeat(body.len() - body.trim_start().len() + 4);
+                        let _indent = " ".repeat(body.len() - body.trim_start().len() + 4);
                         result.push(format!("{} {{ {} }}", body, next));
                         i += 2;
                         continue;
@@ -418,7 +430,7 @@ fn fix_string_template(source: &str) -> String {
     let lines: Vec<&str> = source.lines().collect();
     let mut result = Vec::new();
     let mut in_multiline = false;
-    for (i, line) in lines.iter().enumerate() {
+    for (_i, line) in lines.iter().enumerate() {
         let t = line.trim();
         if !in_multiline && t.contains("\"\"\"") && t.matches("\"\"\"").count() == 1 {
             in_multiline = true;
@@ -459,7 +471,7 @@ mod tests {
     }
     #[test]
     fn fix_indent() {
-        let r = fix_indentation("class Foo {\nval x = 1\n}");
+        let r = fix_indentation("class Foo {\nval x = 1\n}", 4);
         assert!(r.contains("    val x"), "got: {}", r);
     }
     #[test]

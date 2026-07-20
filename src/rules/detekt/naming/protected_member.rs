@@ -21,7 +21,7 @@ impl Rule for ProtectedMemberInFinalClass {
 
     fn check_with_symbols(
         &self,
-        tree: &tree_sitter::Tree,
+        _tree: &tree_sitter::Tree,
         source: &str,
         sym: Option<&crate::resolver::SymbolTable>,
     ) -> Vec<Violation> {

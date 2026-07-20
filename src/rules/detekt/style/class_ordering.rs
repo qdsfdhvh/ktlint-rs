@@ -34,7 +34,7 @@ impl Rule for ClassOrdering {
     }
 }
 
-fn check_body_order(body: &Node, bytes: &[u8], v: &mut Vec<Violation>) {
+fn check_body_order(body: &Node, _bytes: &[u8], v: &mut Vec<Violation>) {
     #[derive(PartialEq)]
     enum Section {
         Constructor,

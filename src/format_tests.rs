@@ -16,7 +16,7 @@ mod format_tests {
         for v in &mut violations {
             v.file = tmp.path().to_string_lossy().to_string();
         }
-        formatter::auto_fix(&[tmp.path().to_path_buf()], &violations).unwrap();
+        formatter::auto_fix(&[tmp.path().to_path_buf()], &violations, 4, true).unwrap();
         let after = std::fs::read_to_string(tmp.path()).unwrap();
         (violations, after)
     }
@@ -66,7 +66,7 @@ mod format_tests {
         for v in &mut violations {
             v.file = f.path().to_string_lossy().to_string();
         }
-        formatter::auto_fix(&[f.path().to_path_buf()], &violations).unwrap();
+        formatter::auto_fix(&[f.path().to_path_buf()], &violations, 4, true).unwrap();
 
         let after_source = std::fs::read_to_string(f.path()).unwrap();
         let tree2 = parser.parse(&after_source);

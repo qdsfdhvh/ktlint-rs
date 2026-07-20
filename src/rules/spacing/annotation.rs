@@ -33,7 +33,7 @@ impl Rule for AnnotationSpacing {
     }
 }
 
-fn walk(root: tree_sitter::Node, bytes: &[u8], visit: &mut dyn FnMut(tree_sitter::Node)) {
+fn walk(root: tree_sitter::Node, _bytes: &[u8], visit: &mut dyn FnMut(tree_sitter::Node)) {
     let mut stack: Vec<tree_sitter::Node> = vec![root];
     while let Some(node) = stack.pop() {
         visit(node);

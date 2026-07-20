@@ -13,6 +13,7 @@ pub struct Cli {
     /// Auto-correct style violations
     #[arg(short = 'F', long)]
     pub format: bool,
+    #[arg(skip)]
     pub patterns_from_stdin: Vec<String>,
 
     /// Path to the default .editorconfig

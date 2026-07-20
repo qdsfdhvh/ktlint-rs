@@ -39,7 +39,7 @@ impl ArgumentListWrapping {
         }
     }
 
-    fn check_list(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    fn check_list(&self, node: &tree_sitter::Node, _bytes: &[u8], _violations: &mut Vec<Violation>) {
         let start_row = node.start_position().row;
         let end_row = node.end_position().row;
 
