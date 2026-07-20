@@ -21,24 +21,19 @@ impl Rule for NoSingleExpressionBody {
             let trimmed = line.trim();
 
             // Detect expression-body functions that span lines
-            // Pattern: `fun name(params): Type = expr`
-            if trimmed.starts_with("fun ") && trimmed.contains('=') {
-                // Check if the `=` is followed by content on the same line
-                if let Some(eq_pos) = trimmed.find('=') {
-                    let after = trimmed[eq_pos + 1..].trim();
-                    if !after.is_empty() && !after.starts_with('{') {
-                        // Expression body on same line — OK
-                    }
-                }
-
-                // Check if next line continues the expression
+            if trimmed.starts_with("fun ") && trimmed.contains('=') && !trimmed.contains('{') {
+                // Issue #45: skip trailing lambda — check if next line starts with { or .
                 if i + 1 < lines.len() {
                     let next = lines[i + 1];
-                    // If next line is indented more, it's part of the expression body
                     let next_indent = next.len() - next.trim_start().len();
                     let curr_indent = line.len() - trimmed.len();
-                    if next_indent > curr_indent && !next.trim().starts_with("//") {
-                        // Multi-line expression body without braces
+                    let next_trim = next.trim();
+                    let is_trailing_lambda =
+                        next_trim.starts_with('{') || next_trim.starts_with('.');
+                    if next_indent > curr_indent
+                        && !next_trim.starts_with("//")
+                        && !is_trailing_lambda
+                    {
                         violations.push(Violation {
                             file: String::new(),
                             line: i + 1,
@@ -84,5 +79,29 @@ mod tests {
         let v = check("fun foo() =\n    1 + 2 + 3\n");
         assert!(!v.is_empty());
         assert_eq!(v[0].rule_id, "standard:no-single-expression-body");
+    }
+
+    // ── Issue #45: Trailing lambda ──
+
+    #[test]
+    fn trailing_lambda_expression_ok() {
+        let src = "fun render() = wrapper {\n    consume(1f)\n}\n";
+        let v = check(src);
+        assert!(
+            v.is_empty(),
+            "trailing lambda should not be flagged, got {:?}",
+            v
+        );
+    }
+
+    #[test]
+    fn chained_call_expression_ok() {
+        let src = "fun foo() = bar\n    .baz()\n";
+        let v = check(src);
+        assert!(
+            v.is_empty(),
+            "chained call should not be flagged, got {:?}",
+            v
+        );
     }
 }

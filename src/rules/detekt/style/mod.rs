@@ -461,11 +461,11 @@ impl Rule for RedundantExplicitType {
         _sym: Option<&crate::resolver::SymbolTable>,
     ) -> Vec<Violation> {
         let mut v = Vec::new();
-        let ti = crate::resolver::type_bridge::TypeInfo::extract(source);
+        let _ti = crate::resolver::type_bridge::TypeInfo::extract(source);
         for (i, line) in source.lines().enumerate() {
             let t = line.trim();
             if t.starts_with("val ") && t.contains(" = ") {
-                if let Some((name, type_name, _)) = parse_val_decl(t) {
+                if let Some((_name, type_name, _)) = parse_val_decl(t) {
                     // Check if type matches a simple inferred type
                     let is_redundant = matches!(
                         type_name.as_str(),

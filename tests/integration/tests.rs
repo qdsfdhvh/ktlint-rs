@@ -409,4 +409,53 @@ mod integration_tests {
             );
         }
     }
+
+    // ── Issue #45: File Discovery ──
+
+    #[test]
+    fn issue45_two_positional_files() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .args(["--reporter", "json"])
+            .arg(fixtures_dir("issue45/a/Alpha.kt"))
+            .arg(fixtures_dir("issue45/b/Beta.kt"))
+            .output()
+            .expect("ktlint failed");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("Alpha.kt"),
+            "should contain Alpha.kt: {}",
+            stdout
+        );
+        assert!(
+            stdout.contains("Beta.kt"),
+            "should contain Beta.kt: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn issue45_directory_walk() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .args(["--reporter", "json"])
+            .arg(fixtures_dir("issue45"))
+            .output()
+            .expect("ktlint failed");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(!stdout.is_empty(), "should produce output");
+    }
+
+    #[test]
+    fn issue45_single_file_still_works() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .arg(fixtures_dir("issue45/Sample.kt"))
+            .output()
+            .expect("ktlint failed");
+        assert!(
+            output.status.code().unwrap_or(-1) != 101,
+            "should not panic (exit 101)"
+        );
+    }
 }

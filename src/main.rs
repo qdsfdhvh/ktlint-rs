@@ -33,33 +33,37 @@ fn main() -> anyhow::Result<()> {
     let files = FileCollector::new(&cli, &config).collect()?;
     let engine = RuleEngine::new(&config);
 
-    // Cache root: parent directory of the first file (target project dir)
-    let cache_root: PathBuf = files
-        .first()
-        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-        .unwrap_or_else(|| config.project_root.clone());
-
-    // ── Scoped thread pool with cache ──
-    let all_violations: Vec<Violation> = rayon::ThreadPoolBuilder::new()
+    // Parallel lint with cache — collect results, then write cache sequentially
+    let results: Vec<(PathBuf, Vec<Violation>)> = rayon::ThreadPoolBuilder::new()
         .stack_size(4 * 1024 * 1024)
         .build()?
         .install(|| {
             use rayon::prelude::*;
             files
                 .par_iter()
-                .flat_map(|path| {
-                    if let Some(cached) = cache::get_cached(path, &cache_root) {
-                        return cached;
+                .map(|path| {
+                    if let Some(cached) = cache::get_cached(path, &config.project_root) {
+                        return (path.clone(), cached);
                     }
                     let source = std::fs::read_to_string(path).unwrap_or_default();
                     let mut parser = KotlinParser::new();
                     let tree = parser.parse(&source);
                     let violations = engine.check(&path.to_string_lossy(), &tree, &source);
-                    cache::save_cached(path, &violations, &cache_root);
-                    violations
+                    (path.clone(), violations)
                 })
                 .collect::<Vec<_>>()
         });
+
+    // Save cache sequentially (no races)
+    for (path, violations) in &results {
+        cache::save_cached(path, violations, &config.project_root);
+    }
+
+    // Collect all violations
+    let all_violations: Vec<Violation> = results
+        .iter()
+        .flat_map(|(_, violations)| violations.clone())
+        .collect();
 
     if cli.create_baseline {
         let xml = baseline::Baseline::generate(&all_violations);
@@ -79,7 +83,12 @@ fn main() -> anyhow::Result<()> {
     let exit_code = reporter.report(&violations);
 
     if cli.format && !violations.is_empty() {
-        formatter::auto_fix(&files, &violations)?;
+        formatter::auto_fix(
+            &files,
+            &violations,
+            config.indent_size,
+            config.insert_final_newline,
+        )?;
     }
 
     std::process::exit(exit_code);

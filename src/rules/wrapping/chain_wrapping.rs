@@ -18,7 +18,7 @@ impl Rule for ChainWrapping {
     }
 
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
-        let mut violations = Vec::new();
+        let violations = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
         let mut prev_dot_call_line: Option<usize> = None;

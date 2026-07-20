@@ -20,7 +20,7 @@ pub struct TypeInfo {
 impl TypeInfo {
     pub fn extract(source: &str) -> Self {
         let mut ti = TypeInfo::default();
-        let mut prev_line = "";
+        let prev_line = "";
         for (i, line) in source.lines().enumerate() {
             let t = line.trim();
             if t.starts_with("val ") || t.starts_with("var ") {

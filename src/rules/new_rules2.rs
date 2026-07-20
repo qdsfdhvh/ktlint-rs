@@ -9,7 +9,7 @@ impl Rule for AnnotationRule {
     fn auto_fixable(&self) -> bool {
         false
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         vec![]
     } // disabled — too noisy
 }
@@ -124,7 +124,7 @@ impl Rule for SpacingAroundAngleBracketsRule {
     }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        let bytes = s.as_bytes();
+        let _bytes = s.as_bytes();
         for (i, l) in s.lines().enumerate() {
             let t = l.trim();
             if t.contains("< ") && !t.contains("<<") && !t.contains("\"") {

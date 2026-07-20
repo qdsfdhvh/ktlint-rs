@@ -32,7 +32,7 @@ impl TrailingComma {
     fn check_trailing_comma(
         &self,
         node: &tree_sitter::Node,
-        bytes: &[u8],
+        _bytes: &[u8],
         violations: &mut Vec<Violation>,
     ) {
         // Get the last non-`)` child. If it has content (not just comments),

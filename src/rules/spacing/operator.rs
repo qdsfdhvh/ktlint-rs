@@ -55,6 +55,24 @@ impl OperatorSpacing {
         let pos = node.start_position();
         let s = node.start_byte();
         let e = node.end_byte();
+        // Issue #45: Unary minus — skip when CST parent is unary_expression
+        // Covers: = -640f, (-1), foo(1,-2), x=-2, second=-2
+        if node.kind() == "-"
+            && node
+                .parent()
+                .map_or(false, |p| p.kind() == "unary_expression")
+        {
+            return;
+        }
+        // Fallback byte-level heuristic for edge cases
+        let is_unary_minus = node.kind() == "-"
+            && s > 0
+            && !(bytes[s - 1] as char).is_alphanumeric()
+            && bytes[s - 1] != b')'
+            && bytes[s - 1] != b']';
+        if is_unary_minus {
+            return;
+        }
         if s > 0 && bytes[s - 1] != b' ' && bytes[s - 1] != b'(' && bytes[s - 1] != b'\n' {
             v.push(Violation {
                 file: String::new(),
@@ -98,6 +116,60 @@ mod tests {
                 .filter(|x| x.rule_id == "standard:op-spacing" && x.message.contains("<"))
                 .count(),
             0
+        );
+    }
+
+    // ── Issue #45: Unary minus ──
+
+    #[test]
+    fn unary_minus_after_equals() {
+        assert!(c("val offset = -640f\n").is_empty());
+    }
+    #[test]
+    fn unary_minus_after_paren() {
+        assert!(c("foo(-1)\n").is_empty());
+    }
+    #[test]
+    fn unary_minus_after_comma() {
+        // foo(1, -2) — the `-2` is in a different call context
+        let v = c("fun f() { foo(1, -2) }\n");
+        assert_eq!(
+            v.iter()
+                .filter(|x| x.rule_id == "standard:op-spacing")
+                .count(),
+            0
+        );
+    }
+    #[test]
+    fn binary_minus_still_flagged() {
+        let v = c("val x = 1-2\n");
+        assert!(!v.is_empty(), "binary minus should be flagged");
+    }
+    #[test]
+    fn binary_minus_spaced_ok() {
+        assert!(c("val x = a - b\n").is_empty());
+    }
+    #[test]
+    fn unary_minus_attached_to_equals() {
+        // val x=-2 — CST: `-2` is unary_expression; `-` NOT flagged
+        // (`=` without space is a valid violation for `=`)
+        let v = c("val x=-2\n");
+        let minus: Vec<_> = v.iter().filter(|x| x.message.contains("\"-\"")).collect();
+        assert!(
+            minus.is_empty(),
+            "unary minus should not be flagged: {:?}",
+            minus
+        );
+    }
+    #[test]
+    fn unary_minus_after_assignment_no_space() {
+        // val second=-2 — CST: `-2` is unary_expression
+        let v = c("val second=-2\n");
+        let minus: Vec<_> = v.iter().filter(|x| x.message.contains("\"-\"")).collect();
+        assert!(
+            minus.is_empty(),
+            "unary minus on literal should not be flagged: {:?}",
+            minus
         );
     }
 }

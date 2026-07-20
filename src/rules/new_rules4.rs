@@ -54,33 +54,7 @@ impl Rule for KdocWrappingRule {
     }
 }
 
-pub struct FunctionExpressionBodyRule;
-impl Rule for FunctionExpressionBodyRule {
-    fn id(&self) -> &'static str {
-        "standard:function-expression-body"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if t.starts_with("fun ") && t.contains('=') && !t.contains('{') && i + 1 < l.len() {
-                let next = l[i + 1].trim();
-                if !next.is_empty() && !next.starts_with("//") {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: self.id().into(),
-                        message: "Multi-line expression body should use braces".into(),
-                        auto_fixable: true,
-                    });
-                }
-            }
-        }
-        v
-    }
-}
+// FunctionExpressionBodyRule removed — dead duplicate of phase3b_rules::FunctionExpressionBody
 
 pub struct CallExpressionWrappingRule;
 impl Rule for CallExpressionWrappingRule {

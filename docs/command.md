@@ -12,7 +12,7 @@ ktlint-rs --ruleset ktlint
 # Lint with detekt rules only  
 ktlint-rs --ruleset detekt
 
-# Lint both (default)
+# Lint both
 ktlint-rs --ruleset ktlint,detekt
 ```
 

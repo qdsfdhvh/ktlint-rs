@@ -9,5 +9,6 @@ findings.md
 progress.md
 .ktlint/
 .ktlint-rs/
+.cache/
 bench_results.tsv
 .pi/
