@@ -55,7 +55,12 @@ impl OperatorSpacing {
         let pos = node.start_position();
         let s = node.start_byte();
         let e = node.end_byte();
-        // T4.x: Unary minus — skip (e.g. val x = -640f)
+        // Issue #45: Unary minus — skip when CST parent is unary_expression
+        // Covers: = -640f, (-1), foo(1,-2), x=-2, second=-2
+        if node.kind() == "-" && node.parent().map_or(false, |p| p.kind() == "unary_expression") {
+            return;
+        }
+        // Fallback byte-level heuristic for edge cases
         let is_unary_minus = node.kind() == "-"
             && s > 0
             && !(bytes[s - 1] as char).is_alphanumeric()
@@ -134,5 +139,24 @@ mod tests {
     #[test]
     fn binary_minus_spaced_ok() {
         assert!(c("val x = a - b\n").is_empty());
-}
+    }
+    #[test]
+    fn unary_minus_attached_to_equals() {
+        // val x=-2 — CST: `-2` is unary_expression; `-` NOT flagged
+        // (`=` without space is a valid violation for `=`)
+        let v = c("val x=-2\n");
+        let minus: Vec<_> = v.iter()
+            .filter(|x| x.message.contains("\"-\""))
+            .collect();
+        assert!(minus.is_empty(), "unary minus should not be flagged: {:?}", minus);
+    }
+    #[test]
+    fn unary_minus_after_assignment_no_space() {
+        // val second=-2 — CST: `-2` is unary_expression
+        let v = c("val second=-2\n");
+        let minus: Vec<_> = v.iter()
+            .filter(|x| x.message.contains("\"-\""))
+            .collect();
+        assert!(minus.is_empty(), "unary minus on literal should not be flagged: {:?}", minus);
+    }
 }
