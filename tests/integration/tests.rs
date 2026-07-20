@@ -422,8 +422,16 @@ mod integration_tests {
             .output()
             .expect("ktlint failed");
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("Alpha.kt"), "should contain Alpha.kt: {}", stdout);
-        assert!(stdout.contains("Beta.kt"), "should contain Beta.kt: {}", stdout);
+        assert!(
+            stdout.contains("Alpha.kt"),
+            "should contain Alpha.kt: {}",
+            stdout
+        );
+        assert!(
+            stdout.contains("Beta.kt"),
+            "should contain Beta.kt: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -445,6 +453,9 @@ mod integration_tests {
             .arg(fixtures_dir("issue45/Sample.kt"))
             .output()
             .expect("ktlint failed");
-        assert!(output.status.code().unwrap_or(-1) != 101, "should not panic (exit 101)");
+        assert!(
+            output.status.code().unwrap_or(-1) != 101,
+            "should not panic (exit 101)"
+        );
     }
 }

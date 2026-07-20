@@ -83,7 +83,12 @@ fn main() -> anyhow::Result<()> {
     let exit_code = reporter.report(&violations);
 
     if cli.format && !violations.is_empty() {
-        formatter::auto_fix(&files, &violations, config.indent_size, config.insert_final_newline)?;
+        formatter::auto_fix(
+            &files,
+            &violations,
+            config.indent_size,
+            config.insert_final_newline,
+        )?;
     }
 
     std::process::exit(exit_code);

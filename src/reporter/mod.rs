@@ -102,7 +102,12 @@ impl<'a> DiagnosticReporter<'a> {
             let msg = &v.message;
 
             if self.cli.color {
-                output.push_str(&format!("{} {} {}\n", location.red(), rule.dimmed(), msg.yellow()));
+                output.push_str(&format!(
+                    "{} {} {}\n",
+                    location.red(),
+                    rule.dimmed(),
+                    msg.yellow()
+                ));
             } else {
                 output.push_str(&format!("{} {} {}\n", location, rule, msg));
             }
@@ -247,7 +252,11 @@ impl<'a> DiagnosticReporter<'a> {
                      <span class=\"line\">:{}:{}</span>\
                      <span class=\"rule\">({})</span>\
                      <span class=\"msg\">{}</span></div>\n",
-                    self.rel_path(&v.file), v.line, v.col, v.rule_id, v.message
+                    self.rel_path(&v.file),
+                    v.line,
+                    v.col,
+                    v.rule_id,
+                    v.message
                 ));
             }
         }
@@ -276,7 +285,10 @@ impl<'a> DiagnosticReporter<'a> {
         let mut file_names: Vec<&&str> = files.keys().collect();
         file_names.sort();
         for file_name in file_names {
-            xml.push_str(&format!("<file name=\"{}\">\n", xml_attr_escape(&self.rel_path(file_name))));
+            xml.push_str(&format!(
+                "<file name=\"{}\">\n",
+                xml_attr_escape(&self.rel_path(file_name))
+            ));
             for v in &files[file_name] {
                 xml.push_str(&format!(
                     "<error line=\"{}\" column=\"{}\" severity=\"error\" \
@@ -324,7 +336,11 @@ impl<'a> DiagnosticReporter<'a> {
             for v in limited {
                 md.push_str(&format!(
                     "| {} | {}:{} | {} | {} |\n",
-                    self.rel_path(&v.file), v.line, v.col, v.rule_id, v.message
+                    self.rel_path(&v.file),
+                    v.line,
+                    v.col,
+                    v.rule_id,
+                    v.message
                 ));
             }
         }
@@ -362,7 +378,12 @@ mod tests {
         }
     }
 
-    fn make_cli(reporter: &str, limit: Option<usize>, reporter_output: Option<&str>, relative: bool) -> Cli {
+    fn make_cli(
+        reporter: &str,
+        limit: Option<usize>,
+        reporter_output: Option<&str>,
+        relative: bool,
+    ) -> Cli {
         Cli {
             format: false,
             patterns_from_stdin: vec![],
@@ -388,7 +409,9 @@ mod tests {
     fn t2_1_limit_truncates_json() {
         let cli = make_cli("json", Some(2), None, false);
         let r = DiagnosticReporter::new(&cli);
-        let violations: Vec<Violation> = (0..5).map(|i| make_violation(&format!("file{}.kt", i), "rule")).collect();
+        let violations: Vec<Violation> = (0..5)
+            .map(|i| make_violation(&format!("file{}.kt", i), "rule"))
+            .collect();
         let limited = r.limited(&violations);
         assert_eq!(limited.len(), 2);
     }
@@ -397,7 +420,9 @@ mod tests {
     fn t2_2_limit_none_shows_all() {
         let cli = make_cli("json", None, None, false);
         let r = DiagnosticReporter::new(&cli);
-        let violations: Vec<Violation> = (0..5).map(|i| make_violation(&format!("file{}.kt", i), "rule")).collect();
+        let violations: Vec<Violation> = (0..5)
+            .map(|i| make_violation(&format!("file{}.kt", i), "rule"))
+            .collect();
         assert_eq!(r.limited(&violations).len(), 5);
     }
 
@@ -405,7 +430,9 @@ mod tests {
     fn t2_3_limit_exceeds_total() {
         let cli = make_cli("json", Some(100), None, false);
         let r = DiagnosticReporter::new(&cli);
-        let violations: Vec<Violation> = (0..5).map(|i| make_violation(&format!("file{}.kt", i), "rule")).collect();
+        let violations: Vec<Violation> = (0..5)
+            .map(|i| make_violation(&format!("file{}.kt", i), "rule"))
+            .collect();
         assert_eq!(r.limited(&violations).len(), 5);
     }
 
@@ -475,7 +502,9 @@ mod tests {
     fn t2_14_limit_with_summary_total() {
         let cli = make_cli("plain", Some(2), None, false);
         let r = DiagnosticReporter::new(&cli);
-        let violations: Vec<Violation> = (0..10).map(|i| make_violation(&format!("file{}.kt", i), "rule")).collect();
+        let violations: Vec<Violation> = (0..10)
+            .map(|i| make_violation(&format!("file{}.kt", i), "rule"))
+            .collect();
         // Limited should be 2, but summary uses full violations
         let limited = r.limited(&violations);
         assert_eq!(limited.len(), 2);
@@ -485,7 +514,16 @@ mod tests {
 
     #[test]
     fn t2_15_all_reporters_no_panic() {
-        for reporter in &["json", "sarif", "plain-summary", "plain", "html", "xml", "checkstyle", "markdown"] {
+        for reporter in &[
+            "json",
+            "sarif",
+            "plain-summary",
+            "plain",
+            "html",
+            "xml",
+            "checkstyle",
+            "markdown",
+        ] {
             let cli = make_cli(reporter, Some(1), None, false);
             let r = DiagnosticReporter::new(&cli);
             let violations = vec![make_violation("test.kt", "r1")];

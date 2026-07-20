@@ -28,8 +28,8 @@ impl Rule for NoSingleExpressionBody {
                     let next_indent = next.len() - next.trim_start().len();
                     let curr_indent = line.len() - trimmed.len();
                     let next_trim = next.trim();
-                    let is_trailing_lambda = next_trim.starts_with('{')
-                        || next_trim.starts_with('.');
+                    let is_trailing_lambda =
+                        next_trim.starts_with('{') || next_trim.starts_with('.');
                     if next_indent > curr_indent
                         && !next_trim.starts_with("//")
                         && !is_trailing_lambda
@@ -39,8 +39,9 @@ impl Rule for NoSingleExpressionBody {
                             line: i + 1,
                             col: 1,
                             rule_id: self.id().to_string(),
-                            message: "Multi-line expression body should use braces or be on one line"
-                                .to_string(),
+                            message:
+                                "Multi-line expression body should use braces or be on one line"
+                                    .to_string(),
                             auto_fixable: true,
                         });
                     }
@@ -86,13 +87,21 @@ mod tests {
     fn trailing_lambda_expression_ok() {
         let src = "fun render() = wrapper {\n    consume(1f)\n}\n";
         let v = check(src);
-        assert!(v.is_empty(), "trailing lambda should not be flagged, got {:?}", v);
+        assert!(
+            v.is_empty(),
+            "trailing lambda should not be flagged, got {:?}",
+            v
+        );
     }
 
     #[test]
     fn chained_call_expression_ok() {
         let src = "fun foo() = bar\n    .baz()\n";
         let v = check(src);
-        assert!(v.is_empty(), "chained call should not be flagged, got {:?}", v);
+        assert!(
+            v.is_empty(),
+            "chained call should not be flagged, got {:?}",
+            v
+        );
     }
 }

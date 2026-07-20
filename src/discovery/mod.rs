@@ -196,8 +196,16 @@ mod tests {
         ];
         let files = collector(&config, &cli).collect().unwrap();
         let names = file_names(&files);
-        assert!(names.contains(&"Alpha.kt".to_string()), "should contain Alpha.kt, got {:?}", names);
-        assert!(names.contains(&"Beta.kt".to_string()), "should contain Beta.kt, got {:?}", names);
+        assert!(
+            names.contains(&"Alpha.kt".to_string()),
+            "should contain Alpha.kt, got {:?}",
+            names
+        );
+        assert!(
+            names.contains(&"Beta.kt".to_string()),
+            "should contain Beta.kt, got {:?}",
+            names
+        );
         assert_eq!(names.len(), 2);
     }
 
@@ -238,9 +246,20 @@ mod tests {
         let files = collector(&config, &cli).collect().unwrap();
         let names = file_names(&files);
         // Should include Root.kt, Alpha.kt, Beta.kt, Gamma.kts (not Ignored.kt, not .txt)
-        assert!(names.contains(&"Root.kt".to_string()), "should have Root.kt, got {:?}", names);
-        assert!(names.contains(&"Alpha.kt".to_string()), "should have Alpha.kt, got {:?}", names);
-        assert!(!names.contains(&"Ignored.kt".to_string()), "Ignored.kt should be excluded");
+        assert!(
+            names.contains(&"Root.kt".to_string()),
+            "should have Root.kt, got {:?}",
+            names
+        );
+        assert!(
+            names.contains(&"Alpha.kt".to_string()),
+            "should have Alpha.kt, got {:?}",
+            names
+        );
+        assert!(
+            !names.contains(&"Ignored.kt".to_string()),
+            "Ignored.kt should be excluded"
+        );
         assert!(!names.contains(&"NotKotlin.txt".to_string()));
     }
 

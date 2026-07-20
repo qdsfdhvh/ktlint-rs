@@ -3,7 +3,12 @@ use crate::rules::Violation;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-pub fn auto_fix(_files: &[PathBuf], violations: &[Violation], indent_size: usize, insert_final_newline: bool) -> anyhow::Result<()> {
+pub fn auto_fix(
+    _files: &[PathBuf],
+    violations: &[Violation],
+    indent_size: usize,
+    insert_final_newline: bool,
+) -> anyhow::Result<()> {
     let fixable: Vec<&Violation> = violations.iter().filter(|v| v.auto_fixable).collect();
     if fixable.is_empty() {
         return Ok(());
@@ -202,11 +207,21 @@ fn fix_operators(source: &str) -> String {
             }
             // After insert, re-read positions
             let cur2: Vec<char> = s.chars().collect();
-            let after = pos + op.len() + if prev.is_alphanumeric() && prev != ' ' { 1 } else { 0 };
+            let after = pos
+                + op.len()
+                + if prev.is_alphanumeric() && prev != ' ' {
+                    1
+                } else {
+                    0
+                };
             if after < cur2.len() {
                 let actual_next = cur2[after];
                 // Align with rule: insert unless next is space ) \n ,
-                if actual_next != ' ' && actual_next != ')' && actual_next != '\n' && actual_next != ',' {
+                if actual_next != ' '
+                    && actual_next != ')'
+                    && actual_next != '\n'
+                    && actual_next != ','
+                {
                     s.insert(after, ' ');
                 }
             }
