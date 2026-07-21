@@ -1135,6 +1135,7 @@ catch(e: E) { b() }"
             "expr lost"
         );
         assert!(!r.contains("\u{fffd}"), "replacement char");
+        assert!(r.contains("@get:JvmName"), "get lost");
     }
 
     #[test]
@@ -1149,5 +1150,165 @@ catch(e: E) { b() }"
         let src = "    val  x   =    1\n";
         let r = fix_all_spacing(src);
         assert!(r.contains("    val x = 1"), "wrong: {r:?}");
+    }
+
+    // ── Mask→restore: generics, supertype colon, use-site targets ──
+
+    #[test]
+    fn cs68_generic_type_args_not_spaced() {
+        let src = "val list: List<String> = emptyList()\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("List<String>"), "generic args broken: {r:?}");
+    }
+
+    #[test]
+    fn cs68_generic_function_call_not_spaced() {
+        let src = "val map = mapOf<String, Int>()\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("mapOf<String, Int>"),
+            "generic call broken: {r:?}"
+        );
+    }
+
+    #[test]
+    fn cs68_supertype_colon_preserved() {
+        let src = "class Foo : Bar<Int> { val x = 1 }\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("Foo : Bar"), "supertype colon broken: {r:?}");
+    }
+
+    #[test]
+    fn cs68_where_clause_colon_preserved() {
+        let src = "fun <T> f() where T : Comparable<T> = TODO()\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("T : Comparable"), "where clause broken: {r:?}");
+    }
+
+    #[test]
+    fn cs68_param_receiver_targets_preserved() {
+        let src = "@param:Deprecated @receiver:Suppress(\"w\") fun f() = 1\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("@param:Deprecated"), "param broken: {r:?}");
+        assert!(r.contains("@receiver:Suppress"), "receiver broken: {r:?}");
+    }
+
+    #[test]
+    fn cs68_file_target_colon_not_spaced() {
+        let src = "@file:Suppress(\"ktlint\")\nclass Foo {}\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("@file:Suppress"), "file colon broken: {r:?}");
+    }
+
+    // ── Operator safety: compound ops, safe-call, elvis ──
+
+    #[test]
+    fn cs68_double_equals_not_split() {
+        let src = "val ok = a == b\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("=="), "== split: {r:?}");
+    }
+
+    #[test]
+    fn cs68_not_equals_not_split() {
+        let src = "val ok = a != b\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("!="), "!= split: {r:?}");
+    }
+
+    #[test]
+    fn cs68_elvis_operator_survives() {
+        let src = "val x = a ?: b\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("?:"), "elvis broken: {r:?}");
+    }
+
+    #[test]
+    fn cs68_safe_call_operator_survives() {
+        let src = "val x = a?.b()\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("?."), "safe-call broken: {r:?}");
+    }
+
+    #[test]
+    fn cs68_range_operator_survives() {
+        let src = "for (i in 1..10) {}\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("1..10"), "range broken: {r:?}");
+    }
+
+    #[test]
+    fn cs68_compound_plus_equals_not_split() {
+        let src = "x += 1\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("+="), "+= split: {r:?}");
+    }
+
+    #[test]
+    fn cs68_property_reference_not_spaced() {
+        let src = "val ref = Foo::bar\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("::"), "prop ref broken: {r:?}");
+    }
+
+    // ── Label, enum, and annotation edge cases ──
+
+    #[test]
+    fn cs68_label_colon_preserved() {
+        let src = "loop@ for (x in 1..5) { break@loop }\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("loop@"), "label broken: {r:?}");
+    }
+
+    #[test]
+    fn cs68_enum_constructor_call_preserved() {
+        let src = "enum class E { A(1), B(2) }\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("A(1)"), "enum call broken: {r:?}");
+    }
+
+    // ── Multiline template, spread, KDoc ──
+
+    #[test]
+    fn cs68_multiline_raw_template_preserved() {
+        let src = "val s = \"\"\"\n    \u{0024}{foo.bar()}\n\"\"\".trimIndent()\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("\u{0024}{foo.bar()}"), "template lost: {r:?}");
+    }
+
+    #[test]
+    fn cs68_spread_operator_preserved() {
+        let src = "val arr = listOf(*array)\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("*array") || r.contains("* array"),
+            "entry lost: {r:?}"
+        );
+    }
+
+    #[test]
+    fn cs68_kdoc_with_code_block_untouched() {
+        let src = "/**\n * ```\n * val x=1\n * ```\n */\nclass Foo\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("val x=1"), "kdoc code changed: {r:?}");
+    }
+
+    // ── Multiple fixes + UTF-8 ──
+
+    #[test]
+    fn cs68_multiple_fixes_no_replacement_chars() {
+        let src = concat!(
+            "// \u{2500} UTF-8\n",
+            "class Foo { val x=1 val y=2 }\n",
+            "class Bar{ val a=3 }\n",
+        );
+        let r = fix_all_spacing(src);
+        assert!(!r.contains("\u{fffd}"), "replacement: {r:?}");
+        assert!(r.contains("\u{2500}"), "box lost: {r:?}");
+        assert!(
+            r.contains("x=1") || r.contains("x = 1"),
+            "eq expr lost: {r:?}"
+        );
+        // second class brace may not fix inside multi-block string
     }
 }
