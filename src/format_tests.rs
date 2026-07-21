@@ -23,7 +23,10 @@ mod format_tests {
 
     #[test]
     fn format_idempotency() {
-        let source = "class Foo{ fun bar( x:Int):String=\"\" }";
+        // Must parse cleanly: the formatter deliberately skips spacing edits on
+        // files tree-sitter-kotlin-sg can't parse (safety over completeness), so a
+        // grammar-breaking snippet would no-op and defeat this test's intent.
+        let source = "class Foo {\n    val x:Int=1\n    fun bar(a:String) {}\n}\n";
         let mut f = NamedTempFile::new().unwrap();
         f.write_all(source.as_bytes()).unwrap();
 
