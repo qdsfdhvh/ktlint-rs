@@ -1,7 +1,8 @@
 //! Incremental lint cache — skips unchanged files on repeated runs.
-//! Stores violations per file keyed by (path, mtime, file_size).
+//! Stores violations per file keyed by (path, mtime, file_size, ruleset, config).
 //! Cache lives in `.cache/ktlint-rs/cache.json` at the project root.
 
+use crate::config::KtlintConfig;
 use crate::rules::Violation;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,12 +10,15 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 /// Bump on format change to invalidate old caches.
-const CACHE_VERSION: u32 = 2;
+const CACHE_VERSION: u32 = 3;
 
 #[derive(Serialize, Deserialize)]
 struct CacheFile {
     version: u32,
     entries: HashMap<String, CachedViolations>,
+    /// Config fingerprint to avoid cross-ruleset cache reuse
+    #[serde(default)]
+    config_fingerprint: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -38,8 +42,26 @@ pub fn cache_path(project_root: &Path) -> PathBuf {
     project_root.join(".cache/ktlint-rs").join("cache.json")
 }
 
+/// Build a config fingerprint for cache discrimination.
+fn config_fingerprint(config: &KtlintConfig) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut h = DefaultHasher::new();
+    config.rule_set.hash(&mut h);
+    config.code_style.hash(&mut h);
+    config.indent_size.hash(&mut h);
+    config.insert_final_newline.hash(&mut h);
+    config.max_line_length.hash(&mut h);
+    config.compat.hash(&mut h);
+    h.finish()
+}
+
 /// Try to load cached violations for a file. Returns None if cache miss.
-pub fn get_cached(path: &Path, project_root: &Path) -> Option<Vec<Violation>> {
+pub fn get_cached(
+    path: &Path,
+    project_root: &Path,
+    config: &KtlintConfig,
+) -> Option<Vec<Violation>> {
     let meta = path.metadata().ok()?;
     let mtime = meta
         .modified()
@@ -51,6 +73,11 @@ pub fn get_cached(path: &Path, project_root: &Path) -> Option<Vec<Violation>> {
 
     let cache = load_cache(project_root)?;
     let key = cache_key(path, project_root);
+    let fp = config_fingerprint(config);
+    // Check config fingerprint to avoid cross-ruleset cache reuse
+    if cache.config_fingerprint != fp {
+        return None;
+    }
     let cached = cache.entries.get(&key)?;
 
     // Check mtime + size match
@@ -75,7 +102,12 @@ pub fn get_cached(path: &Path, project_root: &Path) -> Option<Vec<Violation>> {
 }
 
 /// Save violations for a file to the cache.
-pub fn save_cached(path: &Path, violations: &[Violation], project_root: &Path) {
+pub fn save_cached(
+    path: &Path,
+    violations: &[Violation],
+    project_root: &Path,
+    config: &KtlintConfig,
+) {
     let meta = match path.metadata() {
         Ok(m) => m,
         Err(_) => return,
@@ -93,7 +125,11 @@ pub fn save_cached(path: &Path, violations: &[Violation], project_root: &Path) {
     let mut cache = load_cache(project_root).unwrap_or(CacheFile {
         version: CACHE_VERSION,
         entries: HashMap::new(),
+        config_fingerprint: config_fingerprint(config),
     });
+
+    // Update fingerprint if cache was loaded from disk (might differ)
+    cache.config_fingerprint = config_fingerprint(config);
 
     let key = cache_key(path, project_root);
     cache.entries.insert(

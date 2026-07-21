@@ -42,7 +42,7 @@ fn main() -> anyhow::Result<()> {
             files
                 .par_iter()
                 .map(|path| {
-                    if let Some(cached) = cache::get_cached(path, &config.project_root) {
+                    if let Some(cached) = cache::get_cached(path, &config.project_root, &config) {
                         return (path.clone(), cached);
                     }
                     let source = std::fs::read_to_string(path).unwrap_or_default();
@@ -56,7 +56,7 @@ fn main() -> anyhow::Result<()> {
 
     // Save cache sequentially (no races)
     for (path, violations) in &results {
-        cache::save_cached(path, violations, &config.project_root);
+        cache::save_cached(path, violations, &config.project_root, &config);
     }
 
     // Collect all violations
