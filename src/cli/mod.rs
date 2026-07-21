@@ -40,6 +40,10 @@ pub struct Cli {
     #[arg(long, default_value = "ktlint")]
     pub ruleset: String,
 
+    /// Enable JVM-compatible mode: include ktlint-rs-only rules in default ruleset
+    #[arg(long)]
+    pub compat: bool,
+
     /// Maximum number of errors to show
     #[arg(long)]
     pub limit: Option<usize>,

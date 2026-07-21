@@ -92,12 +92,84 @@ impl RuleEngine {
         violations
     }
 
+    /// Rs-only rules: no JVM ktlint equivalent. Excluded from default --ruleset ktlint
+    /// unless --compat is passed. Source: docs/RULE_PLAN.md Part 2.
+    const RS_ONLY: &[&str] = &[
+        "standard:ij_kotlin_allow_trailing_comma",
+        "standard:kdoc-no-empty-first-line",
+        "standard:no-trailing-spaces-in-kdoc",
+        "standard:no-unnecessary-parentheses-before-trailing-lambda",
+        "standard:no-empty-line-after-kdoc",
+        "standard:no-blank-line-before-list-closing",
+        "standard:no-empty-file-body",
+        "standard:no-single-expression-body",
+        "standard:no-trailing-spaces-in-string-template",
+        "standard:no-wildcard-imports-either",
+        "standard:spacing-between-declarations",
+        "standard:trailing-comma",
+        "standard:no-trailing-spaces-in-block-comment",
+        "standard:try-catch-finally-wrapping",
+        "standard:when-expression-line-break",
+    ];
+
     fn rule_set_allows(&self, rule_id: &str) -> bool {
         match self.config.rule_set {
             crate::config::RuleSet::Both => true,
             crate::config::RuleSet::DetektOnly => rule_id.starts_with("detekt:"),
-            crate::config::RuleSet::KtlintOnly => !rule_id.starts_with("detekt:"),
+            crate::config::RuleSet::KtlintOnly => {
+                if !rule_id.starts_with("detekt:") {
+                    // Exclude rs-only rules if compat mode is off
+                    self.config.compat || !Self::RS_ONLY.contains(&rule_id)
+                } else {
+                    false
+                }
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod rule_set_tests {
+    use super::*;
+    use crate::config::{KtlintConfig, RuleSet};
+
+    fn config_with(ruleset: RuleSet, compat: bool) -> KtlintConfig {
+        KtlintConfig {
+            rule_set: ruleset,
+            compat,
+            ..KtlintConfig::default()
+        }
+    }
+
+    #[test]
+    fn t50_ktlint_excludes_rs_only() {
+        let engine = RuleEngine::new(&config_with(RuleSet::KtlintOnly, false));
+        assert!(engine.rule_set_allows("standard:curly-spacing"));
+        assert!(!engine.rule_set_allows("standard:no-single-expression-body"));
+        assert!(!engine.rule_set_allows("standard:spacing-between-declarations"));
+        assert!(!engine.rule_set_allows("detekt:style:VarCouldBeVal"));
+    }
+
+    #[test]
+    fn t50_compat_enables_rs_only() {
+        let engine = RuleEngine::new(&config_with(RuleSet::KtlintOnly, true));
+        assert!(engine.rule_set_allows("standard:no-single-expression-body"));
+        assert!(engine.rule_set_allows("standard:spacing-between-declarations"));
+    }
+
+    #[test]
+    fn t50_detekt_only_excludes_standard() {
+        let engine = RuleEngine::new(&config_with(RuleSet::DetektOnly, false));
+        assert!(!engine.rule_set_allows("standard:curly-spacing"));
+        assert!(!engine.rule_set_allows("standard:no-single-expression-body"));
+        assert!(engine.rule_set_allows("detekt:style:VarCouldBeVal"));
+    }
+
+    #[test]
+    fn t50_both_includes_all() {
+        let engine = RuleEngine::new(&config_with(RuleSet::Both, false));
+        assert!(engine.rule_set_allows("standard:no-single-expression-body"));
+        assert!(engine.rule_set_allows("detekt:style:VarCouldBeVal"));
     }
 }
 

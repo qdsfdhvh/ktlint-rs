@@ -458,4 +458,43 @@ mod integration_tests {
             "should not panic (exit 101)"
         );
     }
+
+    // ── Issue #50: JVM parity ──
+
+    #[test]
+    fn issue50_jvm_parity_default_ruleset() {
+        ensure_built();
+        // Parity.kt passes JVM ktlint 1.8.0. Default ruleset must match.
+        let output = Command::new(ktlint_bin())
+            .arg(fixtures_dir("issue50/Parity.kt"))
+            .output()
+            .expect("ktlint failed");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            !stdout.contains("no-single-expression-body"),
+            "rs-only rule should not fire in default ktlint ruleset: {}",
+            stdout
+        );
+        assert!(
+            !stdout.contains("spacing-between-declarations"),
+            "rs-only rule should not fire in default ktlint ruleset: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn issue50_compat_enables_rs_only() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .args(["--compat", "--reporter", "json"])
+            .arg(fixtures_dir("issue50/Parity.kt"))
+            .output()
+            .expect("ktlint failed");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("no-single-expression-body"),
+            "--compat should enable rs-only rules: {}",
+            stdout
+        );
+    }
 }
