@@ -1021,4 +1021,133 @@ catch(e: E) { b() }"
         assert!(!r.is_empty(), "output must not be empty");
         assert!(!r.contains("\u{fffd}"), "no replacement chars");
     }
+
+    // ── PR #67 additional coverage ──
+
+    #[test]
+    fn backtick_with_method_call_not_mangled() {
+        let src = "val r = `is`(x)\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("`is`"), "backtick lost: {r:?}");
+    }
+
+    #[test]
+    fn cs67_template_complex_expression_not_broken() {
+        let src = "val s = \"\u{0024}{a + b}\"\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("\u{0024}{a + b}"),
+            "complex template lost: {r:?}"
+        );
+    }
+
+    #[test]
+    fn cs67_comment_operators_preserved() {
+        let src = "// val x=1\nval y=2\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("// val x=1"), "comment modified: {r:?}");
+        assert!(r.contains("val y = 2"), "code not fixed: {r:?}");
+    }
+
+    #[test]
+    fn cs67_block_comment_braces_untouched() {
+        let src = "/* { } */\nclass Foo {}\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("/* { } */"), "block comment changed: {r:?}");
+    }
+
+    #[test]
+    fn cs67_string_equals_not_spaced() {
+        let src = "val s = \"a=b\"\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("\"a=b\""), "string equals spaced: {r:?}");
+    }
+
+    #[test]
+    fn cs67_disabled_indent_not_applied() {
+        let src = "class Foo {\nval x = 1\n}\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("\nval x"),
+            "indent applied (should be disabled): {r:?}"
+        );
+    }
+
+    #[test]
+    fn cs67_disabled_chain_wrap_unchanged() {
+        let src = "val x = foo\n    .bar()\n    .baz()\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains(".bar()"), "chain wrap touched: {r:?}");
+    }
+
+    #[test]
+    fn cs67_disabled_string_template_no_trim() {
+        let src = "val s = \"\"\"\n    line\n\"\"\"\n";
+        let r = fix_all_spacing(src);
+        assert!(!r.contains("trimIndent"), "trimIndent added: {r:?}");
+    }
+
+    #[test]
+    fn cs67_parse_error_untouched_unmatched() {
+        let src = "val x = (a + b\n";
+        let r = fix_all_spacing(src);
+        assert_eq!(r, src, "unparseable must be untouched");
+    }
+
+    #[test]
+    fn cs67_parse_error_untouched_jumbled() {
+        let src = "val ){ class = fun\n";
+        let r = fix_all_spacing(src);
+        assert_eq!(r, src, "jumbled must be untouched");
+    }
+
+    #[test]
+    fn cs67_real_world_snippet_all_forms_survive() {
+        let src = concat!(
+            "@file:Suppress(\"ktlint:standard:max-line-length\")\n",
+            "@get:JvmName(\"foo\")\n",
+            "class `MyData`<T : Any> : Base(\n",
+            "    val id: String,\n",
+            "    val `prop`: String,\n",
+            ") where T : Comparable<T> {\n",
+            "    // TODO\n",
+            "    val j = \"\"\"\n",
+            "        {\"k\": \"v\"}\n",
+            "    \"\"\".trimIndent()\n",
+            "    fun f() = \"",
+            "\u{0024}name world\"\n",
+            "    val `is` = 1\n",
+            "    val should==1\n",
+            "}\n",
+        );
+        let r = fix_all_spacing(src);
+        assert!(r.contains("@file:Suppress"), "use-site lost");
+        assert!(r.contains("@get:JvmName"), "get lost");
+        assert!(r.contains("`MyData`"), "backtick class lost");
+        assert!(r.contains("`prop`"), "backtick prop lost");
+        assert!(r.contains("`is`"), "backtick val lost");
+        assert!(r.contains("<T : Any>"), "generic lost");
+        assert!(r.contains("where T"), "where clause lost");
+        assert!(r.contains("trimIndent"), "trimIndent lost");
+        assert!(r.contains("// TODO"), "comment lost");
+        assert!(
+            r.contains("should==1") || r.contains("should == 1"),
+            "expr lost"
+        );
+        assert!(!r.contains("\u{fffd}"), "replacement char");
+    }
+
+    #[test]
+    fn cs67_leading_indent_survives_paren_fix() {
+        let src = "fun f() {\n    bar(\n        x,\n        y,\n    )\n}\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("    )"), "indent eaten: {r:?}");
+    }
+
+    #[test]
+    fn cs67_double_spaces_removed_but_indent_kept() {
+        let src = "    val  x   =    1\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("    val x = 1"), "wrong: {r:?}");
+    }
 }
