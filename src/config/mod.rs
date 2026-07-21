@@ -32,7 +32,7 @@ pub struct KtlintConfig {
     pub category_overrides: HashMap<String, RuleConfig>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RuleSet {
     KtlintOnly,
     DetektOnly,
@@ -73,7 +73,7 @@ impl Default for KtlintConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum CodeStyle {
     #[default]
     KtlintOfficial,
