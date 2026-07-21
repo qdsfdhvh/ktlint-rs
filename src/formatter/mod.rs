@@ -1,7 +1,155 @@
 //! Auto-fix formatter — applies text-level corrections for fixable violations.
+use crate::parser::KotlinParser;
 use crate::rules::Violation;
 use std::collections::HashSet;
 use std::path::PathBuf;
+
+/// Private-use sentinel that never appears in real Kotlin source. Used to fence
+/// off masked spans (see [`mask_protected`]).
+const SENTINEL: char = '\u{E000}';
+
+/// True for CST node kinds whose *interior* the text-level spacing fixers must
+/// never edit: string/char literals and comments. The text fixers (`fix_operators`,
+/// `fix_colons`, `fix_comment_spacing`, …) are CST-unaware and would otherwise
+/// insert spaces inside `"https://x?a=b"`, KDoc, and `// url` comments. Matching
+/// on substrings keeps this robust across grammar naming variants
+/// (`line_string_literal`, `multiline_string_literal`, `line_comment`, …).
+fn is_protected_kind(kind: &str) -> bool {
+    kind == "string_literal"
+        || kind == "character_literal"
+        || kind.contains("string")
+        || kind.contains("comment")
+        // Generic type argument/parameter lists: their `<`, `>`, and commas must not
+        // be touched by fix_operators/fix_angle_brackets/fix_commas, which can't tell
+        // `List<String>` from the comparison operators `<`/`>`.
+        || kind == "type_arguments"
+        || kind == "type_parameters"
+}
+
+/// A `:` that carries a space *before* it in ktlint style — class/object supertype,
+/// generic `where` constraint, and secondary-constructor delegation. The text-level
+/// `fix_colons` collapses ` : `→`: ` (correct for `val x: Int`, wrong here), so these
+/// specific colons are protected via their CST parent.
+fn is_space_before_colon(node: &tree_sitter::Node) -> bool {
+    node.kind() == ":"
+        && node.parent().is_some_and(|p| {
+            matches!(
+                p.kind(),
+                "class_declaration"
+                    | "object_declaration"
+                    | "object_literal"
+                    | "type_constraint"
+                    | "secondary_constructor"
+            )
+        })
+}
+
+/// A backtick-quoted identifier (e.g. `` fun `name with spaces`() ``) is not a
+/// string node, so `is_protected_kind` misses it — yet its interior (`-`, spaces,
+/// `/`) must never be edited. Kotlin backtick identifiers cannot contain a newline
+/// or another backtick, so a same-line ``…`` span is unambiguous.
+fn is_backtick_identifier(node: &tree_sitter::Node, source: &str) -> bool {
+    let t = &source[node.start_byte()..node.end_byte()];
+    t.len() >= 2 && t.starts_with('`') && t.ends_with('`') && !t.contains('\n')
+}
+
+fn collect_protected(node: tree_sitter::Node, source: &str, out: &mut Vec<(usize, usize)>) {
+    if is_protected_kind(node.kind())
+        || is_backtick_identifier(&node, source)
+        || is_space_before_colon(&node)
+    {
+        // Protect the whole span (including any string interpolation) rather than
+        // risk corrupting it — under-formatting is acceptable, corruption is not.
+        out.push((node.start_byte(), node.end_byte()));
+        return;
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        collect_protected(child, source, out);
+    }
+}
+
+/// Replace every string/char-literal and comment span with an inert, newline-count-
+/// preserving placeholder so the text-level fixers can't reach inside them. Returns
+/// the masked text and the table needed by [`restore_protected`].
+///
+/// Each physical line of a span becomes its own `SENTINEL<id>SENTINEL` fragment,
+/// with real `\n`s kept between fragments — this keeps line-oriented fixers
+/// (`fix_indentation`, `fix_blank_line_in_list`, `fix_trailing_ws`) seeing the same
+/// line structure, while the fragments contain no character any fixer targets.
+fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> (String, Vec<String>) {
+    if source.contains(SENTINEL) {
+        return (source.to_string(), Vec::new());
+    }
+    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    collect_protected(tree.root_node(), source, &mut ranges);
+    if ranges.is_empty() {
+        return (source.to_string(), Vec::new());
+    }
+    ranges.sort_by_key(|r| r.0);
+
+    let mut out = String::with_capacity(source.len());
+    let mut store: Vec<String> = Vec::new();
+    let mut last = 0usize;
+    for (start, end) in ranges {
+        if start < last {
+            continue; // defensive: skip any overlap
+        }
+        out.push_str(&source[last..start]);
+        let mut first = true;
+        for part in source[start..end].split('\n') {
+            if !first {
+                out.push('\n');
+            }
+            first = false;
+            let id = store.len();
+            store.push(part.to_string());
+            out.push(SENTINEL);
+            out.push_str(&id.to_string());
+            out.push(SENTINEL);
+        }
+        last = end;
+    }
+    out.push_str(&source[last..]);
+    (out, store)
+}
+
+/// Inverse of [`mask_protected`]: swap each `SENTINEL<id>SENTINEL` fragment back
+/// for its original text. Fixers never insert into a fragment (it holds only
+/// digits between two sentinels), so ids survive intact.
+fn restore_protected(text: &str, store: &[String]) -> String {
+    if store.is_empty() {
+        return text.to_string();
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == SENTINEL {
+            let mut j = i + 1;
+            let mut num = String::new();
+            while j < chars.len() && chars[j] != SENTINEL {
+                num.push(chars[j]);
+                j += 1;
+            }
+            if j < chars.len() && chars[j] == SENTINEL {
+                if let Ok(id) = num.parse::<usize>() {
+                    if let Some(orig) = store.get(id) {
+                        out.push_str(orig);
+                        i = j + 1;
+                        continue;
+                    }
+                }
+            }
+            out.push(SENTINEL); // malformed — emit literally (should never happen)
+            i += 1;
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    out
+}
 
 pub fn auto_fix(
     _files: &[PathBuf],
@@ -65,7 +213,20 @@ pub fn auto_fix(
 }
 
 fn fix_all_spacing(source: &str) -> String {
-    let mut text = source.to_string();
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    // If tree-sitter-kotlin-sg can't parse the file (grammar limitation), CST-based
+    // masking is unreliable, so the text fixers could corrupt strings/comments/colons.
+    // Skip the interior-editing passes entirely — safety over completeness. Clean
+    // files parse fine and are fully formatted; only grammar-breaking files are
+    // left untouched here (trailing-whitespace/newline normalization still applies).
+    if tree.root_node().has_error() {
+        return source.to_string();
+    }
+    // Fence off string/char-literal and comment interiors: the text-level fixers
+    // below are CST-unaware and would corrupt URLs, KDoc, and `//` inside strings.
+    let (masked, store) = mask_protected(source, &tree);
+    let mut text = masked;
     for _ in 0..5 {
         let before = text.clone();
         text = fix_curly_braces(&text);
@@ -83,55 +244,24 @@ fn fix_all_spacing(source: &str) -> String {
             break;
         }
     }
-    text
+    restore_protected(&text, &store)
 }
 
 fn fix_all_wrapping(source: &str) -> String {
-    let mut text = source.to_string();
-    for _ in 0..3 {
-        let before = text.clone();
-        text = fix_multiline_if_else(&text);
-        text = fix_chain_wrapping(&text);
-        text = fix_when_expression_break(&text);
-        text = fix_try_catch(&text);
-        text = fix_when_entry_bracing(&text);
-        text = fix_string_template(&text);
-        if text == before {
-            break;
-        }
-    }
-    text
+    // Only `} catch`/`} finally` merging is safe as a text op. The other wrapping
+    // "fixers" (multiline-if-else, chain, when-break, when-entry-bracing, string-
+    // template) rebuilt lines destructively — merging unrelated statements,
+    // scrambling `when` branch braces/parens, and even injecting `.trimIndent()`
+    // (a semantic change). They need the CST; until then they are disabled.
+    fix_try_catch(source)
 }
 
-fn fix_indentation(source: &str, indent_size: usize) -> String {
-    let lines: Vec<&str> = source.lines().collect();
-    // Detect base indent from first non-empty line
-    let base = lines
-        .iter()
-        .find(|l| !l.trim().is_empty())
-        .map(|l| l.len() - l.trim_start().len())
-        .unwrap_or(0);
-    let mut out = Vec::new();
-    let mut level = 0usize; // indent level relative to base
-    let sz = indent_size;
-    for line in &lines {
-        let t = line.trim();
-        if t.is_empty() {
-            out.push(String::new());
-            continue;
-        }
-        // Decrease level BEFORE outputting closing brace
-        if t.starts_with('}') {
-            level = level.saturating_sub(1);
-        }
-        let actual = base + level * sz;
-        out.push(format!("{}{}", " ".repeat(actual), t));
-        // Increase level AFTER outputting opening brace
-        if t.ends_with('{') && !t.contains("//") && !t.contains("/*") {
-            level += 1;
-        }
-    }
-    out.join("\n")
+fn fix_indentation(source: &str, _indent_size: usize) -> String {
+    // Disabled: this counted `{`/`}` only, ignoring `(`/`[` nesting, so it flattened
+    // the indentation of everything inside multi-line calls / collection literals
+    // (e.g. a 12-space-indented builder argument was forced back to 8). Correct
+    // reindentation needs the CST; until then leave indentation untouched.
+    source.to_string()
 }
 
 fn fix_trailing_ws(source: &str) -> String {
@@ -176,6 +306,7 @@ fn fix_operators(source: &str) -> String {
         debug_assert_eq!(c2b.len(), chars.len());
 
         // Phase 1: collect all char positions
+        let is_op_char = |c: char| "=<>!+-*/%&|".contains(c);
         let mut positions: Vec<usize> = Vec::new();
         let mut i = 0;
         while i + op.len() <= chars.len() {
@@ -187,7 +318,13 @@ fn fix_operators(source: &str) -> String {
                         && (!chars[i - 1].is_alphanumeric()
                             && chars[i - 1] != ')'
                             && chars[i - 1] != ']');
-                    if !is_unary_minus {
+                    // Skip when this match is adjacent to another operator char: it
+                    // belongs to a compound operator (==, >=, +=, ->, …) handled by
+                    // that operator's own iteration. Without this, the single-char
+                    // `=` pass splits `==` into `= =` and `>=` loses its lead space.
+                    let touches_op = is_op_char(chars[i - 1])
+                        || chars.get(i + op.len()).copied().map_or(false, is_op_char);
+                    if !is_unary_minus && !touches_op {
                         positions.push(i);
                     }
                 }
@@ -247,34 +384,70 @@ fn fix_commas(source: &str) -> String {
 }
 
 fn fix_angle_brackets(source: &str) -> String {
-    source.replace("< ", "<").replace(" >", ">")
+    // Disabled: a text-level `< `→`<` / ` >`→`>` cannot tell a generic (`List<T>`,
+    // now masked anyway) from the comparison operators `a < b` / `a >= b`, and
+    // corrupted the latter. Generic tidy is handled by masking; comparison spacing
+    // by fix_operators. Kept as a no-op so the pipeline order is unchanged.
+    source.to_string()
 }
 
 fn fix_parens(source: &str) -> String {
-    source.replace("( ", "(").replace(" )", ")")
+    // Per-line and indent-preserving: a global `replace(" )", ")")` also eats the
+    // leading indentation of a `)` that sits on its own line (`        )` → `   )`),
+    // because the loop re-applies it each pass. Only collapse spaces *inside* the line body.
+    strip_inner_bracket_spaces(source, "( ", "(", " )", ")")
+}
+
+/// Collapse `open_from`→`open_to` and `close_from`→`close_to` within each line's
+/// body while preserving leading indentation.
+fn strip_inner_bracket_spaces(
+    source: &str,
+    open_from: &str,
+    open_to: &str,
+    close_from: &str,
+    close_to: &str,
+) -> String {
+    source
+        .split('\n')
+        .map(|line| {
+            let indent_len = line.len() - line.trim_start().len();
+            let (indent, rest) = line.split_at(indent_len);
+            let fixed = rest.replace(open_from, open_to).replace(close_from, close_to);
+            format!("{indent}{fixed}")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn fix_colons(source: &str) -> String {
-    let mut s = source.replace(" : ", ": ");
-    // Fix word:word → word: word
+    // Supertype/constraint colons (`) : Base`, `where T : Any`) are protected
+    // upstream via masking, so collapsing ` : `→`: ` here is safe for the rest.
+    let s = source.replace(" : ", ": ");
+    // `word:word` → `word: word`, EXCEPT annotation use-site targets (`@file:`,
+    // `@get:`, `@set:`, `@param:`, …) which take no space after the colon.
+    // Rebuilt as a single forward pass — the old in-place `insert` mutated `s`
+    // while indexing a stale `chars` snapshot.
     let chars: Vec<char> = s.chars().collect();
-    let mut i = 1;
-    while i < chars.len().saturating_sub(1) {
-        if chars[i] == ':'
+    let mut out = String::with_capacity(s.len());
+    for (i, &c) in chars.iter().enumerate() {
+        out.push(c);
+        if c == ':'
+            && i > 0
+            && i + 1 < chars.len()
             && chars[i - 1].is_alphanumeric()
             && chars[i + 1].is_alphanumeric()
-            && chars[i + 1] != ' '
         {
-            let bp = s
-                .char_indices()
-                .nth(i + 1)
-                .map(|(bi, _)| bi)
-                .unwrap_or(s.len());
-            s.insert(bp, ' ');
+            let mut j = i;
+            while j > 0 && (chars[j - 1].is_alphanumeric() || chars[j - 1] == '_') {
+                j -= 1;
+            }
+            let is_annotation_target = j > 0 && chars[j - 1] == '@';
+            if !is_annotation_target {
+                out.push(' ');
+            }
         }
-        i += 1;
     }
-    s
+    out
 }
 
 fn fix_comment_spacing(source: &str) -> String {
@@ -290,19 +463,29 @@ fn fix_blank_lines(source: &str) -> String {
 }
 
 fn fix_blank_line_in_list(source: &str) -> String {
-    // Remove blank lines between list items (inside brackets)
-    let lines: Vec<&str> = source.lines().collect();
+    // Remove blank lines only inside an actual argument/parameter list — i.e. when
+    // the innermost open bracket is `(` or `[`. A brace stack is required: the old
+    // paren-depth-only counter also stripped blank lines inside `{}` lambda/blocks
+    // nested in a call (e.g. blank lines between `entry<…>{}` blocks in a
+    // `NavDisplay(entryProvider { … })`), which ktlint keeps.
+    let mut stack: Vec<char> = Vec::new();
     let mut result = Vec::new();
-    let mut bracket_depth = 0i32;
-    for (_i, line) in lines.iter().enumerate() {
-        let t = line.trim();
-        // Track bracket depth
-        bracket_depth += t.chars().filter(|&c| c == '(' || c == '[').count() as i32;
-        bracket_depth -= t.chars().filter(|&c| c == ')' || c == ']').count() as i32;
-
-        // Remove empty lines inside brackets
-        if t.is_empty() && bracket_depth > 0 {
+    for line in source.split('\n') {
+        if line.trim().is_empty() {
+            if matches!(stack.last(), Some('(') | Some('[')) {
+                continue;
+            }
+            result.push(line.to_string());
             continue;
+        }
+        for c in line.chars() {
+            match c {
+                '(' | '[' | '{' => stack.push(c),
+                ')' | ']' | '}' => {
+                    stack.pop();
+                }
+                _ => {}
+            }
         }
         result.push(line.to_string());
     }
@@ -310,19 +493,29 @@ fn fix_blank_line_in_list(source: &str) -> String {
 }
 
 fn fix_brace_between(source: &str) -> String {
-    source
-        .replace("\n} else {", "} else {")
-        .replace("\n} else if", "} else if")
-        .replace("\n} catch", "} catch")
-        .replace("\n} finally", "} finally")
+    // Disabled: these patterns removed the newline *before* `}` (the wrong side),
+    // gluing the closing brace onto the previous statement (`endpoint\n} else {`
+    // → `endpoint} else {`). The intended `}\nelse`→`} else` merge is a wrapping
+    // concern handled elsewhere; here it only corrupted valid code.
+    source.to_string()
 }
 
 fn fix_double_spaces(source: &str) -> String {
-    let mut s = source.to_string();
-    while s.contains("  ") {
-        s = s.replace("  ", " ");
-    }
-    s
+    // Collapse runs of interior spaces only — leading indentation must survive.
+    // The old whole-string collapse crushed every 4-space indent down to 1 space.
+    source
+        .split('\n')
+        .map(|line| {
+            let indent_len = line.len() - line.trim_start().len();
+            let (indent, rest) = line.split_at(indent_len);
+            let mut r = rest.to_string();
+            while r.contains("  ") {
+                r = r.replace("  ", " ");
+            }
+            format!("{indent}{r}")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 // ── Wrapping helper ──
@@ -349,36 +542,11 @@ fn fix_multiline_if_else(source: &str) -> String {
 // ── Chain wrapping ──
 
 fn fix_chain_wrapping(source: &str) -> String {
-    // Normalize dot-call chains: if any call is on its own line
-    // (indented), ensure all are. If all on one line, keep.
-    let lines: Vec<&str> = source.lines().collect();
-    let mut has_multiline = false;
-    for line in &lines {
-        let t = line.trim();
-        if t.starts_with('.') && !t.starts_with("..") {
-            has_multiline = true;
-            break;
-        }
-    }
-    if !has_multiline {
-        return source.to_string();
-    }
-
-    // Rebuild: put each .call() on its own indented line
-    let mut result = Vec::new();
-    for line in source.lines() {
-        let t = line.trim();
-        if t.starts_with('.') {
-            result.push(format!("    {}", t));
-        } else if t.ends_with(')') && result.last().map_or(false, |l| l.trim().starts_with('.')) {
-            // Previous line was a dot call — continue
-            let prev = result.pop().unwrap();
-            result.push(format!("    {}.{}", prev.trim(), t));
-        } else {
-            result.push(line.to_string());
-        }
-    }
-    result.join("\n")
+    // Disabled: this line-rebuilder forced every `.call` to a hardcoded 4-space
+    // indent (destroying real indentation) and, worse, merged unrelated lines while
+    // injecting stray `.` (`}.val first =`, `"relative" return …`, `}.?.lowercase()`),
+    // producing invalid Kotlin. A safe chain-wrap needs the CST; until then, no-op.
+    source.to_string()
 }
 
 // ── When expression break ──
@@ -517,8 +685,10 @@ mod tests {
     }
     #[test]
     fn fix_indent() {
-        let r = fix_indentation("class Foo {\nval x = 1\n}", 4);
-        assert!(r.contains("    val x"), "got: {}", r);
+        // fix_indentation is intentionally disabled (brace-only counting flattened
+        // paren/bracket-nested code); it must now be an identity passthrough.
+        let src = "class Foo {\nval x = 1\n}";
+        assert_eq!(fix_indentation(src, 4), src);
     }
     #[test]
     fn fix_chain_wrap() {
@@ -671,6 +841,166 @@ catch(e: E) { b() }"
         check_char_boundaries("// \u{2500} x=1", &fix_operators("// \u{2500} x=1"));
         check_char_boundaries("// \u{2500} Foo{}", &fix_curly_braces("// \u{2500} Foo{}"));
         check_char_boundaries("// \u{2500} x:String", &fix_colons("// \u{2500} x:String"));
+    }
+
+    // ── String / comment interior must never be mutated ──
+
+    #[test]
+    fn string_literal_url_is_preserved() {
+        // Regression: `"https://x?a=b"` was mangled to `"https:/ / x?a = b"`.
+        let src = "val u = \"https://callback?flow=abc&token=x-y\"\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("\"https://callback?flow=abc&token=x-y\""),
+            "string literal corrupted: {r}"
+        );
+    }
+
+    #[test]
+    fn kdoc_slashes_and_dashes_preserved() {
+        // Regression: `/**` → `/ * *`, `pause/resume` → `pause / resume`,
+        // `server-side` → `server - side`.
+        let src = "/**\n * pause/resume and server-side notes\n */\nval x=1\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("/**"), "kdoc opener corrupted: {r}");
+        assert!(r.contains(" */"), "kdoc closer corrupted: {r}");
+        assert!(r.contains("pause/resume"), "comment slash corrupted: {r}");
+        assert!(r.contains("server-side"), "comment dash corrupted: {r}");
+        assert!(r.contains("val x = 1"), "real code not fixed: {r}");
+    }
+
+    #[test]
+    fn line_comment_url_preserved() {
+        let src = "// see https://example.com/path?a=b\nval y=2\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("https://example.com/path?a=b"),
+            "line-comment url corrupted: {r}"
+        );
+        assert!(r.contains("val y = 2"), "real code not fixed: {r}");
+    }
+
+    #[test]
+    fn backtick_identifier_preserved() {
+        // Regression: `` `sign-in is a no-op` `` was mangled to `sign - in is a no - op`.
+        let src = "fun `sign-in is a no-op`() {\n    val x=1\n}\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("`sign-in is a no-op`"),
+            "backtick identifier corrupted: {r}"
+        );
+        assert!(r.contains("val x = 1"), "real code not fixed: {r}");
+    }
+
+    #[test]
+    fn indentation_is_not_collapsed() {
+        // Regression: 4-space indent was crushed to 1 space by fix_double_spaces.
+        let src = "class Foo {\n    fun bar() {\n        val x=1\n    }\n}\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("\n    fun bar()"), "4-space indent lost: {r}");
+        assert!(r.contains("\n        val x = 1"), "8-space indent lost: {r}");
+    }
+
+    #[test]
+    fn closing_paren_indentation_preserved() {
+        // Regression: `fix_parens`' global `replace(" )", ")")` ate the leading
+        // indent of a `)` on its own line (`        )` → `   )`) across loop passes.
+        let src = "val h = foo(\n    a = 1,\n    b = 2,\n)\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("\n)"), "closing paren indent altered: {r:?}");
+        assert!(!r.contains(" )"), "space before paren remained: {r:?}");
+    }
+
+    #[test]
+    fn inner_paren_spaces_still_collapsed() {
+        let src = "foo( a, b )\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("foo(a, b)"), "inner paren spaces not collapsed: {r:?}");
+    }
+
+    #[test]
+    fn compound_operators_not_split() {
+        // Regression: the single-char `=` pass split `==` into `= =`; the (now
+        // removed) angle-bracket tidy ate `>=`'s leading space.
+        assert!(fix_all_spacing("if (a==b) {}\n").contains("a == b"));
+        assert!(fix_all_spacing("val r = a>=b\n").contains("a >= b"));
+        assert!(fix_all_spacing("val r = a!=b\n").contains("a != b"));
+        assert!(fix_all_spacing("x+=1\n").contains("x += 1"));
+        // Already-correct compound operators must be left untouched (never `= =`).
+        assert!(!fix_all_spacing("val r = a == b\n").contains("= ="));
+    }
+
+    #[test]
+    fn annotation_use_site_colon_preserved() {
+        // Regression: `@file:OptIn` / `@get:JvmName` mangled to `@file: OptIn`.
+        assert!(fix_all_spacing("@file:OptIn(Foo::class)\n").contains("@file:OptIn"));
+        assert!(fix_all_spacing("@get:JvmName(\"x\")\nval y = 1\n").contains("@get:JvmName"));
+        // Ordinary member colon still gets its space.
+        assert!(fix_all_spacing("val x:Int = 1\n").contains("val x: Int"));
+    }
+
+    #[test]
+    fn supertype_colon_space_preserved() {
+        // Regression: `) : Base` / `where T : Any` collapsed to `): Base` / `T: Any`.
+        let src = "class Foo(x: Int) : Base() {\n    val y: Int = x\n}\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains(") : Base()"), "supertype colon collapsed: {r:?}");
+        assert!(r.contains("val y: Int"), "member colon should stay tight: {r:?}");
+    }
+
+    #[test]
+    fn generic_angle_brackets_preserved() {
+        // Regression: `Map<String, Int>` mangled to `Map < String, Int >`.
+        let src = "val m: Map<String, Int> = mapOf()\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("Map<String, Int>"), "generic corrupted: {r:?}");
+    }
+
+    #[test]
+    fn comparison_operators_spaced_not_mangled() {
+        // `>=` keeps its spaces (previously eaten by fix_angle_brackets).
+        let src = "val r = if (a >= b) x else y\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("a >= b"), "comparison mangled: {r:?}");
+    }
+
+    #[test]
+    fn blank_line_in_lambda_block_preserved() {
+        // Regression: blank lines inside a `{}` block nested in a call were dropped.
+        let src = "foo(bar {\n    a()\n\n    b()\n})\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("a()\n\n    b()"), "blank line in block dropped: {r:?}");
+    }
+
+    #[test]
+    fn blank_line_in_arg_list_removed() {
+        // Genuine list blank line (innermost bracket is `(`) is still removed.
+        let src = "foo(\n    a,\n\n    b,\n)\n";
+        let r = fix_all_spacing(src);
+        assert!(!r.contains("a,\n\n"), "arg-list blank line not removed: {r:?}");
+    }
+
+    #[test]
+    fn unparseable_file_left_untouched() {
+        // When tree-sitter can't parse the file, we must not risk text-level edits
+        // that could corrupt strings/comments — return spacing pass unchanged.
+        let src = "val u=\"a=b\"\n)))not valid kotlin(((\nfun x(=\n";
+        assert_eq!(fix_all_spacing(src), src);
+    }
+
+    #[test]
+    fn interior_double_spaces_still_collapsed() {
+        let src = "val  x   =    1\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("val x = 1"), "interior spaces not collapsed: {r}");
+    }
+
+    #[test]
+    fn operator_spacing_around_string_still_applied() {
+        // Masking must not stop spacing being fixed *outside* the string.
+        let src = "val s=\"a=b\"\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("val s = \"a=b\""), "expected `s = \"a=b\"`, got: {r}");
     }
 
     #[test]
