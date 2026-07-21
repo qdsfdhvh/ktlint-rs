@@ -412,7 +412,9 @@ fn strip_inner_bracket_spaces(
         .map(|line| {
             let indent_len = line.len() - line.trim_start().len();
             let (indent, rest) = line.split_at(indent_len);
-            let fixed = rest.replace(open_from, open_to).replace(close_from, close_to);
+            let fixed = rest
+                .replace(open_from, open_to)
+                .replace(close_from, close_to);
             format!("{indent}{fixed}")
         })
         .collect::<Vec<_>>()
@@ -463,33 +465,12 @@ fn fix_blank_lines(source: &str) -> String {
 }
 
 fn fix_blank_line_in_list(source: &str) -> String {
-    // Remove blank lines only inside an actual argument/parameter list — i.e. when
-    // the innermost open bracket is `(` or `[`. A brace stack is required: the old
-    // paren-depth-only counter also stripped blank lines inside `{}` lambda/blocks
-    // nested in a call (e.g. blank lines between `entry<…>{}` blocks in a
-    // `NavDisplay(entryProvider { … })`), which ktlint keeps.
-    let mut stack: Vec<char> = Vec::new();
-    let mut result = Vec::new();
-    for line in source.split('\n') {
-        if line.trim().is_empty() {
-            if matches!(stack.last(), Some('(') | Some('[')) {
-                continue;
-            }
-            result.push(line.to_string());
-            continue;
-        }
-        for c in line.chars() {
-            match c {
-                '(' | '[' | '{' => stack.push(c),
-                ')' | ']' | '}' => {
-                    stack.pop();
-                }
-                _ => {}
-            }
-        }
-        result.push(line.to_string());
-    }
-    result.join("\n")
+    // Disabled: text-level bracket counting cannot distinguish a call's value-
+    // argument list (where ktlint may drop a blank line) from a data-class primary
+    // constructor's property list, where blank lines legitimately group fields —
+    // and ktlint keeps those. Removing them corrupted grouping, so leave blank
+    // lines alone; a real list-blank violation is still reported by the linter.
+    source.to_string()
 }
 
 fn fix_brace_between(source: &str) -> String {
@@ -898,7 +879,10 @@ catch(e: E) { b() }"
         let src = "class Foo {\n    fun bar() {\n        val x=1\n    }\n}\n";
         let r = fix_all_spacing(src);
         assert!(r.contains("\n    fun bar()"), "4-space indent lost: {r}");
-        assert!(r.contains("\n        val x = 1"), "8-space indent lost: {r}");
+        assert!(
+            r.contains("\n        val x = 1"),
+            "8-space indent lost: {r}"
+        );
     }
 
     #[test]
@@ -915,7 +899,10 @@ catch(e: E) { b() }"
     fn inner_paren_spaces_still_collapsed() {
         let src = "foo( a, b )\n";
         let r = fix_all_spacing(src);
-        assert!(r.contains("foo(a, b)"), "inner paren spaces not collapsed: {r:?}");
+        assert!(
+            r.contains("foo(a, b)"),
+            "inner paren spaces not collapsed: {r:?}"
+        );
     }
 
     #[test]
@@ -945,7 +932,10 @@ catch(e: E) { b() }"
         let src = "class Foo(x: Int) : Base() {\n    val y: Int = x\n}\n";
         let r = fix_all_spacing(src);
         assert!(r.contains(") : Base()"), "supertype colon collapsed: {r:?}");
-        assert!(r.contains("val y: Int"), "member colon should stay tight: {r:?}");
+        assert!(
+            r.contains("val y: Int"),
+            "member colon should stay tight: {r:?}"
+        );
     }
 
     #[test]
@@ -969,15 +959,22 @@ catch(e: E) { b() }"
         // Regression: blank lines inside a `{}` block nested in a call were dropped.
         let src = "foo(bar {\n    a()\n\n    b()\n})\n";
         let r = fix_all_spacing(src);
-        assert!(r.contains("a()\n\n    b()"), "blank line in block dropped: {r:?}");
+        assert!(
+            r.contains("a()\n\n    b()"),
+            "blank line in block dropped: {r:?}"
+        );
     }
 
     #[test]
-    fn blank_line_in_arg_list_removed() {
-        // Genuine list blank line (innermost bracket is `(`) is still removed.
-        let src = "foo(\n    a,\n\n    b,\n)\n";
+    fn blank_line_in_data_class_params_preserved() {
+        // Regression: blank lines grouping data-class properties (ktlint keeps them)
+        // were removed by the paren-based blank-line stripper.
+        let src = "data class C(\n    val a: Int,\n\n    val b: Int,\n)\n";
         let r = fix_all_spacing(src);
-        assert!(!r.contains("a,\n\n"), "arg-list blank line not removed: {r:?}");
+        // The blank line between the two properties must survive (trailing-space
+        // normalization after commas is handled separately by fix_trailing_ws).
+        assert!(r.contains("\n\n"), "grouping blank line dropped: {r:?}");
+        assert!(r.contains("val b: Int"), "second property lost: {r:?}");
     }
 
     #[test]
@@ -992,7 +989,10 @@ catch(e: E) { b() }"
     fn interior_double_spaces_still_collapsed() {
         let src = "val  x   =    1\n";
         let r = fix_all_spacing(src);
-        assert!(r.contains("val x = 1"), "interior spaces not collapsed: {r}");
+        assert!(
+            r.contains("val x = 1"),
+            "interior spaces not collapsed: {r}"
+        );
     }
 
     #[test]
@@ -1000,7 +1000,10 @@ catch(e: E) { b() }"
         // Masking must not stop spacing being fixed *outside* the string.
         let src = "val s=\"a=b\"\n";
         let r = fix_all_spacing(src);
-        assert!(r.contains("val s = \"a=b\""), "expected `s = \"a=b\"`, got: {r}");
+        assert!(
+            r.contains("val s = \"a=b\""),
+            "expected `s = \"a=b\"`, got: {r}"
+        );
     }
 
     #[test]
