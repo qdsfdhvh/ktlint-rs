@@ -26,6 +26,7 @@ pub struct KtlintConfig {
     pub trim_trailing_whitespace: bool,
     /// Rule set filter (ktlint-only, detekt-only, or both)
     pub rule_set: RuleSet,
+    pub compat: bool,
     pub skip_type_resolution: bool,
     /// Category-level overrides from YAML (e.g., "detekt:complexity" → RuleConfig)
     pub category_overrides: HashMap<String, RuleConfig>,
@@ -65,6 +66,7 @@ impl Default for KtlintConfig {
             insert_final_newline: true,
             trim_trailing_whitespace: true,
             rule_set: RuleSet::KtlintOnly,
+            compat: false,
             skip_type_resolution: true,
             category_overrides: HashMap::new(),
         }
@@ -195,6 +197,7 @@ impl KtlintConfig {
     pub fn load(cli: &Cli) -> anyhow::Result<Self> {
         let project_root = std::env::current_dir()?;
         let mut config = Self {
+            compat: cli.compat,
             project_root,
             rule_set: RuleSet::from_str(&cli.ruleset),
             ..Default::default()
