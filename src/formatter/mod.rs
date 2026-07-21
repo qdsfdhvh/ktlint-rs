@@ -170,8 +170,12 @@ fn fix_operators(source: &str) -> String {
         "==", "!=", "<=", ">=", "&&", "||", "+=", "-=", "*=", "/=", "=", "+", "-", "*", "/", "%",
     ];
     for op in &ops {
-        // Phase 1: collect all positions
+        // Build char→byte mapping for this iteration
         let chars: Vec<char> = s.chars().collect();
+        let c2b: Vec<usize> = s.char_indices().map(|(bi, _)| bi).collect();
+        debug_assert_eq!(c2b.len(), chars.len());
+
+        // Phase 1: collect all char positions
         let mut positions: Vec<usize> = Vec::new();
         let mut i = 0;
         while i + op.len() <= chars.len() {
@@ -190,9 +194,10 @@ fn fix_operators(source: &str) -> String {
             }
             i += 1;
         }
-        // Phase 2: apply fixes right-to-left (indices stay stable)
+        // Phase 2: apply fixes right-to-left using byte positions
         for &pos in positions.iter().rev() {
             let cur: Vec<char> = s.chars().collect();
+            let cur_c2b: Vec<usize> = s.char_indices().map(|(bi, _)| bi).collect();
             if pos >= cur.len() || pos + op.len() > cur.len() {
                 continue;
             }
@@ -200,29 +205,32 @@ fn fix_operators(source: &str) -> String {
             if cur_rest != *op {
                 continue;
             }
+            let byte_pos = cur_c2b[pos];
             let prev = cur[pos - 1];
             let next = cur.get(pos + op.len()).copied().unwrap_or(' ');
             if prev.is_alphanumeric() && prev != ' ' {
-                s.insert(pos, ' ');
+                s.insert(byte_pos, ' ');
             }
-            // After insert, re-read positions
+            // Re-read after potential insert
             let cur2: Vec<char> = s.chars().collect();
-            let after = pos
+            let cur2_c2b: Vec<usize> = s.char_indices().map(|(bi, _)| bi).collect();
+            let after_char = pos
                 + op.len()
                 + if prev.is_alphanumeric() && prev != ' ' {
                     1
                 } else {
                     0
                 };
-            if after < cur2.len() {
-                let actual_next = cur2[after];
+            if after_char < cur2.len() {
+                let actual_next = cur2[after_char];
                 // Align with rule: insert unless next is space ) \n ,
                 if actual_next != ' '
                     && actual_next != ')'
                     && actual_next != '\n'
                     && actual_next != ','
                 {
-                    s.insert(after, ' ');
+                    let after_byte = cur2_c2b[after_char];
+                    s.insert(after_byte, ' ');
                 }
             }
         }
@@ -257,7 +265,12 @@ fn fix_colons(source: &str) -> String {
             && chars[i + 1].is_alphanumeric()
             && chars[i + 1] != ' '
         {
-            s.insert(i + 1, ' ');
+            let bp = s
+                .char_indices()
+                .nth(i + 1)
+                .map(|(bi, _)| bi)
+                .unwrap_or(s.len());
+            s.insert(bp, ' ');
         }
         i += 1;
     }
