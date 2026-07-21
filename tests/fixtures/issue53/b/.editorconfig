@@ -1,0 +1,4 @@
+root = true
+
+[*.kt]
+ktlint_standard_curly-spacing = enabled

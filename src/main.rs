@@ -31,7 +31,9 @@ fn main() -> anyhow::Result<()> {
     }
 
     let files = FileCollector::new(&cli, &config).collect()?;
-    let engine = RuleEngine::new(&config);
+    // Issue #53: load per-file editorconfig, build per-file engine
+    let base_config = config.clone();
+    // (engine removed — built per-file below)
 
     // Parallel lint with cache — collect results, then write cache sequentially
     let results: Vec<(PathBuf, Vec<Violation>)> = rayon::ThreadPoolBuilder::new()
@@ -42,9 +44,15 @@ fn main() -> anyhow::Result<()> {
             files
                 .par_iter()
                 .map(|path| {
-                    if let Some(cached) = cache::get_cached(path, &config.project_root, &config) {
+                    if let Some(cached) =
+                        cache::get_cached(path, &base_config.project_root, &base_config)
+                    {
                         return (path.clone(), cached);
                     }
+                    // Load per-file .editorconfig
+                    let file_config =
+                        KtlintConfig::load_for_file(path).unwrap_or_else(|_| base_config.clone());
+                    let engine = RuleEngine::new(&file_config);
                     let source = std::fs::read_to_string(path).unwrap_or_default();
                     let mut parser = KotlinParser::new();
                     let tree = parser.parse(&source);
