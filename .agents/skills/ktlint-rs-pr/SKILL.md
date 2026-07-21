@@ -150,4 +150,8 @@ EOF
 - CI 全部通过后，需要 `--admin` 标志才能合并（项目设置了 required checks）
 - 合并用 squash：`gh pr merge <num> --squash --delete-branch --admin`
 - 预发版本：合并后创建 tag + release
+- **发版后必须**用 `cargo install --git` 从 GitHub 安装，不要本地 `cp` 到 `~/.local/bin`
+```bash
+cargo install --git https://github.com/qdsfdhvh/ktlint-rs --force
+```
 - Docs-only PR 可能被 branch protection 卡住——如果 CI jobs 被 `paths-ignore` 跳过但仍是 required status checks，需要从 GitHub Web UI 手动 bypass 或暂时关掉 branch protection
