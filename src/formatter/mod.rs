@@ -552,4 +552,140 @@ catch(e: E) { b() }"
         let r = fix_all_wrapping(src);
         assert_eq!(r, src);
     }
+
+    // ── Issue #63: UTF-8 multi-byte character safety ──
+
+    #[test]
+    fn issue63_box_drawing_before_equals() {
+        // \u{2500} is 3 bytes. `=` spacing must not corrupt it.
+        let src = "// \u{2500}\u{2500} comment \u{2500}\u{2500}\nval x=1";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("val x = 1"), "equals not fixed: {}", r);
+        assert!(
+            r.contains("\u{2500}\u{2500} comment"),
+            "box chars corrupted: {}",
+            r
+        );
+        assert!(!r.contains("\u{fffd}"), "replacement char found: {}", r);
+    }
+
+    #[test]
+    fn issue63_box_drawing_operators_only() {
+        // Verify fix_operators directly with box-drawing chars
+        let src = "// \u{2500}\u{2500} test \u{2500}\u{2500}\nval x=1";
+        let r = fix_operators(src);
+        assert!(r.contains("\u{2500}"), "box char lost: {}", r);
+        assert!(r.contains("x = 1"), "operator not fixed: {}", r);
+    }
+
+    #[test]
+    fn issue63_box_drawing_curly_only() {
+        let src = "// \u{2500}\u{2500} test \u{2500}\u{2500}\nclass Foo{}";
+        let r = fix_curly_braces(src);
+        assert!(r.contains("Foo {"), "curly not fixed: {}", r);
+        assert!(r.contains("\u{2500}"), "box char lost: {}", r);
+    }
+
+    #[test]
+    fn issue63_box_drawing_colons_only() {
+        let src = "// \u{2500}\u{2500} test\nval x:String";
+        let r = fix_colons(src);
+        assert!(r.contains("x: String"), "colon not fixed: {}", r);
+        assert!(r.contains("\u{2500}"), "box char lost: {}", r);
+    }
+
+    #[test]
+    fn issue63_cjk_chars_with_operators() {
+        // CJK characters are 3 bytes each.
+        let src = "// \u{3053}\u{3093}\u{306B}\u{3061}\u{306F}\nval x=1";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("val x = 1"), "equals not fixed: {}", r);
+        assert!(r.contains("\u{306B}"), "CJK char lost: {}", r);
+        assert!(!r.contains("\u{fffd}"), "replacement char: {}", r);
+    }
+
+    #[test]
+    fn issue63_em_dash_before_operators() {
+        // \u{2014} (EM DASH) is 3 bytes.
+        let src = "// \u{2014}\u{2014} test\nval a=1\nval b=2";
+        let r = fix_operators(src);
+        assert!(r.contains("a = 1"), "eq1 not fixed: {}", r);
+        assert!(r.contains("b = 2"), "eq2 not fixed: {}", r);
+        assert!(r.contains("\u{2014}"), "em dash lost: {}", r);
+    }
+
+    #[test]
+    fn issue63_emoji_with_operators() {
+        // Emoji are 4 bytes.
+        let src = "// \u{1f600} test\nval x=1";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("val x = 1"), "equals not fixed: {}", r);
+        assert!(r.contains("\u{1f600}"), "emoji lost: {}", r);
+    }
+
+    #[test]
+    fn issue63_preserves_unicode_no_replacement_char() {
+        // Any valid UTF-8 must survive formatting without replacement characters.
+        let src = concat!(
+            "// \u{2500}\u{2500} box \u{2500}\u{2500}\n",
+            "// \u{3053}\u{3093} CJK\n",
+            "// \u{2014} em dash\n",
+            "// \u{1f600} emoji\n",
+            "class Foo{}\n",
+            "val x=1\n",
+            "val y:String\n",
+        );
+        let r = fix_all_spacing(src);
+        assert!(!r.contains("\u{fffd}"), "replacement char in output: {}", r);
+        assert!(r.contains("\u{2500}"), "box lost");
+        assert!(r.contains("\u{3053}"), "CJK lost");
+        assert!(r.contains("\u{2014}"), "em dash lost");
+        assert!(r.contains("\u{1f600}"), "emoji lost");
+        assert!(r.contains("Foo {"), "curly not fixed");
+        assert!(r.contains("x = 1"), "equals not fixed");
+        assert!(r.contains("y: String"), "colon not fixed");
+    }
+
+    #[test]
+    fn issue63_char_boundary_safety() {
+        // Verify every s.insert() position is a char boundary.
+        fn check_char_boundaries(orig: &str, fixed: &str) {
+            assert!(orig.is_char_boundary(0), "always valid");
+            for (bi, _) in orig.char_indices() {
+                assert!(
+                    orig.is_char_boundary(bi),
+                    "byte {bi} not boundary in original"
+                );
+            }
+            for (bi, _) in fixed.char_indices() {
+                assert!(
+                    fixed.is_char_boundary(bi),
+                    "byte {bi} not boundary in fixed"
+                );
+            }
+        }
+        let src = "// \u{2500}\u{2500} test \u{2500}\u{2500}\nval x=1\nval y=2\nclass Foo{}\nval z:String";
+        let r = fix_all_spacing(src);
+        check_char_boundaries(&r, &r);
+        // Also test individual functions
+        check_char_boundaries("// \u{2500} x=1", &fix_operators("// \u{2500} x=1"));
+        check_char_boundaries("// \u{2500} Foo{}", &fix_curly_braces("// \u{2500} Foo{}"));
+        check_char_boundaries("// \u{2500} x:String", &fix_colons("// \u{2500} x:String"));
+    }
+
+    #[test]
+    fn issue63_no_panic_on_large_utf8() {
+        // Verify no panic on a larger file with mixed content.
+        let mut src = String::from("// \u{2500}".repeat(80));
+        src.push_str("\n");
+        for i in 0..20 {
+            src.push_str(&format!("val x{}={}\n", i, i));
+        }
+        src.push_str("class Broken{}\n");
+        src.push_str(&"// \u{3053}\u{3093}\u{306B}\u{3061}\u{306F}");
+        // Must not panic
+        let r = fix_all_spacing(&src);
+        assert!(!r.is_empty(), "output must not be empty");
+        assert!(!r.contains("\u{fffd}"), "no replacement chars");
+    }
 }
