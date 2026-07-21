@@ -89,7 +89,7 @@ impl CurlySpacing {
                     col: pos.column + 1,
                     rule_id: self.id().to_string(),
                     message: "Missing space before \"}\"".to_string(),
-                    auto_fixable: true,
+                    auto_fixable: false, // formatter does not fix closing braces
                 });
             }
         }
