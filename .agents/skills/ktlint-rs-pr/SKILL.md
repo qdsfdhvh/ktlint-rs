@@ -146,6 +146,7 @@ EOF
 
 - **不要**直接 push 到 main（仓库规则禁止）
 - **一定要**在 PR body 里加 `Closes #<num>` 来关联 issue
+- **一定要**检查并提交 `Cargo.lock`，版本 bump 或依赖变更后 lockfile 可能不同步
 - CI 全部通过后，需要 `--admin` 标志才能合并（项目设置了 required checks）
 - 合并用 squash：`gh pr merge <num> --squash --delete-branch --admin`
 - 预发版本：合并后创建 tag + release
