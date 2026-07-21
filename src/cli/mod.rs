@@ -38,6 +38,7 @@ pub struct Cli {
     // ── Rule set selection ──
     /// Comma-separated rule sets: ktlint, detekt, ktlint,detekt (default: ktlint)
     #[arg(long, default_value = "ktlint")]
+    #[arg(long, default_value = "ktlint", value_parser = ["ktlint", "detekt", "ktlint,detekt"])]
     pub ruleset: String,
 
     /// Enable JVM-compatible mode: include ktlint-rs-only rules in default ruleset
@@ -58,6 +59,7 @@ pub struct Cli {
 
     /// Reporter to use: plain, json, sarif, checkstyle, html, markdown, plain-summary
     #[arg(long, default_value = "plain")]
+    #[arg(long, default_value = "plain", value_parser = ["plain", "json", "sarif", "checkstyle", "html", "markdown", "plain-summary"])]
     pub reporter: String,
 
     /// Reporter output file
