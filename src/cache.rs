@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 /// Bump on format change to invalidate old caches.
-const CACHE_VERSION: u32 = 3;
+const CACHE_VERSION: u32 = 4;
 
 #[derive(Serialize, Deserialize)]
 struct CacheFile {
@@ -25,6 +25,9 @@ struct CacheFile {
 struct CachedViolations {
     mtime_secs: u64,
     file_size: u64,
+    /// Simple content hash
+    #[serde(default)]
+    content_hash: u64,
     violations: Vec<CachedViolation>,
 }
 
@@ -80,6 +83,12 @@ pub fn get_cached(
     }
     let cached = cache.entries.get(&key)?;
 
+    // Check content hash to detect same-size same-mtime edits
+    let content_hash = hash_file_content(path);
+    if cached.content_hash != content_hash {
+        return None;
+    }
+
     // Check mtime + size match
     if cached.mtime_secs != mtime || cached.file_size != size {
         return None;
@@ -99,6 +108,22 @@ pub fn get_cached(
             })
             .collect(),
     )
+}
+
+/// Simple content hash to detect same-size same-mtime edits.
+fn hash_file_content(path: &Path) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut h = DefaultHasher::new();
+    if let Ok(data) = std::fs::read(path) {
+        // Use first 4KB + file size as a cheap fingerprint
+        let n = data.len().min(4096);
+        h.write(&data[..n]);
+        (data.len() as u64).hash(&mut h);
+    } else {
+        h.write(&[0u8; 8]);
+    }
+    h.finish()
 }
 
 /// Save violations for a file to the cache.
@@ -137,6 +162,7 @@ pub fn save_cached(
         CachedViolations {
             mtime_secs: mtime,
             file_size: size,
+            content_hash: hash_file_content(path),
             violations: violations
                 .iter()
                 .map(|v| CachedViolation {
