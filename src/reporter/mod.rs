@@ -386,6 +386,7 @@ mod tests {
     ) -> Cli {
         Cli {
             compat: false,
+            strict: false,
             format: false,
             patterns_from_stdin: vec![],
             editorconfig: None,

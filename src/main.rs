@@ -87,17 +87,36 @@ fn main() -> anyhow::Result<()> {
         all_violations
     };
 
-    let reporter = DiagnosticReporter::new(&cli);
-    let exit_code = reporter.report(&violations);
+    // Blocker 5: warn on unmatched inputs
+    if files.is_empty() && !cli.patterns.is_empty() {
+        eprintln!("No files matched [{}]", cli.patterns.join(", "));
+        if cli.strict {
+            std::process::exit(1);
+        }
+    }
 
-    if cli.format && !violations.is_empty() {
+    let reporter = DiagnosticReporter::new(&cli);
+
+    let exit_code = if cli.format && !violations.is_empty() {
         formatter::auto_fix(
             &files,
             &violations,
             config.indent_size,
             config.insert_final_newline,
         )?;
-    }
+        // Blocker 4: re-lint after format, report post-format state only
+        let mut post_violations = Vec::new();
+        let engine = RuleEngine::new(&config);
+        for file in &files {
+            let source = std::fs::read_to_string(file).unwrap_or_default();
+            let mut parser = KotlinParser::new();
+            let tree = parser.parse(&source);
+            post_violations.extend(engine.check(&file.to_string_lossy(), &tree, &source));
+        }
+        reporter.report(&post_violations)
+    } else {
+        reporter.report(&violations)
+    };
 
     std::process::exit(exit_code);
 }
