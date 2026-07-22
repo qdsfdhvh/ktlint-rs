@@ -147,7 +147,7 @@ fn is_inside_block(lines: &[&str], kdoc_line: usize) -> bool {
                 && !t.starts_with("//")
                 && !t.starts_with("/*")
                 && !t.starts_with('*')
-                && !is_declaration_or_modifier(t)
+                || t == "}" && !is_declaration_or_modifier(t)
             {
                 return true;
             }

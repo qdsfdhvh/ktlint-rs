@@ -16,7 +16,13 @@ impl Rule for DoubleColonSpacing {
             if let Some(pos) = line.find("::") {
                 let byte_pos = source.lines().take(i).map(|l| l.len() + 1).sum::<usize>() + pos;
                 // Check space before ::
-                if byte_pos > 0 && bytes[byte_pos - 1] == b' ' {
+                // Only flag Class  ::  member pattern (space before :: after alphanumeric)
+                // Callable refs ( = ::println ) have space after non-alphanumeric → fine
+                let has_space_before = byte_pos > 0 && bytes[byte_pos - 1] == b' ';
+                let space_after_ident = has_space_before
+                    && byte_pos >= 2
+                    && bytes[byte_pos - 2].is_ascii_alphanumeric();
+                if space_after_ident {
                     violations.push(Violation {
                         file: String::new(),
                         line: i + 1,
