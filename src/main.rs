@@ -50,8 +50,8 @@ fn main() -> anyhow::Result<()> {
                         return (path.clone(), cached);
                     }
                     // Load per-file .editorconfig
-                    let file_config =
-                        KtlintConfig::load_for_file(path).unwrap_or_else(|_| base_config.clone());
+                    let file_config = KtlintConfig::load_for_file_with_base(path, &base_config)
+                        .unwrap_or_else(|_| base_config.clone());
                     let engine = RuleEngine::new(&file_config);
                     let source = std::fs::read_to_string(path).unwrap_or_default();
                     let mut parser = KotlinParser::new();

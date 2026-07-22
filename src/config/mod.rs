@@ -253,6 +253,30 @@ impl KtlintConfig {
     }
 
     /// Load config for a specific file path (multi-project support).
+    /// Load config for a file, overlaying per-file EditorConfig onto a base config.
+    /// Preserves CLI options (ruleset, code-style, compat, etc.) from the base.
+    pub fn load_for_file_with_base(file_path: &Path, base: &Self) -> anyhow::Result<Self> {
+        let mut config = base.clone();
+        let abs_path = if file_path.is_absolute() {
+            file_path.to_path_buf()
+        } else {
+            std::env::current_dir().unwrap_or_default().join(file_path)
+        };
+        if let Ok(ec_map) = editorconfig::get_config(&abs_path) {
+            let map: std::collections::HashMap<String, String> = ec_map.into_iter().collect();
+            config.apply_editorconfig(&map);
+        }
+        if let Some(ec_file) = find_editorconfig(&abs_path) {
+            let ktlint_props = parse_ktlint_properties(&ec_file, &abs_path);
+            config.apply_editorconfig(&ktlint_props);
+        }
+        config.project_root = file_path
+            .parent()
+            .unwrap_or(std::path::Path::new("."))
+            .to_path_buf();
+        Ok(config)
+    }
+
     pub fn load_for_file(file_path: &Path) -> anyhow::Result<Self> {
         let mut config = Self::default();
         // Ensure absolute path so editorconfig::get_config resolves correctly.
