@@ -101,4 +101,3 @@ fn main() -> anyhow::Result<()> {
 
     std::process::exit(exit_code);
 }
-
