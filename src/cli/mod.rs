@@ -45,6 +45,10 @@ pub struct Cli {
     #[arg(long)]
     pub compat: bool,
 
+    /// Treat unmatched inputs / no files found as error (exit 1 for CI)
+    #[arg(long)]
+    pub strict: bool,
+
     /// Maximum number of errors to show
     #[arg(long)]
     pub limit: Option<usize>,

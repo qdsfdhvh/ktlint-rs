@@ -140,6 +140,7 @@ mod tests {
         let cli = Cli {
             format: false,
             compat: false,
+            strict: false,
             patterns_from_stdin: vec![],
             editorconfig: None,
             code_style: None,
