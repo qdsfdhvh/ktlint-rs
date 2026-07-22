@@ -35,7 +35,14 @@ impl Rule for KdocFormatting {
 
                 if trimmed.ends_with("*/") && trimmed.len() > 4 {
                     // Single-line /** ... */ — check location
-                    if is_inside_block(&lines, i) {
+                    // Allow KDoc on private/internal declarations at file scope
+                    let next_is_private = i + 1 < lines.len() && {
+                        let n = lines[i + 1].trim();
+                        n.starts_with("private ")
+                            || n.starts_with("internal ")
+                            || n.starts_with("protected ")
+                    };
+                    if !next_is_private && is_inside_block(&lines, i) {
                         violations.push(kdoc_violation(
                             self.id(),
                             i + 1,
@@ -147,7 +154,7 @@ fn is_inside_block(lines: &[&str], kdoc_line: usize) -> bool {
                 && !t.starts_with("//")
                 && !t.starts_with("/*")
                 && !t.starts_with('*')
-                && !is_declaration_or_modifier(t)
+                || t == "}" && !is_declaration_or_modifier(t)
             {
                 return true;
             }
@@ -178,6 +185,9 @@ fn is_class_like_opener(line: &str) -> bool {
 
 /// Check if a trimmed line looks like a declaration or modifier (annotation, visibility).
 fn is_declaration_or_modifier(line: &str) -> bool {
+    if line == "}" {
+        return true;
+    }
     line.starts_with("fun ")
         || line.starts_with("val ")
         || line.starts_with("var ")

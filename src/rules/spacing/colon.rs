@@ -54,6 +54,7 @@ impl ColonSpacing {
             matches!(
                 parent_kind,
                 "parameter"
+                    | "catch_block"
                     | "class_parameter"
                     | "function_declaration"
                     | "property_declaration"

@@ -14,7 +14,7 @@ impl Rule for MultilineIfElse {
 
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
-            if trimmed.starts_with("else") && i > 0 {
+            if trimmed.starts_with("else") && i > 0 && !trimmed.starts_with("else ->") {
                 let prev_trimmed = lines[i - 1].trim();
                 if !prev_trimmed.ends_with('}') || !prev_trimmed.contains("else") {
                     violations.push(Violation {

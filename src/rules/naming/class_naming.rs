@@ -35,6 +35,10 @@ impl Rule for ClassNaming {
 
             // Enum declarations
             if let Some(name) = extract_name_after_keyword(trimmed, "enum ") {
+                // Skip 'enum class Foo' — the 'class' keyword is not an enum name
+                if name == "class" || name == "interface" {
+                    continue;
+                }
                 if !is_pascal_case(&name) {
                     violations.push(Violation {
                         file: String::new(),

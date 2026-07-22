@@ -18,7 +18,10 @@ impl Rule for SpacingAroundKeyword {
                 let pattern = format!("{}(", kw);
                 if let Some(pos) = trimmed.find(&pattern) {
                     // Check: keyword should be preceded by space or line start
-                    if pos > 0 && trimmed.as_bytes().get(pos - 1) != Some(&b' ') {
+                    // Must be a whole keyword, not substring of identifier
+                    let is_keyword =
+                        pos == 0 || !trimmed.as_bytes()[pos - 1].is_ascii_alphanumeric();
+                    if is_keyword && pos > 0 && trimmed.as_bytes()[pos - 1] != b' ' {
                         violations.push(Violation {
                             file: String::new(),
                             line: i + 1,
