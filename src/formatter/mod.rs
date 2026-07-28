@@ -114,6 +114,57 @@ fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> (String, Vec<String
     (out, store)
 }
 
+fn mask_strings_and_chars(
+    source: &str,
+    tree: &tree_sitter::Tree,
+    include_comments: bool,
+) -> (String, Vec<String>) {
+    fn collect(
+        node: tree_sitter::Node<'_>,
+        ranges: &mut Vec<(usize, usize)>,
+        include_comments: bool,
+    ) {
+        if node.kind().contains("string")
+            || node.kind() == "character_literal"
+            || (include_comments && node.kind().contains("comment"))
+        {
+            ranges.push((node.start_byte(), node.end_byte()));
+            return;
+        }
+        for index in 0..node.child_count() {
+            if let Some(child) = node.child(index) {
+                collect(child, ranges, include_comments);
+            }
+        }
+    }
+
+    let mut ranges = Vec::new();
+    collect(tree.root_node(), &mut ranges, include_comments);
+    ranges.sort_by_key(|range| range.0);
+    let mut output = String::with_capacity(source.len());
+    let mut store = Vec::new();
+    let mut cursor = 0;
+    for (start, end) in ranges {
+        if start < cursor || end > source.len() {
+            continue;
+        }
+        output.push_str(&source[cursor..start]);
+        for (part_index, part) in source[start..end].split('\n').enumerate() {
+            if part_index > 0 {
+                output.push('\n');
+            }
+            let id = store.len();
+            store.push(part.to_string());
+            output.push(SENTINEL);
+            output.push_str(&id.to_string());
+            output.push(SENTINEL);
+        }
+        cursor = end;
+    }
+    output.push_str(&source[cursor..]);
+    (output, store)
+}
+
 /// Inverse of [`mask_protected`]: swap each `SENTINEL<id>SENTINEL` fragment back
 /// for its original text. Fixers never insert into a fragment (it holds only
 /// digits between two sentinels), so ids survive intact.
@@ -121,8 +172,8 @@ fn restore_protected(text: &str, store: &[String]) -> String {
     if store.is_empty() {
         return text.to_string();
     }
-    let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
+    let chars: Vec<char> = text.chars().collect();
     let mut i = 0;
     while i < chars.len() {
         if chars[i] == SENTINEL {
@@ -170,37 +221,20 @@ pub fn auto_fix(
     }
 
     for file_path in &file_set {
-        let rules: Vec<&str> = fixable
+        // ktlint formatting is a whole-file, ordered rule-engine pass. Running only
+        // fixers whose ids happened to be reported misses dependent corrections.
+        let _rules: Vec<&str> = fixable
             .iter()
             .filter(|v| v.file == *file_path)
             .map(|v| v.rule_id.as_str())
             .collect();
-        let any_spacing = rules.iter().any(|r| {
-            r.contains("spacing")
-                || r.contains("curly")
-                || r.contains("op-")
-                || r.contains("paren")
-                || r.contains("colon")
-                || r.contains("comma")
-                || r.contains("comment")
-        });
-        let any_wrapping = rules.iter().any(|r| {
-            r.contains("wrapping") || r.contains("when-entry-bracing") || r.contains("try-catch")
-        });
-        let any_indent = rules.iter().any(|r| r.contains("indent"));
 
         let original = std::fs::read_to_string(file_path)?;
         let mut text = original.clone();
-        if any_spacing {
-            text = fix_all_spacing(&text);
-        }
-        if any_wrapping {
-            text = fix_all_wrapping(&text);
-        }
-        if any_indent {
-            text = fix_indentation(&text, indent_size);
-        }
-        text = fix_trailing_ws(&text);
+        text = fix_all_spacing(&text);
+        text = fix_all_wrapping(&text);
+        text = fix_indentation(&text, indent_size);
+        text = fix_trailing_ws_protected(&text);
         // Issue #45: restore final newline if config requires it
         if insert_final_newline && !text.ends_with('\n') {
             text.push('\n');
@@ -235,6 +269,11 @@ fn fix_all_spacing(source: &str) -> String {
         text = fix_parens(&text);
         text = fix_angle_brackets(&text);
         text = fix_colons(&text);
+        text = fix_keyword_spacing(&text);
+        text = fix_range_spacing(&text);
+        text = fix_trailing_lambda_parentheses(&text);
+        text = fix_semicolons(&text);
+        text = fix_single_line_trailing_comma(&text);
         text = fix_comment_spacing(&text);
         text = fix_blank_lines(&text);
         text = fix_blank_line_in_list(&text);
@@ -244,24 +283,70 @@ fn fix_all_spacing(source: &str) -> String {
             break;
         }
     }
-    restore_protected(&text, &store)
+    let restored = restore_protected(&text, &store);
+    let restored = fix_class_header_spacing(&restored);
+    fix_comment_spacing(&restored)
 }
 
 fn fix_all_wrapping(source: &str) -> String {
-    // Only `} catch`/`} finally` merging is safe as a text op. The other wrapping
-    // "fixers" (multiline-if-else, chain, when-break, when-entry-bracing, string-
-    // template) rebuilt lines destructively — merging unrelated statements,
-    // scrambling `when` branch braces/parens, and even injecting `.trimIndent()`
-    // (a semantic change). They need the CST; until then they are disabled.
-    fix_try_catch(source)
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    if tree.root_node().has_error() {
+        return source.to_string();
+    }
+    let (masked, store) = mask_protected(source, &tree);
+    let text = fix_single_line_control_blocks(&fix_try_catch(&masked));
+    restore_protected(&text, &store)
 }
 
-fn fix_indentation(source: &str, _indent_size: usize) -> String {
-    // Disabled: this counted `{`/`}` only, ignoring `(`/`[` nesting, so it flattened
-    // the indentation of everything inside multi-line calls / collection literals
-    // (e.g. a 12-space-indented builder argument was forced back to 8). Correct
-    // reindentation needs the CST; until then leave indentation untouched.
-    source.to_string()
+fn fix_indentation(source: &str, indent_size: usize) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    if tree.root_node().has_error() {
+        return source.to_string();
+    }
+    let (masked, store) = mask_protected(source, &tree);
+    let existing_indented_code_lines = masked
+        .lines()
+        .filter(|line| {
+            let trimmed = line.trim_start();
+            !trimmed.is_empty()
+                && !trimmed.contains(SENTINEL)
+                && line.len().saturating_sub(trimmed.len()) > 0
+        })
+        .count();
+    // Avoid globally reflowing already-indented files until continuation
+    // indentation is fully CST-driven. Wrapping may introduce one or two lines.
+    if existing_indented_code_lines > 2 {
+        return source.to_string();
+    }
+    let mut depth = 0usize;
+    let mut output = Vec::new();
+    for line in masked.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.is_empty() {
+            output.push(String::new());
+            continue;
+        }
+        let line_depth = depth.saturating_sub(usize::from(trimmed.starts_with('}')));
+        if trimmed.starts_with(SENTINEL) {
+            output.push(line.to_string());
+        } else {
+            output.push(format!(
+                "{}{}",
+                " ".repeat(line_depth * indent_size),
+                trimmed
+            ));
+        }
+        let opens = trimmed.bytes().filter(|byte| *byte == b'{').count();
+        let closes = trimmed.bytes().filter(|byte| *byte == b'}').count();
+        depth = depth.saturating_add(opens).saturating_sub(closes);
+    }
+    let mut result = output.join("\n");
+    if source.ends_with('\n') {
+        result.push('\n');
+    }
+    restore_protected(&result, &store)
 }
 
 fn fix_trailing_ws(source: &str) -> String {
@@ -272,16 +357,32 @@ fn fix_trailing_ws(source: &str) -> String {
         .join("\n")
 }
 
+fn fix_trailing_ws_protected(source: &str) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    let (masked, store) = mask_protected(source, &tree);
+    restore_protected(&fix_trailing_ws(&masked), &store)
+}
+
 // ── Spacing helpers ──
 
 fn fix_curly_braces(source: &str) -> String {
     let mut s = source.to_string();
-    let indices: Vec<usize> = s.match_indices('{').map(|(i, _)| i).collect();
-    for &pos in indices.iter().rev() {
+    let opens: Vec<usize> = s.match_indices('{').map(|(i, _)| i).collect();
+    for &pos in opens.iter().rev() {
         if pos > 0 {
             let prev = s[..pos].chars().last().unwrap_or(' ');
-            // Skip string interpolation ${}, annotations @X({}), and ({}
             if prev != ' ' && prev != '\n' && prev != '$' && prev != '(' && prev != '[' {
+                s.insert(pos, ' ');
+            }
+        }
+    }
+    s = s.replace("{", "{ ").replace("{  ", "{ ");
+    let closes: Vec<usize> = s.match_indices('}').map(|(i, _)| i).collect();
+    for &pos in closes.iter().rev() {
+        if pos > 0 {
+            let prev = s[..pos].chars().last().unwrap_or(' ');
+            if !prev.is_whitespace() && prev != '{' {
                 s.insert(pos, ' ');
             }
         }
@@ -289,7 +390,6 @@ fn fix_curly_braces(source: &str) -> String {
     for kw in &["else", "catch", "finally"] {
         s = s.replace(&format!("}}{}", kw), &format!("}} {}", kw));
     }
-    // Merge }\nelse if onto one line
     s = s.replace("}\nelse if", "} else if");
     s
 }
@@ -297,7 +397,8 @@ fn fix_curly_braces(source: &str) -> String {
 fn fix_operators(source: &str) -> String {
     let mut s = source.to_string();
     let ops = [
-        "==", "!=", "<=", ">=", "&&", "||", "+=", "-=", "*=", "/=", "=", "+", "-", "*", "/", "%",
+        "==", "!=", "<=", ">=", "->", "&&", "||", "+=", "-=", "*=", "/=", "=", "<", ">", "+", "-",
+        "*", "/", "%",
     ];
     for op in &ops {
         // Build char→byte mapping for this iteration
@@ -345,7 +446,7 @@ fn fix_operators(source: &str) -> String {
             let byte_pos = cur_c2b[pos];
             let prev = cur[pos - 1];
             let next = cur.get(pos + op.len()).copied().unwrap_or(' ');
-            if prev.is_alphanumeric() && prev != ' ' {
+            if prev != ' ' && prev != '\n' && !is_op_char(prev) {
                 s.insert(byte_pos, ' ');
             }
             // Re-read after potential insert
@@ -353,7 +454,7 @@ fn fix_operators(source: &str) -> String {
             let cur2_c2b: Vec<usize> = s.char_indices().map(|(bi, _)| bi).collect();
             let after_char = pos
                 + op.len()
-                + if prev.is_alphanumeric() && prev != ' ' {
+                + if prev != ' ' && prev != '\n' && !is_op_char(prev) {
                     1
                 } else {
                     0
@@ -376,11 +477,19 @@ fn fix_operators(source: &str) -> String {
 }
 
 fn fix_commas(source: &str) -> String {
-    let mut s = source.to_string();
-    if !s.contains(", ") {
-        s = s.replace(",", ", ");
+    let mut output = String::with_capacity(source.len());
+    let chars: Vec<char> = source.chars().collect();
+    for (index, ch) in chars.iter().copied().enumerate() {
+        output.push(ch);
+        if ch == ','
+            && chars
+                .get(index + 1)
+                .is_some_and(|next| !next.is_whitespace() && !matches!(*next, ')' | ']'))
+        {
+            output.push(' ');
+        }
     }
-    s
+    output
 }
 
 fn fix_angle_brackets(source: &str) -> String {
@@ -422,9 +531,7 @@ fn strip_inner_bracket_spaces(
 }
 
 fn fix_colons(source: &str) -> String {
-    // Supertype/constraint colons (`) : Base`, `where T : Any`) are protected
-    // upstream via masking, so collapsing ` : `→`: ` here is safe for the rest.
-    let s = source.replace(" : ", ": ");
+    let s = source.to_string();
     // `word:word` → `word: word`, EXCEPT annotation use-site targets (`@file:`,
     // `@get:`, `@set:`, `@param:`, …) which take no space after the colon.
     // Rebuilt as a single forward pass — the old in-place `insert` mutated `s`
@@ -436,8 +543,8 @@ fn fix_colons(source: &str) -> String {
         if c == ':'
             && i > 0
             && i + 1 < chars.len()
-            && chars[i - 1].is_alphanumeric()
-            && chars[i + 1].is_alphanumeric()
+            && !chars[i + 1].is_whitespace()
+            && chars[i + 1] != ':'
         {
             let mut j = i;
             while j > 0 && (chars[j - 1].is_alphanumeric() || chars[j - 1] == '_') {
@@ -449,11 +556,129 @@ fn fix_colons(source: &str) -> String {
             }
         }
     }
-    out
+    out.split('\n')
+        .map(|line| {
+            if line.contains("class ") {
+                line.replace("):", ") :")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn fix_comment_spacing(source: &str) -> String {
-    source.replace("//", "// ")
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    let bytes = source.as_bytes();
+    let mut insertions = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind().contains("comment") {
+            let start = node.start_byte();
+            let text = &bytes[start..node.end_byte()];
+            if text.starts_with(b"//")
+                && !text.starts_with(b"// ")
+                && !text.starts_with(b"///")
+                && text.get(2).is_some_and(|byte| *byte != b'\n')
+            {
+                insertions.push(start + 2);
+            }
+        }
+        for index in (0..node.child_count()).rev() {
+            if let Some(child) = node.child(index) {
+                stack.push(child);
+            }
+        }
+    }
+    let mut fixed = source.to_string();
+    insertions.sort_unstable_by(|left, right| right.cmp(left));
+    for offset in insertions {
+        fixed.insert(offset, ' ');
+    }
+    fixed
+}
+
+fn fix_keyword_spacing(source: &str) -> String {
+    ["if", "for", "while", "when", "catch"]
+        .into_iter()
+        .fold(source.to_string(), |text, keyword| {
+            text.replace(&format!("{keyword}("), &format!("{keyword} ("))
+        })
+}
+
+fn fix_range_spacing(source: &str) -> String {
+    source
+        .replace(" .. ", "..")
+        .replace(" ..", "..")
+        .replace(".. ", "..")
+}
+
+fn fix_single_line_trailing_comma(source: &str) -> String {
+    source.replace(",)", ")").replace(", )", ")")
+}
+
+fn fix_trailing_lambda_parentheses(source: &str) -> String {
+    source
+        .split('\n')
+        .map(|line| {
+            if !line.contains("fun ")
+                && !line.contains("class ")
+                && !line.contains("interface ")
+                && !line.contains("object ")
+                && line.contains('.')
+            {
+                line.replace("() {", " {")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn fix_semicolons(source: &str) -> String {
+    source
+        .split('\n')
+        .map(|line| {
+            let trimmed = line.trim();
+            if trimmed != ";" && line.trim_end().ends_with(';') {
+                line.trim_end().trim_end_matches(';').to_string()
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn fix_class_header_spacing(source: &str) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    let (masked, store) = mask_strings_and_chars(source, &tree, true);
+    let fixed = masked
+        .split('\n')
+        .map(|line| {
+            if !line.contains("class ") {
+                return line.to_string();
+            }
+            let mut fixed = line.replace("):", ") :");
+            if let Some(marker) = fixed.rfind(") :") {
+                let after = marker + 3;
+                if fixed
+                    .as_bytes()
+                    .get(after)
+                    .is_some_and(|byte| *byte != b' ')
+                {
+                    fixed.insert(after, ' ');
+                }
+            }
+            fixed
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    restore_protected(&fixed, &store)
 }
 
 fn fix_blank_lines(source: &str) -> String {
@@ -580,6 +805,41 @@ fn fix_when_expression_break(source: &str) -> String {
     result.join("\n")
 }
 
+fn fix_single_line_control_blocks(source: &str) -> String {
+    let mut output = Vec::new();
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        let is_control = ["if (", "for (", "while ("]
+            .iter()
+            .any(|prefix| trimmed.starts_with(prefix));
+        let open = line.find('{');
+        let close = line.rfind('}');
+        if is_control && open.is_some() && close.is_some() && open < close {
+            let open = open.unwrap_or(0);
+            let close = close.unwrap_or(open);
+            let suffix = &line[close + 1..];
+            if suffix.trim_start().starts_with("else") {
+                output.push(line.to_string());
+                continue;
+            }
+            let indent = &line[..line.len() - trimmed.len()];
+            let body = line[open + 1..close].trim();
+            output.push(format!("{}{} {{", indent, line[..open].trim_end()));
+            if !body.is_empty() {
+                output.push(format!("{}    {}", indent, body));
+            }
+            output.push(format!("{}}}{}", indent, suffix));
+        } else {
+            output.push(line.to_string());
+        }
+    }
+    let mut result = output.join("\n");
+    if source.ends_with('\n') {
+        result.push('\n');
+    }
+    result
+}
+
 // ── Try-catch wrapping ──
 
 fn fix_try_catch(source: &str) -> String {
@@ -654,7 +914,7 @@ mod tests {
     }
     #[test]
     fn fix_curly_brace() {
-        assert_eq!(fix_all_spacing("fun foo(){x}"), "fun foo() {x}");
+        assert_eq!(fix_all_spacing("fun foo(){x}"), "fun foo() { x }");
     }
     #[test]
     fn fix_colon_spacing() {
@@ -666,10 +926,8 @@ mod tests {
     }
     #[test]
     fn fix_indent() {
-        // fix_indentation is intentionally disabled (brace-only counting flattened
-        // paren/bracket-nested code); it must now be an identity passthrough.
         let src = "class Foo {\nval x = 1\n}";
-        assert_eq!(fix_indentation(src, 4), src);
+        assert_eq!(fix_indentation(src, 4), "class Foo {\n    val x = 1\n}");
     }
     #[test]
     fn fix_chain_wrap() {
@@ -702,6 +960,27 @@ catch(e: E) { b() }"
         let src = "val x = foo\n    .bar()\n    .baz()";
         let r = fix_all_wrapping(src);
         assert_eq!(r, src);
+    }
+
+    #[test]
+    fn raw_string_content_is_never_reformatted_after_restore() {
+        let source = "val raw = \"\"\"\n//keep\nclass Fake):Type\n\"\"\"\nval x=1\n";
+        let fixed = fix_all_spacing(source);
+        assert!(fixed.contains("//keep\nclass Fake):Type"));
+        assert!(fixed.contains("val x = 1"));
+    }
+
+    #[test]
+    fn extension_function_parentheses_are_preserved() {
+        let source = "private fun Foo.bar() {\n}\n";
+        assert_eq!(fix_trailing_lambda_parentheses(source), source);
+    }
+
+    #[test]
+    fn single_line_control_block_preserves_suffix_comment() {
+        let source = "if (ready) { run() } // keep\n";
+        let fixed = fix_single_line_control_blocks(source);
+        assert!(fixed.contains("} // keep"), "got: {fixed}");
     }
 
     // ── Issue #63: UTF-8 multi-byte character safety ──

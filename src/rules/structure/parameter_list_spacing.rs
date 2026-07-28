@@ -18,7 +18,12 @@ impl Rule for ParameterListSpacing {
                     if let Some(paren_end) = trimmed.rfind(')') {
                         if paren_end > paren_start + 1 {
                             let params = &trimmed[paren_start + 1..paren_end];
-                            if params.contains("  ") {
+                            let structural = without_string_contents(params);
+                            let has_extra_space = params.starts_with(char::is_whitespace)
+                                || params.ends_with(char::is_whitespace)
+                                || structural.contains(" ,")
+                                || structural.contains(",  ");
+                            if has_extra_space {
                                 violations.push(Violation {
                                     file: String::new(),
                                     line: i + 1,
@@ -35,6 +40,35 @@ impl Rule for ParameterListSpacing {
         }
         violations
     }
+}
+
+fn without_string_contents(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    let mut quote = None;
+    let mut escaped = false;
+    for ch in text.chars() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if quote.is_some() && ch == '\\' {
+            escaped = true;
+            continue;
+        }
+        if matches!(ch, '\'' | '"') {
+            if quote == Some(ch) {
+                quote = None;
+            } else if quote.is_none() {
+                quote = Some(ch);
+                result.push('S');
+            }
+            continue;
+        }
+        if quote.is_none() {
+            result.push(ch);
+        }
+    }
+    result
 }
 
 #[cfg(test)]
@@ -56,5 +90,15 @@ mod tests {
     #[test]
     fn empty() {
         assert!(c("fun foo()\n").is_empty());
+    }
+
+    #[test]
+    fn spaces_inside_string_argument_are_allowed() {
+        assert!(c("call(\"  padded  \")\n").is_empty());
+    }
+
+    #[test]
+    fn string_arguments_around_comma_preserve_structural_boundary() {
+        assert!(c("call(name = \"value\", description = \"other\")\n").is_empty());
     }
 }

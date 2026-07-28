@@ -1,6 +1,7 @@
 use crate::cli::Cli;
 use crate::config::KtlintConfig;
 use anyhow::Result;
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::WalkBuilder;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -53,6 +54,14 @@ impl<'a> FileCollector<'a> {
             }
         }
 
+        let includes = Self::build_glob_set(&self.cli.include)?;
+        let excludes = Self::build_glob_set(&self.cli.exclude)?;
+        files.retain(|path| {
+            let candidate = path.strip_prefix(root).unwrap_or(path);
+            let included = self.cli.include.is_empty() || includes.is_match(candidate);
+            included && !excludes.is_match(candidate)
+        });
+
         // Deduplicate (canonicalize to handle ./a/Alpha.kt and a/Alpha.kt)
         let mut seen: HashSet<PathBuf> = HashSet::new();
         files.retain(|p| {
@@ -62,6 +71,14 @@ impl<'a> FileCollector<'a> {
         });
 
         Ok(files)
+    }
+
+    fn build_glob_set(patterns: &[String]) -> Result<GlobSet> {
+        let mut builder = GlobSetBuilder::new();
+        for pattern in patterns {
+            builder.add(Glob::new(pattern)?);
+        }
+        Ok(builder.build()?)
     }
 
     /// Walk a directory and collect `.kt` / `.kts` files.
@@ -95,7 +112,7 @@ impl<'a> FileCollector<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
+    use std::fs;
     use tempfile::TempDir;
 
     fn setup_fixture() -> (TempDir, KtlintConfig, Cli) {
@@ -154,6 +171,8 @@ mod tests {
             reporter: "plain".to_string(),
             reporter_output: None,
             log_level: None,
+            include: vec![],
+            exclude: vec![],
             patterns: vec![],
         };
 
@@ -329,5 +348,33 @@ mod tests {
         // The relative one won't resolve to tmp path, so we just check no crash
         let files = collector(&config, &cli).collect().unwrap();
         assert!(files.iter().any(|p| p.file_name().unwrap() == "Alpha.kt"));
+    }
+
+    #[test]
+    fn include_and_exclude_globs_filter_relative_paths() {
+        let (_tmp, config, mut cli) = setup_fixture();
+        cli.include = vec!["**/src/**/*.kt".to_string()];
+        cli.exclude = vec!["**/generated/**".to_string()];
+
+        let root = &config.project_root;
+        fs::create_dir_all(root.join("module/src/main/kotlin/generated")).unwrap();
+        fs::create_dir_all(root.join("module/src/main/kotlin/app")).unwrap();
+        fs::write(
+            root.join("module/src/main/kotlin/generated/Generated.kt"),
+            "class Generated",
+        )
+        .unwrap();
+        fs::write(root.join("module/src/main/kotlin/app/App.kt"), "class App").unwrap();
+        fs::write(root.join("module/build.gradle.kts"), "plugins {}").unwrap();
+
+        let files = collector(&config, &cli).collect().unwrap();
+        assert_eq!(file_names(&files), vec!["App.kt"]);
+    }
+
+    #[test]
+    fn invalid_glob_returns_error() {
+        let (_tmp, config, mut cli) = setup_fixture();
+        cli.include = vec!["[".to_string()];
+        assert!(collector(&config, &cli).collect().is_err());
     }
 }

@@ -10,7 +10,6 @@ pub use chain_wrapping::ChainWrapping;
 pub use general::GeneralWrapping;
 pub use multiline_expression::MultilineExpressionWrapping;
 pub use multiline_if_else::MultilineIfElse;
-pub use string_template_indent::StringTemplateIndent;
 pub use try_catch::TryCatchFinallyWrapping;
 pub use when_break::WhenExpressionLineBreak;
 pub mod when_entry_bracing;

@@ -28,7 +28,7 @@ impl Rule for NoSemicolons {
                 continue;
             }
 
-            if trimmed.ends_with(';') {
+            if trimmed.ends_with(';') && trimmed != ";" {
                 violations.push(Violation {
                     file: String::new(),
                     line: i + 1,

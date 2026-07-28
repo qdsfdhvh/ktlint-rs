@@ -9,10 +9,29 @@ impl Rule for NoTrailingSpaces {
     fn id(&self) -> &'static str {
         "standard:no-trailing-spaces"
     }
-    fn check(&self, _: &Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &Tree, s: &str) -> Vec<Violation> {
+        let mut raw_string_rows = std::collections::HashSet::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind().contains("multiline_string")
+                || node.kind() == "string_literal"
+                    && node.end_position().row > node.start_position().row
+            {
+                for row in node.start_position().row..=node.end_position().row {
+                    raw_string_rows.insert(row);
+                }
+            }
+            for index in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(index) {
+                    stack.push(child);
+                }
+            }
+        }
         s.lines()
             .enumerate()
-            .filter(|(_, l)| l.ends_with(' ') || l.ends_with('\t'))
+            .filter(|(row, line)| {
+                !raw_string_rows.contains(row) && (line.ends_with(' ') || line.ends_with('\t'))
+            })
             .map(|(i, _)| Violation {
                 file: String::new(),
                 line: i + 1,

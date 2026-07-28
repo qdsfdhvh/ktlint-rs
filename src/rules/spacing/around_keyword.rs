@@ -8,29 +8,30 @@ impl Rule for SpacingAroundKeyword {
         "standard:spacing-around-keyword"
     }
 
-    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let bytes = source.as_bytes();
         let mut violations = Vec::new();
-        let keywords = ["if", "for", "while", "try", "catch", "when"];
-
-        for (i, line) in source.lines().enumerate() {
-            let trimmed = line.trim();
-            for kw in &keywords {
-                let pattern = format!("{}(", kw);
-                if let Some(pos) = trimmed.find(&pattern) {
-                    // Check: keyword should be preceded by space or line start
-                    // Must be a whole keyword, not substring of identifier
-                    let is_keyword =
-                        pos == 0 || !trimmed.as_bytes()[pos - 1].is_ascii_alphanumeric();
-                    if is_keyword && pos > 0 && trimmed.as_bytes()[pos - 1] != b' ' {
-                        violations.push(Violation {
-                            file: String::new(),
-                            line: i + 1,
-                            col: pos + 1,
-                            rule_id: self.id().to_string(),
-                            message: format!("Missing space before \"{}\"", kw),
-                            auto_fixable: true,
-                        });
-                    }
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if matches!(
+                node.kind(),
+                "if" | "for" | "while" | "try" | "catch" | "when"
+            ) {
+                let pos = node.start_position();
+                if bytes.get(node.end_byte()) == Some(&b'(') {
+                    violations.push(Violation {
+                        file: String::new(),
+                        line: pos.row + 1,
+                        col: pos.column + 1,
+                        rule_id: self.id().into(),
+                        message: format!("Missing space after \"{}\"", node.kind()),
+                        auto_fixable: true,
+                    });
+                }
+            }
+            for index in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(index) {
+                    stack.push(child);
                 }
             }
         }

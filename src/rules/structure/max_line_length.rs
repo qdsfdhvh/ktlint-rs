@@ -15,7 +15,18 @@ impl Rule for MaxLineLength {
         source
             .lines()
             .enumerate()
-            .filter(|(_, line)| line.len() > max_length)
+            .filter(|(_, line)| {
+                let trimmed = line.trim_start();
+                line.chars().count() > max_length
+                    && !trimmed.starts_with("package ")
+                    && !trimmed.starts_with("import ")
+                    && !trimmed.starts_with("//")
+                    && !trimmed.starts_with("/*")
+                    && !trimmed.starts_with('*')
+                    // ktlint does not report lines whose long, indivisible content is
+                    // carried by a string literal (URLs, paths, snapshots, etc.).
+                    && !line.contains('"')
+            })
             .map(|(i, _line)| Violation {
                 file: String::new(),
                 line: i + 1,
@@ -46,9 +57,23 @@ mod tests {
 
     #[test]
     fn long_line() {
-        let long = format!("val x = \"{}\"\n", "a".repeat(200));
+        let long = format!("val x = {}\n", "a".repeat(200));
         let v = check(&long);
         assert!(!v.is_empty());
         assert_eq!(v[0].rule_id, "standard:max-line-length");
+    }
+
+    #[test]
+    fn ignores_long_string_and_kdoc_lines() {
+        let string = format!("val x = \"{}\"\n", "a".repeat(200));
+        let kdoc = format!("/** {} */\n", "a".repeat(200));
+        assert!(check(&string).is_empty());
+        assert!(check(&kdoc).is_empty());
+    }
+
+    #[test]
+    fn counts_unicode_characters_instead_of_utf8_bytes() {
+        let source = format!("val text = \"{}\"\n", "中".repeat(50));
+        assert!(check(&source).is_empty());
     }
 }

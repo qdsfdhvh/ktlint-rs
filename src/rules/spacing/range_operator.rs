@@ -8,45 +8,40 @@ impl Rule for RangeOperatorSpacing {
         "standard:spacing-around-range-operator"
     }
 
-    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
-
-        let mut i = 0;
-        while i < bytes.len() {
-            if i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1] == b'.' {
-                // Found `..`
-                let line_num = source[..i].matches('\n').count() + 1;
-                let col = if let Some(last_nl) = source[..i].rfind('\n') {
-                    i - last_nl
-                } else {
-                    i + 1
-                };
-
-                // Check space before
-                if i > 0 && bytes[i - 1] == b' ' && i > 1 && bytes[i - 2] != b'.' {
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == ".." {
+                let offset = node.start_byte();
+                let pos = node.start_position();
+                if offset > 0 && bytes[offset - 1] == b' ' {
                     violations.push(Violation {
                         file: String::new(),
-                        line: line_num,
-                        col,
-                        rule_id: self.id().to_string(),
-                        message: "Unexpected space before \"..\"".to_string(),
+                        line: pos.row + 1,
+                        col: pos.column + 1,
+                        rule_id: self.id().into(),
+                        message: "Unexpected space before \"..\"".into(),
                         auto_fixable: true,
                     });
                 }
-                // Check space after
-                if i + 2 < bytes.len() && bytes[i + 2] == b' ' {
+                if node.end_byte() < bytes.len() && bytes[node.end_byte()] == b' ' {
                     violations.push(Violation {
                         file: String::new(),
-                        line: line_num,
-                        col: col + 2,
-                        rule_id: self.id().to_string(),
-                        message: "Unexpected space after \"..\"".to_string(),
+                        line: pos.row + 1,
+                        col: pos.column + 3,
+                        rule_id: self.id().into(),
+                        message: "Unexpected space after \"..\"".into(),
                         auto_fixable: true,
                     });
                 }
             }
-            i += 1;
+            for index in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(index) {
+                    stack.push(child);
+                }
+            }
         }
         violations
     }

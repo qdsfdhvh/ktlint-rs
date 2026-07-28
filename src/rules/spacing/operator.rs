@@ -22,7 +22,7 @@ impl OperatorSpacing {
         let kind = node.kind();
         if OPERATORS.contains(&kind) {
             if !Self::in_comment(&node)
-                && !((kind == "<" || kind == ">") && Self::is_generic(&node))
+                && !(matches!(kind, "<" | ">" | "*") && Self::is_generic(&node, bytes))
             {
                 Self::check_op(&node, bytes, v);
             }
@@ -43,13 +43,43 @@ impl OperatorSpacing {
         }
         false
     }
-    fn is_generic(node: &tree_sitter::Node) -> bool {
-        node.parent().map_or(false, |p| {
-            matches!(
-                p.kind(),
-                "type_arguments" | "type_parameters" | "type_projection"
-            )
-        })
+    fn is_generic(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+        let mut current = node.parent();
+        while let Some(parent) = current {
+            if matches!(
+                parent.kind(),
+                "type_arguments" | "type_parameters" | "type_projection" | "type_parameter"
+            ) {
+                return true;
+            }
+            if matches!(
+                parent.kind(),
+                "binary_expression" | "unary_expression" | "call_expression"
+            ) {
+                break;
+            }
+            current = parent.parent();
+        }
+        if node.kind() == "<" {
+            return bytes
+                .get(node.end_byte())
+                .is_some_and(|byte| byte.is_ascii_uppercase() || matches!(*byte, b'*' | b'@'));
+        }
+        if node.kind() == ">" {
+            let line_start = bytes[..node.start_byte()]
+                .iter()
+                .rposition(|byte| *byte == b'\n')
+                .map_or(0, |index| index + 1);
+            if let Some(open) = bytes[line_start..node.start_byte()]
+                .iter()
+                .rposition(|byte| *byte == b'<')
+            {
+                return bytes
+                    .get(line_start + open + 1)
+                    .is_some_and(|byte| byte.is_ascii_uppercase() || matches!(*byte, b'*' | b'@'));
+            }
+        }
+        false
     }
     fn check_op(node: &tree_sitter::Node, bytes: &[u8], v: &mut Vec<Violation>) {
         let pos = node.start_position();

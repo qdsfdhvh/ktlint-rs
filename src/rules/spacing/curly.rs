@@ -45,11 +45,17 @@ impl CurlySpacing {
         // Skip over newlines: if preceded by \n, it's already at line start (fine)
         if start_byte > 0 {
             let prev_char = bytes[start_byte - 1];
+            // tree-sitter columns are byte offsets, so this derives the line start in O(1).
+            let line_start = start_byte.saturating_sub(pos.column);
+            let is_first_token_on_line = bytes[line_start..start_byte]
+                .iter()
+                .all(|byte| byte.is_ascii_whitespace());
             // Should have space before unless preceded by (, [, or at line start
-            if prev_char == b'\n' {
-                // OK — at line start
-            } else if prev_char == b'(' || prev_char == b'[' {
+            if prev_char == b'\n' || is_first_token_on_line {
+                // OK — first token on the line; preceding spaces are indentation
                 // OK — directly after opening paren/bracket
+            } else if matches!(prev_char, b'(' | b'[') {
+                // OK — lambda literals can directly follow an opening delimiter.
             } else if prev_char != b' ' {
                 violations.push(Violation {
                     file: String::new(),
@@ -133,5 +139,11 @@ mod tests {
         let source = "fun foo(): Int {\n    return 1\n}\n";
         let v = check(source);
         assert!(v.is_empty());
+    }
+
+    #[test]
+    fn indented_lambda_argument_is_ok() {
+        let source = "call(\n    { value() },\n)\n";
+        assert!(check(source).is_empty());
     }
 }

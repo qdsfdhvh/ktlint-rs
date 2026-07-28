@@ -25,6 +25,7 @@ impl Rule for Indentation {
         let is = self.indent_size;
         let lines: Vec<&str> = source.lines().collect();
         let mut in_block_comment = false;
+        let mut in_raw_string = false;
 
         // Detect KTS files: if no class/fun/object declarations, skip indent
         let is_kts = !lines.iter().any(|l| {
@@ -44,6 +45,14 @@ impl Rule for Indentation {
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
             let spaces = line.len() - trimmed.len();
+
+            let raw_delimiters = line.matches("\"\"\"").count();
+            if in_raw_string || raw_delimiters % 2 == 1 {
+                if raw_delimiters % 2 == 1 {
+                    in_raw_string = !in_raw_string;
+                }
+                continue;
+            }
 
             // Track block comments
             if trimmed.starts_with("/*") {

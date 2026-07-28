@@ -82,4 +82,32 @@ mod format_tests {
             after
         );
     }
+
+    #[test]
+    fn matches_spotless_8_8_0_ktlint_1_8_0_golden() {
+        let source = include_str!("../tests/fixtures/spotless-parity/input.kt");
+        let expected = include_str!("../tests/fixtures/spotless-parity/expected.kt");
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(source.as_bytes()).unwrap();
+
+        let (_, actual) = lint_and_fix(source, &file);
+        assert_eq!(
+            actual, expected,
+            "formatter output must match Spotless byte-for-byte"
+        );
+    }
+
+    #[test]
+    fn matches_spotless_extended_golden() {
+        let source = include_str!("../tests/fixtures/spotless-parity/extended-input.kt");
+        let expected = include_str!("../tests/fixtures/spotless-parity/extended-expected.kt");
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(source.as_bytes()).unwrap();
+
+        let (_, actual) = lint_and_fix(source, &file);
+        assert_eq!(
+            actual, expected,
+            "formatter output must match Spotless byte-for-byte"
+        );
+    }
 }

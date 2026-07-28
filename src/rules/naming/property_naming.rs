@@ -50,7 +50,9 @@ impl Rule for PropertyNaming {
             // val/var: camelCase
             if let Some(name) = extract_name_after_keyword(trimmed, "val ") {
                 let name = name.split(':').next().unwrap_or(&name);
-                if !is_camel_case(name) {
+                // Kotlin permits object-like immutable properties to use PascalCase and
+                // deeply immutable values to use constant-style UPPER_SNAKE_CASE.
+                if !is_camel_case(name) && !is_upper_snake(name) && !is_pascal_case(name) {
                     violations.push(Violation {
                         file: String::new(),
                         line: i + 1,
@@ -99,6 +101,10 @@ fn is_camel_case(s: &str) -> bool {
     s.chars().next().map_or(false, |c| c.is_lowercase()) && !s.contains('_')
 }
 
+fn is_pascal_case(s: &str) -> bool {
+    s.chars().next().is_some_and(|ch| ch.is_uppercase()) && !s.contains('_')
+}
+
 fn is_upper_snake(s: &str) -> bool {
     s.chars()
         .all(|c| c.is_uppercase() || c.is_numeric() || c == '_')
@@ -123,6 +129,12 @@ mod tests {
     #[test]
     fn upper_case_const() {
         assert!(check("const val MAX_COUNT = 100\n").is_empty());
+    }
+
+    #[test]
+    fn immutable_object_like_properties_may_use_uppercase_names() {
+        assert!(check("val TAGS = listOf<String>()\n").is_empty());
+        assert!(check("val Saver = Any()\n").is_empty());
     }
 
     #[test]

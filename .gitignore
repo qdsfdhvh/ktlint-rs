@@ -3,6 +3,8 @@
 Cargo.lock
 .editorconfig
 tests/fixtures/*
+!tests/fixtures/spotless-parity/
+!tests/fixtures/spotless-parity/**
 !.gitkeep
 task_plan.md
 findings.md

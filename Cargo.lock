@@ -413,6 +413,7 @@ dependencies = [
  "colored",
  "editorconfig",
  "env_logger",
+ "globset",
  "ignore",
  "log",
  "pretty_assertions",

@@ -25,6 +25,7 @@ serde_json = "1"
 serde_yaml = "0.9"
 rayon = "1"
 ignore = "0.4"
+globset = "0.4"
 editorconfig = "1"
 
 # tree-sitter from git for latest fixes, kotlin-sg from crates.io for compat

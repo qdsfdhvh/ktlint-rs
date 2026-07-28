@@ -17,6 +17,7 @@ impl Rule for NoEmptyClassBody {
         for (i, line) in source.lines().enumerate() {
             let trimmed = line.trim();
             if (trimmed.ends_with("{}") || trimmed.ends_with("{ }"))
+                && !trimmed.contains("object :")
                 && (trimmed.contains("class ")
                     || trimmed.contains("interface ")
                     || trimmed.contains("object "))

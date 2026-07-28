@@ -52,6 +52,9 @@ ktlint-rs --reporter json **/*.kt
 
 # Detekt rules only
 ktlint-rs --ruleset detekt
+
+# Spotless-style target/exclude globs (repeatable)
+ktlint-rs --include '**/src/**/*.kt' --exclude '**/generated/**' .
 ```
 
 > Full CLI reference: **[docs/command.md](docs/command.md)**  
