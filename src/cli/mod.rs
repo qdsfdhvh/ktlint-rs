@@ -41,7 +41,7 @@ pub struct Cli {
     #[arg(long, default_value = "ktlint", value_parser = ["ktlint", "detekt", "ktlint,detekt"])]
     pub ruleset: String,
 
-    /// Enable JVM-compatible mode: include ktlint-rs-only rules in default ruleset
+    /// Include ktlint-rs-only extension rules in the default ktlint ruleset
     #[arg(long)]
     pub compat: bool,
 
@@ -73,6 +73,14 @@ pub struct Cli {
     /// Log level
     #[arg(short = 'l', long)]
     pub log_level: Option<String>,
+
+    /// Include only files matching these git-style glob patterns (repeatable)
+    #[arg(long = "include", value_name = "GLOB")]
+    pub include: Vec<String>,
+
+    /// Exclude files matching these git-style glob patterns (repeatable)
+    #[arg(long = "exclude", value_name = "GLOB")]
+    pub exclude: Vec<String>,
 
     /// File / directory patterns to check
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]

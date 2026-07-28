@@ -3,7 +3,6 @@
 //! + inconsistent layout across adjacent annotation groups.
 
 use crate::rules::{Rule, Violation};
-use std::collections::BTreeMap;
 
 pub struct AnnotationSpacing;
 
@@ -15,20 +14,17 @@ impl Rule for AnnotationSpacing {
         let mut v = Vec::new();
         let bytes = source.as_bytes();
 
-        // Collect all declaration annotations grouped by line
-        let mut line_annotations: BTreeMap<usize, Vec<(usize, usize)>> = BTreeMap::new();
+        // Check syntax annotations in declaration contexts. The grammar also uses an
+        // `annotation` node for the `annotation class` modifier, so require a leading `@`.
         walk(tree.root_node(), bytes, &mut |node| {
-            if node.kind() == "annotation" && is_decl_annotation(&node) {
-                let pos = node.start_position();
-                let line = pos.row + 1;
-                let col = pos.column + 1;
-                line_annotations.entry(line).or_default().push((line, col));
-                // Individual checks per annotation
+            if node.kind() == "annotation"
+                && bytes.get(node.start_byte()) == Some(&b'@')
+                && is_decl_annotation(&node)
+            {
                 check_annotation(&node, bytes, &mut v);
             }
         });
-        // JVM: check inconsistent layout across adjacent annotation groups
-        check_annotation_layout(&line_annotations, &mut v);
+        check_top_level_annotation_groups(source, &mut v);
         v
     }
 }
@@ -51,6 +47,7 @@ fn is_decl_annotation(node: &tree_sitter::Node) -> bool {
     while let Some(p) = cur {
         match p.kind() {
             "import_header" => return false,
+            kind if kind.contains("string") || kind.contains("comment") => return false,
             // Reached a declaration context — stop walking, include it
             "class_declaration"
             | "function_declaration"
@@ -76,21 +73,45 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
     let pos = node.start_position();
     let line_start = node.start_byte().saturating_sub(pos.column);
     let in_params = in_parameter_list(node);
+    let before = &bytes[line_start..node.start_byte()];
+    let is_inline_type_annotation = before
+        .iter()
+        .rev()
+        .find(|byte| !byte.is_ascii_whitespace())
+        .is_some_and(|byte| matches!(*byte, b':' | b'=' | b'(' | b',' | b'<'));
+    let line_end = bytes[node.end_byte()..]
+        .iter()
+        .position(|byte| *byte == b'\n')
+        .map_or(bytes.len(), |offset| node.end_byte() + offset);
+    let annotates_constructor = bytes[node.end_byte()..line_end]
+        .windows("constructor".len())
+        .any(|window| window == b"constructor");
+    let indented_annotation_group = pos.column > 0
+        && before
+            .iter()
+            .copied()
+            .skip_while(|byte| byte.is_ascii_whitespace())
+            .next()
+            == Some(b'@');
 
-    let mut prev_was_annotation = false;
     let mut prev_was_code = false;
     let mut i = line_start;
     while i < node.start_byte() {
         match bytes[i] {
             b' ' | b'\t' => {}
-            b'@' => prev_was_annotation = true,
+            b'@' => {}
             b'\n' => break,
             _ => prev_was_code = true,
         }
         i += 1;
     }
 
-    if prev_was_code && !in_params {
+    if prev_was_code
+        && !in_params
+        && !is_inline_type_annotation
+        && !annotates_constructor
+        && !indented_annotation_group
+    {
         violations.push(Violation {
             file: String::new(),
             line: pos.row + 1,
@@ -99,6 +120,23 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
             message: "Expected newline before annotation".into(),
             auto_fixable: true,
         });
+    }
+}
+
+fn check_top_level_annotation_groups(source: &str, violations: &mut Vec<Violation>) {
+    for (line_index, line) in source.lines().enumerate() {
+        if line.starts_with('@') {
+            if let Some(second) = line[1..].find('@') {
+                violations.push(Violation {
+                    file: String::new(),
+                    line: line_index + 1,
+                    col: second + 2,
+                    rule_id: "standard:annotation".into(),
+                    message: "Multiple annotations on same line".into(),
+                    auto_fixable: true,
+                });
+            }
+        }
     }
 }
 
@@ -116,63 +154,6 @@ fn in_parameter_list(node: &tree_sitter::Node) -> bool {
         cur = p.parent();
     }
     false
-}
-
-/// JVM-compatible: check inconsistent annotation layout across adjacent lines.
-/// Pattern: @Foo on line N, @Bar @Baz on line N+1.
-/// Line-based fallback: catch @annotations on same line as code
-/// that tree-sitter CST does not produce annotation nodes for.
-fn fallback_line_check(source: &str, violations: &mut Vec<Violation>) {
-    for (i, line) in source.lines().enumerate() {
-        let t = line.trim();
-        // Skip pure annotation lines, imports, comments
-        if t.starts_with("@") || t.starts_with("import ") || t.starts_with("//") {
-            continue;
-        }
-        // Find @ in middle of code line (after non-annotation content)
-        if let Some(at_pos) = t.find('@') {
-            // Check if there's code before the @
-            let before = &t[..at_pos].trim_end();
-            if !before.is_empty() && !before.ends_with(':') && !before.ends_with('=') {
-                violations.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: at_pos + 1,
-                    rule_id: "standard:annotation".into(),
-                    message: "Expected newline before annotation".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-    }
-}
-
-fn check_annotation_layout(
-    groups: &BTreeMap<usize, Vec<(usize, usize)>>,
-    violations: &mut Vec<Violation>,
-) {
-    // Collect consecutive annotation line groups and their annotation counts
-    let mut prev_line: Option<usize> = None;
-    let mut prev_count: Option<usize> = None;
-
-    for (&line, anno_list) in groups.iter() {
-        let count = anno_list.len();
-        if let (Some(pl), Some(pc)) = (prev_line, prev_count) {
-            // Adjacent lines (gap of 1) with different annotation counts
-            if line == pl + 1 && pc != count && pc >= 1 && count >= 1 {
-                violations.push(Violation {
-                    file: String::new(),
-                    line,
-                    col: 1,
-                    rule_id: "standard:annotation".into(),
-                    message: "Inconsistent annotation layout: all annotations should be on separate lines or all on the same line".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        prev_line = Some(line);
-        prev_count = Some(count);
-    }
 }
 
 #[cfg(test)]
@@ -219,5 +200,12 @@ mod tests {
     #[test]
     fn consistent_layout_ok() {
         assert!(check("@Foo\n@Bar\n@Baz\nfun foo() {}\n").is_empty());
+    }
+
+    #[test]
+    fn inline_type_annotations_and_at_in_strings_are_allowed() {
+        assert!(check("typealias Content = @Composable (String) -> Unit\n").is_empty());
+        assert!(check("val callback: @Composable () -> Unit\n").is_empty());
+        assert!(check("val email = \"reader@@example.com\"\n").is_empty());
     }
 }

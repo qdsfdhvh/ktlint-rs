@@ -6,31 +6,45 @@ impl Rule for TypeArgumentListSpacing {
     fn id(&self) -> &'static str {
         "standard:type-argument-list-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("< ") && l.contains(">") && !l.contains("\"") && !l.contains("->") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "No whitespace expected at this position".into(),
-                    auto_fixable: true,
-                });
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let bytes = source.as_bytes();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if matches!(
+                node.kind(),
+                "type_arguments" | "type_parameters" | "type_projection"
+            ) {
+                for index in 0..node.child_count() {
+                    let Some(child) = node.child(index) else {
+                        continue;
+                    };
+                    let pos = child.start_position();
+                    let offset = child.start_byte();
+                    let has_unexpected_space = match child.kind() {
+                        "<" => child.end_byte() < bytes.len() && bytes[child.end_byte()] == b' ',
+                        ">" => offset > 0 && bytes[offset - 1] == b' ',
+                        _ => false,
+                    };
+                    if has_unexpected_space {
+                        violations.push(Violation {
+                            file: String::new(),
+                            line: pos.row + 1,
+                            col: pos.column + 1,
+                            rule_id: self.id().into(),
+                            message: "No whitespace expected at this position".into(),
+                            auto_fixable: true,
+                        });
+                    }
+                }
             }
-            if l.contains(" >") && l.contains("<") && !l.contains("->") && !l.contains("\"") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "No whitespace expected at this position".into(),
-                    auto_fixable: true,
-                });
+            for index in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(index) {
+                    stack.push(child);
+                }
             }
         }
-        v
+        violations
     }
 }
 

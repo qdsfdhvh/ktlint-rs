@@ -98,16 +98,28 @@ fn main() -> anyhow::Result<()> {
     let reporter = DiagnosticReporter::new(&cli);
 
     let exit_code = if cli.format && !violations.is_empty() {
-        formatter::auto_fix(
-            &files,
-            &violations,
-            config.indent_size,
-            config.insert_final_newline,
-        )?;
-        // Blocker 4: re-lint after format, report post-format state only
-        let mut post_violations = Vec::new();
-        let engine = RuleEngine::new(&config);
         for file in &files {
+            let file_config = KtlintConfig::load_for_file_with_base(file, &base_config)
+                .unwrap_or_else(|_| base_config.clone());
+            let file_name = file.to_string_lossy();
+            let file_violations: Vec<Violation> = violations
+                .iter()
+                .filter(|violation| violation.file == file_name)
+                .cloned()
+                .collect();
+            formatter::auto_fix(
+                std::slice::from_ref(file),
+                &file_violations,
+                file_config.indent_size,
+                file_config.insert_final_newline,
+            )?;
+        }
+        // Re-lint with each file's effective EditorConfig, mirroring Spotless/ktlint.
+        let mut post_violations = Vec::new();
+        for file in &files {
+            let file_config = KtlintConfig::load_for_file_with_base(file, &base_config)
+                .unwrap_or_else(|_| base_config.clone());
+            let engine = RuleEngine::new(&file_config);
             let source = std::fs::read_to_string(file).unwrap_or_default();
             let mut parser = KotlinParser::new();
             let tree = parser.parse(&source);

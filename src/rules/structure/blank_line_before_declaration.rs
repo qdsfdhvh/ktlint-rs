@@ -28,6 +28,11 @@ impl Rule for BlankLineBeforeDeclaration {
             }
 
             let current_indent = line.len().saturating_sub(trimmed.len());
+            // ktlint's rule applies to top-level declarations. Member declarations
+            // (especially compact test fakes with expression bodies) may be adjacent.
+            if current_indent > 0 {
+                continue;
+            }
 
             // Skip very first declaration in file
             if current_indent == 0 && i == 0 {
@@ -160,9 +165,9 @@ mod tests {
     }
 
     #[test]
-    fn inside_class_body_no_blank() {
+    fn adjacent_members_are_allowed() {
         let v = check("class Foo {\n    fun a() {}\n    fun b() {}\n}\n");
-        assert!(!v.is_empty());
+        assert!(v.is_empty());
     }
 
     #[test]

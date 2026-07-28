@@ -38,7 +38,6 @@ impl Registry {
             Box::new(spacing::SpacingAroundKeyword),
             // ── Structure ─────────────────────────────────────────────
             Box::new(structure::BlankLineBeforeDeclaration),
-            Box::new(structure::EnumEntry),
             Box::new(structure::IJTrailingComma),
             Box::new(structure::Indentation::new(config.indent_size)),
             Box::new(structure::KdocFormatting),
@@ -63,7 +62,6 @@ impl Registry {
             Box::new(structure::SpacingBetweenDeclarations),
             Box::new(structure::TrailingComma),
             Box::new(structure::TrailingSpacesInComment),
-            Box::new(structure::UnnecessaryParenBeforeLambda),
             // ── Imports ───────────────────────────────────────────────
             Box::new(NoWildcardImports),
             Box::new(imports::ImportOrdering),
@@ -83,16 +81,13 @@ impl Registry {
             Box::new(wrapping::GeneralWrapping),
             Box::new(wrapping::MultilineExpressionWrapping),
             Box::new(wrapping::MultilineIfElse),
-            Box::new(wrapping::StringTemplateIndent),
             Box::new(wrapping::TryCatchFinallyWrapping),
             Box::new(wrapping::WhenExpressionLineBreak),
             // ── Wrapping (more) ────────────────────────────────────────
             Box::new(wrapping::WhenEntryBracing),
             // ── Structure (more) ────────────────────────────────────────
             Box::new(structure::BlankLineBetweenWhenConditions),
-            Box::new(structure::SpacingBetweenDeclarationsWithComments),
             // ── Phase 1 more ──────────────────────────────────────────
-            Box::new(phase1_more::KtlintAnnotation),
             Box::new(phase1_more::KtlintWrapping),
             Box::new(phase1_more::KtlintNoConsecutiveComments),
             // ── Phase 3b ──────────────────────────────────────────────

@@ -36,7 +36,8 @@ impl Rule for FunctionSignatureSpacing {
         for (i, ln) in l.iter().enumerate() {
             let t = ln.trim();
             if t.starts_with("fun ") && t.contains('(') && !t.contains(')') {
-                if !t.ends_with(',') {
+                let after_open = t.split_once('(').map_or("", |(_, rest)| rest).trim();
+                if !after_open.is_empty() {
                     v.push(Violation {
                         file: String::new(),
                         line: i + 1,
@@ -111,25 +112,31 @@ impl Rule for KeywordSpacing {
     fn id(&self) -> &'static str {
         "standard:keyword-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("if(")
-                || l.contains("for(")
-                || l.contains("while(")
-                || l.contains("when(")
+    fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+        let bytes = s.as_bytes();
+        let mut violations = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if matches!(node.kind(), "if" | "for" | "while" | "when")
+                && bytes.get(node.end_byte()) == Some(&b'(')
             {
-                v.push(Violation {
+                let pos = node.start_position();
+                violations.push(Violation {
                     file: String::new(),
-                    line: i + 1,
-                    col: 1,
+                    line: pos.row + 1,
+                    col: pos.column + 1,
                     rule_id: self.id().into(),
                     message: "Missing space after keyword".into(),
                     auto_fixable: true,
                 });
             }
+            for index in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(index) {
+                    stack.push(child);
+                }
+            }
         }
-        v
+        violations
     }
 }
 

@@ -40,38 +40,37 @@ impl NoBlankLineInList {
     }
 
     fn check_list(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
-        let start_row = node.start_position().row;
-        let end_row = node.end_position().row;
-        if start_row == end_row {
-            return;
-        }
+        let mut cursor = node.walk();
+        let children: Vec<_> = node.children(&mut cursor).collect();
 
-        for row in (start_row + 1)..end_row {
-            let line_start = bytes
+        // Only inspect whitespace between direct list children. Scanning the full node
+        // span incorrectly reports intentional blank lines inside nested lambdas,
+        // `when` blocks, and anonymous objects passed as arguments.
+        for pair in children.windows(2) {
+            let previous = pair[0];
+            let next = pair[1];
+            if previous.end_byte() >= next.start_byte() {
+                continue;
+            }
+            let gap = &bytes[previous.end_byte()..next.start_byte()];
+            let parts: Vec<_> = gap.split(|byte| *byte == b'\n').collect();
+            // The final segment is indentation before `next`, not a blank line.
+            for (index, line) in parts
                 .iter()
                 .enumerate()
-                .filter(|(_, &b)| b == b'\n')
-                .nth(row.saturating_sub(1))
-                .map(|(i, _)| i + 1)
-                .unwrap_or(0);
-            let line_end = bytes
-                .iter()
-                .enumerate()
-                .skip(line_start)
-                .filter(|(_, &b)| b == b'\n')
-                .map(|(i, _)| i)
-                .next()
-                .unwrap_or(bytes.len());
-            let line = &bytes[line_start..line_end];
-            if line.iter().all(|&b| b.is_ascii_whitespace()) {
-                violations.push(Violation {
-                    file: String::new(),
-                    line: row + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Blank line inside list is not allowed".into(),
-                    auto_fixable: true,
-                });
+                .skip(1)
+                .take(parts.len().saturating_sub(2))
+            {
+                if line.iter().all(|byte| byte.is_ascii_whitespace()) {
+                    violations.push(Violation {
+                        file: String::new(),
+                        line: previous.end_position().row + index + 1,
+                        col: 1,
+                        rule_id: self.id().into(),
+                        message: "Blank line inside list is not allowed".into(),
+                        auto_fixable: true,
+                    });
+                }
             }
         }
     }
@@ -103,5 +102,11 @@ mod tests {
     fn blank_line_in_params() {
         let v = check("fun f(\n    a: Int,\n\n    b: Int\n) {}");
         assert!(!v.is_empty());
+    }
+
+    #[test]
+    fn blank_lines_inside_nested_lambda_are_allowed() {
+        let source = "call(\n    onAction = { action ->\n        when (action) {\n            A -> first()\n\n            B -> second()\n        }\n    },\n)";
+        assert!(check(source).is_empty());
     }
 }

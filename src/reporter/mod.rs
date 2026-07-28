@@ -401,6 +401,8 @@ mod tests {
             reporter: reporter.to_string(),
             reporter_output: reporter_output.map(|s| s.to_string()),
             log_level: None,
+            include: vec![],
+            exclude: vec![],
             patterns: vec![],
         }
     }

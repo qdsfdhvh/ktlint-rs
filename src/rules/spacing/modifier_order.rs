@@ -57,11 +57,30 @@ impl Rule for ModifierOrder {
 
             // Extract modifier keywords from the line
             let words: Vec<&str> = trimmed.split_whitespace().collect();
-            let modifiers: Vec<(&str, usize)> = words
+            // Only inspect modifiers attached to the declaration itself. Constructor
+            // parameters can contain another visibility modifier (`public data class
+            // Foo(public val x: Int)`) and must not be compared with the class modifiers.
+            let declaration_end = words
+                .iter()
+                .position(|word| {
+                    matches!(
+                        word.trim_matches(|c: char| !c.is_ascii_alphabetic()),
+                        "class"
+                            | "interface"
+                            | "object"
+                            | "fun"
+                            | "val"
+                            | "var"
+                            | "constructor"
+                            | "typealias"
+                    )
+                })
+                .unwrap_or(words.len());
+            let modifiers: Vec<(&str, usize)> = words[..declaration_end]
                 .iter()
                 .enumerate()
-                .filter(|(_, w)| MODIFIER_ORDER.contains(w))
-                .map(|(idx, w)| (*w, idx))
+                .filter(|(_, word)| MODIFIER_ORDER.contains(word))
+                .map(|(index, word)| (*word, index))
                 .collect();
 
             if modifiers.len() < 2 {
@@ -133,5 +152,10 @@ mod tests {
     #[test]
     fn data_class_correct() {
         assert!(check("data class Foo(val x: Int)\n").is_empty());
+    }
+
+    #[test]
+    fn constructor_property_modifier_is_not_class_modifier() {
+        assert!(check("public data class Foo(public val x: Int)\n").is_empty());
     }
 }

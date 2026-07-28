@@ -16,6 +16,15 @@ ktlint-rs --ruleset detekt
 ktlint-rs --ruleset ktlint,detekt
 ```
 
+## Spotless-style scope
+
+```bash
+# Match kotlin { target("src/**/*.kt"); targetExclude("**/generated/**") }
+ktlint-rs --include '**/src/**/*.kt' --exclude '**/generated/**' .
+
+# --include and --exclude are repeatable; patterns are matched relative to the project root.
+```
+
 ## Format (auto-fix)
 
 ```bash

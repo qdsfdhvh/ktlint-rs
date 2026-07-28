@@ -6,6 +6,7 @@
 //! - Asterisk spacing
 //! - @param → @param[name] syntax
 use crate::rules::{Rule, Violation};
+use std::collections::HashSet;
 use tree_sitter::Tree;
 
 pub struct KdocFormatting;
@@ -19,9 +20,10 @@ impl Rule for KdocFormatting {
         false
     }
 
-    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
+    fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
+        let disallowed_lines = disallowed_kdoc_lines(tree, source);
 
         let mut in_kdoc = false;
         let mut kdoc_start_line = 0;
@@ -42,7 +44,7 @@ impl Rule for KdocFormatting {
                             || n.starts_with("internal ")
                             || n.starts_with("protected ")
                     };
-                    if !next_is_private && is_inside_block(&lines, i) {
+                    if !next_is_private && disallowed_lines.contains(&i) {
                         violations.push(kdoc_violation(
                             self.id(),
                             i + 1,
@@ -81,7 +83,7 @@ impl Rule for KdocFormatting {
 
                 if trimmed.contains("*/") {
                     // End of KDoc — check location
-                    if is_inside_block(&lines, kdoc_start_line) {
+                    if disallowed_lines.contains(&kdoc_start_line) {
                         violations.push(kdoc_violation(
                             self.id(),
                             kdoc_start_line + 1,
@@ -100,122 +102,38 @@ impl Rule for KdocFormatting {
     }
 }
 
-fn is_inside_block(lines: &[&str], kdoc_line: usize) -> bool {
-    if kdoc_line == 0 {
-        return false;
-    }
-    let kdoc_indent = lines[kdoc_line].len() - lines[kdoc_line].trim_start().len();
-    let mut inside = false;
-    let mut opener_is_class_like = false;
-    for j in (0..kdoc_line).rev() {
-        let t = lines[j].trim();
-        if t.is_empty() || t.starts_with("//") || t.starts_with("/*") || t.starts_with('*') {
-            continue;
+fn disallowed_kdoc_lines(tree: &Tree, source: &str) -> HashSet<usize> {
+    let mut result = HashSet::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind().contains("comment")
+            && source[node.start_byte()..node.end_byte()].starts_with("/**")
+            && is_in_executable_context(node)
+        {
+            result.insert(node.start_position().row);
         }
-        let indent = lines[j].len() - t.len();
-        if indent <= kdoc_indent {
-            if t == "}" {
-                inside = false;
-                opener_is_class_like = false;
-            } else if t.contains('{') && !inside {
-                inside = true;
-                // Check if the opening brace is from a class-like declaration.
-                // KDoc at class body level (documenting members) is OK.
-                // KDoc inside function bodies, control flow, etc. is flagged.
-                opener_is_class_like = is_class_like_opener(t);
-                if opener_is_class_like {
-                    // Don't flag yet — check if there's content between the {{
-                    // and the KDoc at the KDoc's indent level. If there IS content,
-                    // it means the KDoc is deeper inside a nested scope.
-                    break;
-                }
-                // Not class-like (function body, if, when, etc.) — KDoc is inside
-                // a non-class block, which is NOT allowed.
-                return true;
+        for index in (0..node.child_count()).rev() {
+            if let Some(child) = node.child(index) {
+                stack.push(child);
             }
         }
     }
-    // If we found a class-like opener, check if there's content at KDoc's
-    // indent between the opener and the KDoc.
-    if inside && opener_is_class_like {
-        // Scan forward from after the opener to before KDoc.
-        // If we find a non-declaration line at kdoc_indent, KDoc is nested → flag.
-        let mut found_opener = false;
-        for j in 0..kdoc_line {
-            let t = lines[j].trim();
-            let indent = lines[j].len() - t.len();
-            if t.contains('{') && indent <= kdoc_indent && !found_opener {
-                found_opener = true;
-                continue;
-            }
-            if found_opener
-                && indent == kdoc_indent
-                && !t.is_empty()
-                && !t.starts_with("//")
-                && !t.starts_with("/*")
-                && !t.starts_with('*')
-                || t == "}" && !is_declaration_or_modifier(t)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-    inside
+    result
 }
 
-/// Check if a line opens a class-like body (class, object, interface, enum, companion).
-fn is_class_like_opener(line: &str) -> bool {
-    line.starts_with("class ")
-        || line.starts_with("interface ")
-        || line.starts_with("object ")
-        || line.starts_with("enum class ")
-        || line.starts_with("companion object ")
-        || line.starts_with("data class ")
-        || line.starts_with("sealed class ")
-        || line.starts_with("sealed interface ")
-        || line.starts_with("abstract class ")
-        || line.starts_with("open class ")
-        || line.starts_with("inline class ")
-        || line.starts_with("value class ")
-        || line.starts_with("expect class ")
-        || line.starts_with("actual class ")
-        || line.starts_with("annotation class ")
-}
-
-/// Check if a trimmed line looks like a declaration or modifier (annotation, visibility).
-fn is_declaration_or_modifier(line: &str) -> bool {
-    if line == "}" {
-        return true;
+fn is_in_executable_context(node: tree_sitter::Node<'_>) -> bool {
+    let mut parent = node.parent();
+    let mut saw_block = false;
+    while let Some(current) = parent {
+        match current.kind() {
+            "block" | "function_body" => saw_block = true,
+            "class_declaration" | "object_declaration" => return false,
+            "function_declaration" | "lambda_literal" => return saw_block,
+            _ => {}
+        }
+        parent = current.parent();
     }
-    line.starts_with("fun ")
-        || line.starts_with("val ")
-        || line.starts_with("var ")
-        || line.starts_with("class ")
-        || line.starts_with("object ")
-        || line.starts_with("interface ")
-        || line.starts_with("enum class ")
-        || line.starts_with("companion object ")
-        || line.starts_with("data class ")
-        || line.starts_with("sealed class ")
-        || line.starts_with("typealias ")
-        || line.starts_with("init ")
-        || line.starts_with("constructor(")
-        || line.starts_with('@')
-        || line.starts_with("private ")
-        || line.starts_with("internal ")
-        || line.starts_with("protected ")
-        || line.starts_with("public ")
-        || line.starts_with("suspend ")
-        || line.starts_with("operator ")
-        || line.starts_with("override ")
-        || line.starts_with("abstract ")
-        || line.starts_with("open ")
-        || line.starts_with("tailrec ")
-        || line.starts_with("external ")
-        || line.starts_with("inline ")
-        || line.starts_with("expect ")
-        || line.starts_with("actual ")
+    false
 }
 
 fn kdoc_violation(rule_id: &str, line: usize, msg: &str) -> Violation {
@@ -263,5 +181,29 @@ mod tests {
     fn java_param_not_flagged() {
         // @param name is valid Kotlin KDoc syntax — JVM ktlint does NOT flag this
         assert!(check("/**\n * @param x\n */\nfun foo(x:Int)\n").is_empty());
+    }
+
+    #[test]
+    fn kdoc_on_class_member_after_closed_class_is_allowed() {
+        let source = "public data class Previous(\n    val value: String,\n) {\n}\n\npublic data class Current(\n    /** Member docs. */\n    val value: String,\n)\n";
+        assert!(check(source).is_empty());
+    }
+
+    #[test]
+    fn kdoc_on_member_of_public_sealed_interface_is_allowed() {
+        let source = "public sealed interface Action {\n    /** Member docs. */\n    public data object Trigger : Action\n}\n";
+        assert!(check(source).is_empty());
+    }
+
+    #[test]
+    fn kdoc_on_member_of_multiline_class_header_is_allowed() {
+        let source = "internal class Example(\n    dependency: String,\n) : Base(\n    dependency = dependency,\n) {\n    /** Member docs. */\n    private var loaded = false\n}\n";
+        assert!(check(source).is_empty());
+    }
+
+    #[test]
+    fn kdoc_on_fun_interface_member_is_allowed() {
+        let source = "fun interface Handler {\n    /** Handles a value. */\n    fun handle(value: String)\n}\n";
+        assert!(check(source).is_empty());
     }
 }
