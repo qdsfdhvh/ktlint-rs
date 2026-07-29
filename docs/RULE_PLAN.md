@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **63**
+- Partial/unverified: **62**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -35,7 +35,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:condition-wrapping` | yes | parity-verified | `standard:condition-wrapping` | parity-verified | 6/6 | 6 | 0 |
 | P0 | `standard:context-receiver-list-wrapping` | yes | parity-verified | `standard:context-receiver-list-wrapping` | parity-verified: fix_context_receiver_list_wrapping | 6/6 | 8 | 0 |
 | P0 | `standard:context-receiver-wrapping` | yes | partial | `standard:context-receiver-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:curly-spacing` | yes | partial | `standard:curly-spacing` | unverified: fix_curly_braces | 0/6 | 0 | 0 |
+| P0 | `standard:curly-spacing` | yes | parity-verified | `standard:curly-spacing` | parity-verified: fix_curly_braces | 6/6 | 7 | 0 |
 | P0 | `standard:discouraged-comment-location` | yes | parity-verified | `standard:discouraged-comment-location` | parity-verified | 6/6 | 6 | 0 |
 | P0 | `standard:dot-spacing` | yes | partial | `standard:dot-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:double-colon-spacing` | yes | parity-verified | `standard:double-colon-spacing` | parity-verified: fix_double_colons | 6/6 | 7 | 0 |

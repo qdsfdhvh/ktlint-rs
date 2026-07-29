@@ -201,6 +201,30 @@
   },
   {
     "auto_fixable": true,
+    "column": 22,
+    "file": "src/main/kotlin/rules/curly_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Missing spacing before \"{\"",
+    "rule": "standard:curly-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 29,
+    "file": "src/main/kotlin/rules/curly_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 19,
+    "file": "src/main/kotlin/rules/curly_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing spacing before \"{\"",
+    "rule": "standard:curly-spacing"
+  },
+  {
+    "auto_fixable": true,
     "column": 1,
     "file": "src/main/kotlin/rules/declaration_annotation_spacing/Interaction.kt",
     "line": 4,
