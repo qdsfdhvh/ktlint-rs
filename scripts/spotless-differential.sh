@@ -106,12 +106,14 @@ ACTUAL_DIAGNOSTICS="$TMP_ROOT/results/actual-diagnostics.json"
         --ruleset ktlint \
         --include '**/src/**/*.kt' \
         --exclude '**/generated/**' \
+        --exclude '**/expected/**' \
         --print-files \
         . >"$ACTUAL_DISCOVERY"
     "$KTLINT_RS" \
         --ruleset ktlint \
         --include '**/src/**/*.kt' \
         --exclude '**/generated/**' \
+        --exclude '**/expected/**' \
         --print-effective-config \
         . >"$ACTUAL_CONFIG"
 )
@@ -145,6 +147,7 @@ set +e
         --reporter-output "$ACTUAL_RAW" \
         --include '**/src/**/*.kt' \
         --exclude '**/generated/**' \
+        --exclude '**/expected/**' \
         .
 )
 ACTUAL_EXIT=$?
@@ -182,6 +185,7 @@ fi
         --format \
         --include '**/src/**/*.kt' \
         --exclude '**/generated/**' \
+        --exclude '**/expected/**' \
         .
 )
 cp -R "$TMP_ROOT/actual/src" "$TMP_ROOT/results/actual-first-src"
@@ -192,6 +196,7 @@ cp -R "$TMP_ROOT/actual/src" "$TMP_ROOT/results/actual-first-src"
         --format \
         --include '**/src/**/*.kt' \
         --exclude '**/generated/**' \
+        --exclude '**/expected/**' \
         .
 )
 if [[ "$INJECT_MISMATCH" == "idempotence" ]]; then

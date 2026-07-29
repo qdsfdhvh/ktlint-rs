@@ -21,6 +21,8 @@ impl Registry {
             Box::new(NoConsecutiveBlankLines),
             // ── Spacing ──────────────────────────────────────────────
             Box::new(spacing::AnnotationSpacing),
+            Box::new(spacing::annotation_spacing::AnnotationConstructSpacing),
+            Box::new(spacing::modifier_list_spacing::ModifierListSpacing),
             Box::new(spacing::ArgumentListWrapping),
             Box::new(spacing::BlockCommentStar),
             Box::new(spacing::ClassSignatureSpacing),

@@ -6,8 +6,8 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **88**
-- Missing: **13**
+- Matched to ktlint-rs registrations: **90**
+- Missing: **11**
 - Partial/unverified: **83**
 - Disabled by Kataris: **5**
 - Extra ktlint-rs standard IDs: **1**
@@ -24,7 +24,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:parameter-list-spacing` | yes | partial | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0/6 | 0 | 2 |
 | P0 | `standard:paren-spacing` | yes | partial | `standard:paren-spacing` | unverified: fix_parens | 0/6 | 0 | 2 |
 | P0 | `standard:colon-spacing` | yes | partial | `standard:colon-spacing` | unverified: fix_colons | 0/6 | 0 | 1 |
-| P0 | `standard:annotation-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:annotation-spacing` | yes | parity-verified | `standard:annotation-spacing` | parity-verified | 6/6 | 7 | 0 |
 | P0 | `standard:argument-list-wrapping` | yes | partial | `standard:argument-list-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:binary-expression-wrapping` | yes | partial | `standard:binary-expression-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:block-comment-initial-star-alignment` | yes | missing | — | missing | 0/6 | 0 | 0 |
@@ -49,7 +49,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:indent` | yes | partial | `standard:indent` | unverified: fix_indentation | 0/6 | 0 | 0 |
 | P0 | `standard:kdoc-wrapping` | yes | partial | `standard:kdoc-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:keyword-spacing` | yes | partial | `standard:keyword-spacing` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:modifier-list-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:modifier-list-spacing` | yes | parity-verified | `standard:modifier-list-spacing` | parity-verified | 6/6 | 7 | 0 |
 | P0 | `standard:multiline-expression-wrapping` | yes | partial | `standard:multiline-expression-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:no-consecutive-comments` | yes | partial | `standard:no-consecutive-comments` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:no-single-line-block-comment` | yes | partial | `standard:no-single-line-block-comment` | unverified | 0/6 | 0 | 0 |

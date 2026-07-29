@@ -62,6 +62,14 @@ mod tests {
     fn double_colon_ok() {
         assert!(check("val x = String::class\n").is_empty());
     }
+
+    #[test]
+    fn class_literal_in_indented_annotation_is_valid() {
+        assert!(check(
+            "package example\n\nabstract  class Foo {\n    @Throws(RuntimeException::class)\n}\n"
+        )
+        .is_empty());
+    }
     #[test]
     fn space_before() {
         let v = check("val x = String ::class\n");

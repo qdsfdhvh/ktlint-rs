@@ -199,6 +199,7 @@ fn main() -> anyhow::Result<()> {
                 &file_violations,
                 file_config.indent_size,
                 file_config.insert_final_newline,
+                &file_config.rules,
             )?;
         }
         // Re-lint with each file's effective EditorConfig, mirroring Spotless/ktlint.

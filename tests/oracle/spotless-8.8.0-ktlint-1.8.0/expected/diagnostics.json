@@ -1,2 +1,66 @@
 [
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/annotation_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Annotations should occur immediately before the annotated construct",
+    "rule": "standard:annotation-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/annotation_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Single newline expected after annotation",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 10,
+    "file": "src/main/kotlin/rules/annotation_spacing/Negative.kt",
+    "line": 3,
+    "message": "Annotations should occur immediately before the annotated construct",
+    "rule": "standard:annotation-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 10,
+    "file": "src/main/kotlin/rules/annotation_spacing/Negative.kt",
+    "line": 3,
+    "message": "Single newline expected after annotation",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 9,
+    "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
+    "line": 3,
+    "message": "Single whitespace expected after modifier",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
+    "line": 5,
+    "message": "Single whitespace expected after modifier",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
+    "line": 5,
+    "message": "Single whitespace expected after modifier",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 33,
+    "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
+    "line": 5,
+    "message": "Single whitespace expected after modifier",
+    "rule": "standard:modifier-list-spacing"
+  }
 ]

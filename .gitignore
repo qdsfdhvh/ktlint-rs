@@ -3,6 +3,7 @@
 Cargo.lock
 .editorconfig
 !tests/oracle/spotless-8.8.0-ktlint-1.8.0/.editorconfig
+!tests/oracle/spotless-8.8.0-ktlint-1.8.0/**/.editorconfig
 tests/oracle/spotless-8.8.0-ktlint-1.8.0/build/
 tests/oracle/spotless-8.8.0-ktlint-1.8.0/.gradle/
 tests/fixtures/*

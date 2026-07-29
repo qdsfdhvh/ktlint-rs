@@ -1,4 +1,5 @@
 pub mod annotation;
+pub mod annotation_spacing;
 pub mod argument_list;
 pub mod block_comment_star;
 pub mod class_signature;
@@ -10,6 +11,7 @@ pub mod double_colon;
 pub mod function_name_paren;
 pub mod function_return_type;
 pub mod function_start_body;
+pub mod modifier_list_spacing;
 pub mod modifier_order;
 pub mod operator;
 pub mod paren;
