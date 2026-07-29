@@ -70,6 +70,9 @@ FORMATTER_PASSES = {
     "standard:parameter-list-spacing": ["fix_parens", "fix_commas"],
     "standard:paren-spacing": ["fix_parens"],
     "standard:range-spacing": ["fix_range_spacing"],
+    "standard:spacing-between-declarations-with-annotations": [
+        "fix_spacing_before_annotated_declarations"
+    ],
     "standard:spacing-around-angle-brackets": ["fix_angle_brackets"],
     "standard:trailing-comma-on-call-site": ["fix_single_line_trailing_comma"],
     "standard:trailing-comma-on-declaration-site": ["fix_single_line_trailing_comma"],

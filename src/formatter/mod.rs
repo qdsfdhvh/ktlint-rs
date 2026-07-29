@@ -402,9 +402,13 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 19] = [
+        let passes: [(&'static str, fn(&str) -> String); 20] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
+            (
+                "standard:spacing-between-declarations-with-annotations",
+                fix_spacing_before_annotated_declarations,
+            ),
             (
                 "standard:function-type-modifier-spacing",
                 fix_function_type_modifier_spacing,
@@ -967,6 +971,28 @@ fn is_annotation_or_declaration(line: &str) -> bool {
         ]
         .iter()
         .any(|prefix| line.starts_with(prefix))
+}
+
+fn fix_spacing_before_annotated_declarations(source: &str) -> String {
+    let lines: Vec<&str> = source.split_inclusive('\n').collect();
+    let mut output = String::with_capacity(source.len() + 1);
+    for (index, line) in lines.iter().enumerate() {
+        if is_annotation_only_line(line.trim_start()) && index > 0 {
+            let previous = lines[index - 1].trim();
+            if !previous.is_empty() && looks_like_declaration_line(previous) {
+                output.push('\n');
+            }
+        }
+        output.push_str(line);
+    }
+    output
+}
+
+fn looks_like_declaration_line(line: &str) -> bool {
+    (!is_annotation_only_line(line) && is_annotation_or_declaration(line))
+        || line.ends_with('}')
+        || line.starts_with("constructor(")
+        || line.starts_with("init ")
 }
 
 fn fix_function_type_modifier_spacing(source: &str) -> String {

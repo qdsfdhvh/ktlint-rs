@@ -155,6 +155,29 @@
         ]
       }
     },
+    "standard:spacing-between-declarations-with-annotations": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/declaration_annotation_spacing/Negative.kt"
+        ],
+        "idempotence": ["scripts/spotless-differential.sh"],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/Interaction.kt"
+        ]
+      }
+    },
     "standard:discouraged-comment-location": {
       "category": "edge-syntax",
       "verified": true,

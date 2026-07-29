@@ -5,7 +5,7 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 
 [![Rust](https://img.shields.io/badge/rust-1.85+-orange.svg)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Rules](https://badgen.net/badge/rules/259/blue)](https://github.com/qdsfdhvh/ktlint-rs)
+[![Rules](https://badgen.net/badge/rules/260/blue)](https://github.com/qdsfdhvh/ktlint-rs)
 [![Tests](https://badgen.net/badge/tests/447/green)](https://github.com/qdsfdhvh/ktlint-rs)
 [![CI](https://github.com/qdsfdhvh/ktlint-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/qdsfdhvh/ktlint-rs/actions)
 
@@ -13,7 +13,7 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 
 Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms.
 
-- **259 unique registry rules** (111 standard/ktlint-oriented + 148 detekt) — zero JVM dependency
+- **260 unique registry rules** (112 standard/ktlint-oriented + 148 detekt) — zero JVM dependency
 - **31 auto-fix passes** for spacing, wrapping, indentation
 - **Drop-in CLI** compatible with JVM ktlint
 - **6 reporters**: plain, JSON, SARIF, checkstyle, HTML, markdown
@@ -72,13 +72,13 @@ ktlint-rs --include '**/src/**/*.kt' --exclude '**/generated/**' .
 
 | Inventory | Count | Meaning |
 |---|---:|---|
-| ktlint-rs standard/ktlint-oriented IDs | 111 | Includes compatibility helpers and rs-only IDs |
-| Enabled ktlint-compatible registry IDs | 96 | Unique IDs used by `--ruleset ktlint` |
+| ktlint-rs standard/ktlint-oriented IDs | 112 | Includes compatibility helpers and rs-only IDs |
+| Enabled ktlint-compatible registry IDs | 97 | Unique IDs used by `--ruleset ktlint` |
 | ktlint 1.8.0 standard oracle | 101 | Runtime inventory from the pinned JVM oracle |
-| Oracle rules matched to Rust owners | 95 | Registration only; behavior remains unverified until differential fixtures pass |
-| Oracle rules currently missing | 5 | Implementation backlog after Kataris code-style gating |
+| Oracle rules matched to Rust owners | 96 | Registration only; behavior remains unverified until differential fixtures pass |
+| Oracle rules currently missing | 4 | Implementation backlog after Kataris code-style gating |
 | Detekt registry IDs | 148 | Outside the Kataris Spotless replacement scope |
-| **Unique registry total** | **259** | **111 standard-oriented + 148 detekt** |
+| **Unique registry total** | **260** | **112 standard-oriented + 148 detekt** |
 
 The machine-generated compatibility matrix, priorities, formatter coverage, and fixture evidence live in **[docs/RULE_PLAN.md](docs/RULE_PLAN.md)**. Counts are validated against `parity-manifest.json` in CI; registration is never treated as parity proof.
 

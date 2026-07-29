@@ -6,8 +6,8 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **95**
-- Missing: **5**
+- Matched to ktlint-rs registrations: **96**
+- Missing: **4**
 - Partial/unverified: **72**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
@@ -55,7 +55,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:property-wrapping` | yes | partial | `standard:property-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:range-spacing` | yes | partial | `standard:spacing-around-range-operator` | unverified: fix_range_spacing | 0/6 | 0 | 0 |
 | P0 | `standard:spacing-around-angle-brackets` | yes | partial | `standard:spacing-around-angle-brackets` | unverified: fix_angle_brackets | 0/6 | 0 | 0 |
-| P0 | `standard:spacing-between-declarations-with-annotations` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-between-declarations-with-annotations` | yes | parity-verified | `standard:spacing-between-declarations-with-annotations` | parity-verified: fix_spacing_before_annotated_declarations | 6/6 | 7 | 0 |
 | P0 | `standard:spacing-between-declarations-with-comments` | yes | partial | `standard:spacing-between-declarations-with-comments` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:spacing-between-function-name-and-opening-parenthesis` | yes | partial | `standard:spacing-between-function-name-and-parenthesis` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:square-brackets-spacing` | yes | partial | `standard:square-brackets-spacing` | unverified | 0/6 | 0 | 0 |

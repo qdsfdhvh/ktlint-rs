@@ -89,6 +89,7 @@ impl Registry {
             Box::new(phase3_rules::StringTemplateRule),
             Box::new(phase3_rules::TypeParameterListSpacing),
             Box::new(structure::spacing_between_declarations_with_comments::SpacingBetweenDeclarationsWithComments),
+            Box::new(structure::spacing_between_declarations_with_annotations::SpacingBetweenDeclarationsWithAnnotations),
             Box::new(structure::unnecessary_paren_lambda::UnnecessaryParenBeforeLambda),
             // ── Imports ───────────────────────────────────────────────
             Box::new(NoWildcardImports),

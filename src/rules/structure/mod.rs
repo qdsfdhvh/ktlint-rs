@@ -54,5 +54,6 @@ pub use blank_line_before_declaration::BlankLineBeforeDeclaration;
 pub mod kdoc_simple;
 // pub use kdoc_simple::KdocSimple; // kept for API stability
 pub mod blank_line_between_when_conditions;
+pub mod spacing_between_declarations_with_annotations;
 pub mod spacing_between_declarations_with_comments;
 pub use blank_line_between_when_conditions::BlankLineBetweenWhenConditions;

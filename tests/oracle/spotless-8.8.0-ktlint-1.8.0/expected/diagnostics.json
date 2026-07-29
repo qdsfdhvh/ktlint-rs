@@ -73,6 +73,22 @@
   },
   {
     "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/declaration_annotation_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Declarations and declarations with annotations should have an empty space between.",
+    "rule": "standard:spacing-between-declarations-with-annotations"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/declaration_annotation_spacing/Negative.kt",
+    "line": 4,
+    "message": "Declarations and declarations with annotations should have an empty space between.",
+    "rule": "standard:spacing-between-declarations-with-annotations"
+  },
+  {
+    "auto_fixable": true,
     "column": 38,
     "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
     "line": 3,
