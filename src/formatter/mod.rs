@@ -989,6 +989,9 @@ fn fix_spacing_before_annotated_declarations(source: &str) -> String {
 }
 
 fn looks_like_declaration_line(line: &str) -> bool {
+    if line.ends_with('{') {
+        return false;
+    }
     (!is_annotation_only_line(line) && is_annotation_or_declaration(line))
         || line.ends_with('}')
         || line.starts_with("constructor(")

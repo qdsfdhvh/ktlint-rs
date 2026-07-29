@@ -6,8 +6,8 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **96**
-- Missing: **4**
+- Matched to ktlint-rs registrations: **97**
+- Missing: **3**
 - Partial/unverified: **72**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
@@ -32,7 +32,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:comma-spacing` | yes | partial | `standard:comma-spacing` | unverified: fix_commas | 0/6 | 0 | 0 |
 | P0 | `standard:comment-spacing` | yes | partial | `standard:comment-spacing` | unverified: fix_comment_spacing | 0/6 | 0 | 0 |
 | P0 | `standard:comment-wrapping` | yes | partial | `standard:comment-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:condition-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:condition-wrapping` | yes | parity-verified | `standard:condition-wrapping` | parity-verified | 6/6 | 6 | 0 |
 | P0 | `standard:context-receiver-list-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
 | P0 | `standard:context-receiver-wrapping` | yes | partial | `standard:context-receiver-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:curly-spacing` | yes | partial | `standard:curly-spacing` | unverified: fix_curly_braces | 0/6 | 0 | 0 |

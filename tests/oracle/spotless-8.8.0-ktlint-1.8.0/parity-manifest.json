@@ -506,29 +506,51 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ],
+        "negative": [
+          "src/rules/wrapping/compatibility.rs::condition_wrapping_is_a_noop_in_ktlint_1_8"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/Noop.kt",
+        "src/rules/wrapping/compatibility.rs::condition_wrapping_is_a_noop_in_ktlint_1_8",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/condition_wrapping/Noop.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/Disabled.kt"
+      ],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "parity-verified"
       },
       "id": "standard:condition-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:condition-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": false,
@@ -3001,15 +3023,15 @@
   "schemaVersion": 1,
   "summary": {
     "extraRustRuleIds": 1,
-    "matchedOracleRules": 96,
+    "matchedOracleRules": 97,
     "registeredDetekt": 148,
-    "registeredKtlintRuleIds": 97,
-    "registeredStandardOriented": 112,
-    "registeredUniqueAll": 260,
+    "registeredKtlintRuleIds": 98,
+    "registeredStandardOriented": 113,
+    "registeredUniqueAll": 261,
     "statuses": {
       "disabled-by-kataris": 17,
-      "missing": 4,
-      "parity-verified": 8,
+      "missing": 3,
+      "parity-verified": 9,
       "partial": 72
     }
   }

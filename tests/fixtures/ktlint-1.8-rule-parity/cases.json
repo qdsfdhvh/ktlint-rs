@@ -178,6 +178,29 @@
         ]
       }
     },
+    "standard:condition-wrapping": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ],
+        "negative": [
+          "src/rules/wrapping/compatibility.rs::condition_wrapping_is_a_noop_in_ktlint_1_8"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ],
+        "idempotence": ["scripts/spotless-differential.sh"],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ]
+      }
+    },
     "standard:discouraged-comment-location": {
       "category": "edge-syntax",
       "verified": true,
