@@ -82,6 +82,14 @@ pub struct Cli {
     #[arg(long = "exclude", value_name = "GLOB")]
     pub exclude: Vec<String>,
 
+    /// Print the discovered Kotlin file set as JSON and exit (parity harness)
+    #[arg(long, hide = true)]
+    pub print_files: bool,
+
+    /// Print per-file effective ktlint-rs configuration as JSON and exit (parity harness)
+    #[arg(long, hide = true)]
+    pub print_effective_config: bool,
+
     /// File / directory patterns to check
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     pub patterns: Vec<String>,

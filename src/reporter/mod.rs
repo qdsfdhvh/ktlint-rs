@@ -389,6 +389,8 @@ mod tests {
             strict: false,
             format: false,
             patterns_from_stdin: vec![],
+            print_files: false,
+            print_effective_config: false,
             editorconfig: None,
             code_style: None,
             baseline: None,

@@ -23,6 +23,7 @@ impl OperatorSpacing {
         if OPERATORS.contains(&kind) {
             if !Self::in_comment(&node)
                 && !(matches!(kind, "<" | ">" | "*") && Self::is_generic(&node, bytes))
+                && !(kind == "*" && Self::is_spread_operator(&node))
             {
                 Self::check_op(&node, bytes, v);
             }
@@ -40,6 +41,19 @@ impl OperatorSpacing {
                 return true;
             }
             cur = n.parent();
+        }
+        false
+    }
+    fn is_spread_operator(node: &tree_sitter::Node) -> bool {
+        let mut current = node.parent();
+        while let Some(parent) = current {
+            if parent.kind() == "spread_expression" {
+                return parent.start_byte() == node.start_byte();
+            }
+            if matches!(parent.kind(), "binary_expression" | "call_expression") {
+                break;
+            }
+            current = parent.parent();
         }
         false
     }
@@ -178,6 +192,20 @@ mod tests {
     #[test]
     fn binary_minus_spaced_ok() {
         assert!(c("val x = a - b\n").is_empty());
+    }
+
+    #[test]
+    fn spread_operator_is_not_binary_spacing() {
+        assert!(c("fun run(command: Array<String>) { ProcessBuilder(*command) }\n").is_empty());
+    }
+
+    #[test]
+    fn spread_operator_in_expression_body_is_not_binary_spacing() {
+        let src = r#"private fun runCommand(vararg command: String): String? = runCatching {
+    ProcessBuilder(*command)
+}.getOrNull()
+"#;
+        assert!(c(src).is_empty());
     }
     #[test]
     fn unary_minus_attached_to_equals() {
