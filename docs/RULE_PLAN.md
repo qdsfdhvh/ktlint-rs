@@ -6,9 +6,9 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **92**
-- Missing: **8**
-- Partial/unverified: **71**
+- Matched to ktlint-rs registrations: **94**
+- Missing: **6**
+- Partial/unverified: **72**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -36,7 +36,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:context-receiver-list-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
 | P0 | `standard:context-receiver-wrapping` | yes | partial | `standard:context-receiver-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:curly-spacing` | yes | partial | `standard:curly-spacing` | unverified: fix_curly_braces | 0/6 | 0 | 0 |
-| P0 | `standard:discouraged-comment-location` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:discouraged-comment-location` | yes | parity-verified | `standard:discouraged-comment-location` | parity-verified | 6/6 | 6 | 0 |
 | P0 | `standard:dot-spacing` | yes | partial | `standard:dot-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:double-colon-spacing` | yes | partial | `standard:spacing-around-double-colon` | unverified: fix_all_spacing | 0/6 | 0 | 0 |
 | P0 | `standard:enum-wrapping` | yes | partial | `standard:enum-wrapping` | unverified | 0/6 | 0 | 0 |
@@ -77,7 +77,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:blank-line-between-when-conditions` | yes | partial | `standard:blank-line-between-when-conditions` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:class-naming` | yes | partial | `standard:class-naming` | not-fixable | 0/6 | 0 | 0 |
 | P1 | `standard:class-signature` | yes | partial | `standard:class-signature` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:enum-entry-name-case` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P1 | `standard:enum-entry-name-case` | yes | partial | `standard:enum-entry-name-case` | unverified | 6/6 | 7 | 0 |
 | P1 | `standard:final-newline` | yes | partial | `standard:final-newline` | unverified: auto_fix final-newline normalization | 0/6 | 0 | 0 |
 | P1 | `standard:function-literal` | yes | partial | `standard:function-literal` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:import-ordering` | yes | partial | `standard:import-ordering` | unverified | 0/6 | 0 | 0 |

@@ -1,5 +1,6 @@
 pub mod backing_property;
 pub mod class_naming;
+pub mod enum_entry_name_case;
 pub mod filename;
 pub mod function_naming;
 pub mod package_name;

@@ -587,29 +587,51 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ],
+        "negative": [
+          "src/rules/naming/enum_entry_name_case.rs::discouraged_comment_location_is_a_noop_in_ktlint_1_8"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/Noop.kt",
+        "src/rules/naming/enum_entry_name_case.rs::discouraged_comment_location_is_a_noop_in_ktlint_1_8",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/discouraged_comment_location/Noop.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/Disabled.kt"
+      ],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "parity-verified"
       },
       "id": "standard:discouraged-comment-location",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:discouraged-comment-location"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": false,
@@ -668,29 +690,52 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/enum_entry_name_case/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/Interaction.kt"
+        ],
+        "negative": [
+          "src/rules/naming/enum_entry_name_case.rs::rejects_lowercase_mixed_underscore_and_leading_underscore"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/Positive.kt",
+        "src/rules/naming/enum_entry_name_case.rs::rejects_lowercase_mixed_underscore_and_leading_underscore",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/enum_entry_name_case/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/Interaction.kt"
+      ],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:enum-entry-name-case",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:enum-entry-name-case"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -2906,16 +2951,16 @@
   "schemaVersion": 1,
   "summary": {
     "extraRustRuleIds": 1,
-    "matchedOracleRules": 92,
+    "matchedOracleRules": 94,
     "registeredDetekt": 148,
-    "registeredKtlintRuleIds": 93,
-    "registeredStandardOriented": 108,
-    "registeredUniqueAll": 256,
+    "registeredKtlintRuleIds": 95,
+    "registeredStandardOriented": 110,
+    "registeredUniqueAll": 258,
     "statuses": {
       "disabled-by-kataris": 17,
-      "missing": 8,
-      "parity-verified": 5,
-      "partial": 71
+      "missing": 6,
+      "parity-verified": 6,
+      "partial": 72
     }
   }
 }

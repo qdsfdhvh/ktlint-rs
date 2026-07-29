@@ -132,6 +132,51 @@
         ]
       }
     },
+    "standard:discouraged-comment-location": {
+      "category": "edge-syntax",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ],
+        "negative": [
+          "src/rules/naming/enum_entry_name_case.rs::discouraged_comment_location_is_a_noop_in_ktlint_1_8"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ],
+        "idempotence": ["scripts/spotless-differential.sh"],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ]
+      }
+    },
+    "standard:enum-entry-name-case": {
+      "category": "naming",
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/Positive.kt"
+        ],
+        "negative": [
+          "src/rules/naming/enum_entry_name_case.rs::rejects_lowercase_mixed_underscore_and_leading_underscore"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/enum_entry_name_case/Negative.kt"
+        ],
+        "idempotence": ["scripts/spotless-differential.sh"],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/Interaction.kt"
+        ]
+      }
+    },
     "standard:op-spacing": {
       "category": "spacing",
       "dimensions": {

@@ -100,6 +100,8 @@ impl Registry {
             Box::new(naming::BackingPropertyNaming),
             Box::new(naming::ClassNaming),
             Box::new(naming::Filename),
+            Box::new(naming::enum_entry_name_case::EnumEntryNameCase),
+            Box::new(naming::enum_entry_name_case::DiscouragedCommentLocation),
             Box::new(naming::FunctionNaming),
             Box::new(naming::PackageName),
             Box::new(naming::PropertyNaming),

@@ -718,6 +718,7 @@ fn fix_curly_braces(source: &str) -> String {
         s = s.replace(&format!("}}{}", kw), &format!("}} {}", kw));
     }
     s = s.replace("}\nelse if", "} else if");
+    s = s.replace("{ }", "{}");
     s
 }
 
