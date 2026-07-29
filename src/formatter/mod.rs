@@ -402,7 +402,7 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 25] = [
+        let passes: [(&'static str, fn(&str) -> String); 26] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -434,6 +434,7 @@ fn apply_spacing_rules(
                 "standard:function-type-reference-spacing",
                 fix_function_type_reference_spacing,
             ),
+            ("standard:double-colon-spacing", fix_double_colons),
             ("standard:curly-spacing", fix_curly_braces),
             ("standard:op-spacing", fix_operators),
             ("standard:comma-spacing", fix_commas),
@@ -894,6 +895,10 @@ fn strip_inner_bracket_spaces(
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn fix_double_colons(source: &str) -> String {
+    source.replace(" ::", "::").replace(":: ", "::")
 }
 
 fn fix_colons(source: &str) -> String {

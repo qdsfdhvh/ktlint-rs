@@ -819,33 +819,54 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/double_colon_spacing/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/double_colon_spacing/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Interaction.kt"
+      ],
       "formatter": {
         "passes": [
-          "fix_all_spacing"
+          "fix_double_colons"
         ],
-        "status": "unverified"
+        "status": "parity-verified"
       },
       "id": "standard:double-colon-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
-        "standard:spacing-around-double-colon"
+        "standard:double-colon-spacing"
       ],
       "priority": "P0",
       "registeredAutoFixable": true,
-      "registrationMatch": "alias",
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": true,
@@ -3281,8 +3302,8 @@
     "registeredUniqueAll": 264,
     "statuses": {
       "disabled-by-kataris": 17,
-      "parity-verified": 20,
-      "partial": 64
+      "parity-verified": 21,
+      "partial": 63
     }
   }
 }

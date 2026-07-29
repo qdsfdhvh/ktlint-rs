@@ -21,7 +21,6 @@ README = ROOT / "README.md"
 RULE_CASES = ROOT / "tests/fixtures/ktlint-1.8-rule-parity/cases.json"
 
 ALIASES = {
-    "standard:double-colon-spacing": ["standard:spacing-around-double-colon"],
     "standard:no-empty-first-line-in-method-block": [
         "standard:no-leading-empty-lines-in-method"
     ],
@@ -53,7 +52,7 @@ FORMATTER_PASSES = {
     "standard:comma-spacing": ["fix_commas"],
     "standard:comment-spacing": ["fix_comment_spacing"],
     "standard:curly-spacing": ["fix_curly_braces"],
-    "standard:double-colon-spacing": ["fix_all_spacing"],
+    "standard:double-colon-spacing": ["fix_double_colons"],
     "standard:final-newline": ["auto_fix final-newline normalization"],
     "standard:function-type-modifier-spacing": ["fix_function_type_modifier_spacing"],
     "standard:function-type-reference-spacing": ["fix_function_type_reference_spacing"],
