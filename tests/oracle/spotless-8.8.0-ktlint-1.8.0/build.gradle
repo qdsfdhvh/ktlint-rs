@@ -1,0 +1,149 @@
+plugins {
+    id 'java'
+    id 'com.diffplug.spotless' version '8.8.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    ktlintOracle
+}
+
+dependencies {
+    ktlintOracle 'com.pinterest.ktlint:ktlint-cli:1.8.0'
+    ktlintOracle 'com.pinterest.ktlint:ktlint-ruleset-standard:1.8.0'
+}
+
+spotless {
+    kotlin {
+        target 'src/**/*.kt'
+        targetExclude '**/generated/**'
+        ktlint '1.8.0'
+    }
+}
+
+layout.buildDirectory = layout.projectDirectory.dir('build')
+
+def oracleOutputDir = layout.buildDirectory.dir('oracle')
+
+
+def sha256 = { File file ->
+    def digest = java.security.MessageDigest.getInstance('SHA-256')
+    file.withInputStream { input ->
+        byte[] buffer = new byte[8192]
+        for (int read = input.read(buffer); read != -1; read = input.read(buffer)) {
+            digest.update(buffer, 0, read)
+        }
+    }
+    digest.digest().encodeHex().toString()
+}
+
+tasks.register('verifyOracleContract') {
+    group = 'verification'
+    description = 'Verifies pinned runtime versions, configuration, and oracle artifact checksums.'
+    doLast {
+        if (gradle.gradleVersion != '9.6.1') {
+            throw new GradleException("Expected Gradle 9.6.1, got ${gradle.gradleVersion}")
+        }
+        if (JavaVersion.current() != JavaVersion.VERSION_21) {
+            throw new GradleException("Expected Java 21, got ${JavaVersion.current()}")
+        }
+        if (sha256(file('.editorconfig')) != '90666631f9bda979b316727e7ab236e72352746dda0349ffed999a3cb21345e9') {
+            throw new GradleException('Pinned Kataris .editorconfig checksum mismatch')
+        }
+
+        def expectedArtifacts = [
+            'ktlint-cli-1.8.0.jar': 'eb540f5ad442ba0b3392c7947c87929dab709ac056fdde7e300beaffcb86e243',
+            'ktlint-ruleset-standard-1.8.0.jar': '82972b4cb2e9cd682840061b2de9d342044846f0d816ecc58f50958824760d69'
+        ]
+        expectedArtifacts.each { name, expected ->
+            def artifact = configurations.ktlintOracle.files.find { it.name == name }
+            if (artifact == null || sha256(artifact) != expected) {
+                throw new GradleException("Oracle artifact checksum mismatch: ${name}")
+            }
+        }
+
+        def spotlessJar = plugins.getPlugin('com.diffplug.spotless').class.protectionDomain.codeSource.location.toURI()
+        if (sha256(new File(spotlessJar)) != 'e3fbf9c0abc4221aeef43886000e36a32308bd234bf67b5e8f1ec1f3831f5707') {
+            throw new GradleException('Spotless plugin artifact checksum mismatch')
+        }
+    }
+}
+
+tasks.register('oracleFormat') {
+    group = 'verification'
+    description = 'Formats the fixture corpus with Spotless 8.8.0 and ktlint 1.8.0.'
+    dependsOn tasks.named('spotlessApply')
+}
+
+tasks.register('oracleCheck') {
+    group = 'verification'
+    description = 'Checks the fixture corpus with Spotless 8.8.0 and ktlint 1.8.0.'
+    dependsOn tasks.named('spotlessCheck')
+}
+
+tasks.register('oracleLint', JavaExec) {
+    group = 'verification'
+    description = 'Writes ktlint 1.8.0 JSON diagnostics for the fixture corpus.'
+    classpath = configurations.ktlintOracle
+    mainClass = 'com.pinterest.ktlint.Main'
+    workingDir = projectDir
+    ignoreExitValue = true
+    doFirst {
+        oracleOutputDir.get().asFile.mkdirs()
+        args(
+            '--relative',
+            "--reporter=json,output=${oracleOutputDir.get().file('diagnostics.json').asFile}",
+            'src/**/*.kt',
+            '!**/generated/**'
+        )
+    }
+    doLast {
+        oracleOutputDir.get().file('lint-exit-code.txt').asFile.text = "${executionResult.get().exitValue}\n"
+    }
+}
+
+tasks.register('oracleRuleInventory', JavaExec) {
+    group = 'verification'
+    description = 'Enumerates ktlint 1.8.0 rule providers from the runtime classpath.'
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'oracle.RuleInventory'
+    doFirst {
+        args(
+            configurations.ktlintOracle.asPath,
+            oracleOutputDir.get().file('rule-inventory.json').asFile.absolutePath
+        )
+    }
+}
+
+tasks.register('oracleMetadata', Copy) {
+    group = 'verification'
+    description = 'Copies the pinned oracle contract and effective Kataris config.'
+    from('oracle-manifest.json', 'effective-config.json')
+    into(oracleOutputDir)
+}
+
+tasks.register('oracleSnapshot') {
+    group = 'verification'
+    description = 'Produces all non-mutating oracle metadata and diagnostics.'
+    dependsOn 'verifyOracleContract', 'oracleLint', 'oracleRuleInventory', 'oracleMetadata'
+}
+
+
+tasks.register('verifyOracleSnapshot') {
+    group = 'verification'
+    description = 'Verifies that the pinned oracle snapshot is reproducible.'
+    dependsOn tasks.named('oracleSnapshot')
+    doLast {
+        ['diagnostics.json', 'lint-exit-code.txt', 'rule-inventory.json'].each { name ->
+            def expected = file("expected/${name}").bytes
+            def actual = oracleOutputDir.get().file(name).asFile.bytes
+            if (!Arrays.equals(expected, actual)) {
+                throw new GradleException("Oracle snapshot mismatch for ${name}")
+            }
+        }
+    }
+}
