@@ -30,35 +30,6 @@ impl Rule for KtlintAnnotation {
     }
 }
 
-pub struct KtlintWrapping;
-impl Rule for KtlintWrapping {
-    fn id(&self) -> &'static str {
-        "standard:wrapping"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if (t.starts_with("if (") || t.starts_with("for (") || t.starts_with("while ("))
-                && t.ends_with('{')
-                && i + 1 < l.len()
-                && l[i + 1].trim().is_empty()
-            {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 2,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Unexpected blank line after brace".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
-    }
-}
-
 pub struct KtlintNoConsecutiveComments;
 impl Rule for KtlintNoConsecutiveComments {
     fn id(&self) -> &'static str {

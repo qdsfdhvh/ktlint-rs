@@ -1,0 +1,1813 @@
+{
+  "extraRustRuleIds": [
+    "standard:block-comment-initial-star-blank-line"
+  ],
+  "oracle": {
+    "ktlintVersion": "1.8.0",
+    "ruleCount": 101,
+    "ruleSet": "standard",
+    "spotlessVersion": "8.8.0"
+  },
+  "policy": {
+    "allowedStatuses": [
+      "missing",
+      "partial",
+      "check-only",
+      "fixable",
+      "parity-verified",
+      "disabled-by-kataris"
+    ],
+    "parityVerifiedRequiresDifferentialFixtures": true,
+    "registrationAloneNeverMeansParity": true
+  },
+  "rules": [
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:annotation",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:annotation"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:annotation-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:argument-list-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:argument-list-wrapping"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-fixable"
+      },
+      "id": "standard:backing-property-naming",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:backing-property-naming"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:binary-expression-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:blank-line-before-declaration",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:blank-line-before-declaration"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:blank-line-between-when-conditions",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:blank-line-between-when-conditions"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:block-comment-initial-star-alignment",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:chain-method-continuation",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:chain-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:chain-wrapping"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-fixable"
+      },
+      "id": "standard:class-naming",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:class-naming"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:class-signature",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:class-signature"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_colons"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:colon-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 1,
+      "ownerRustRuleIds": [
+        "standard:colon-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_commas"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:comma-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:comma-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_comment_spacing"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:comment-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:comment-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:comment-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:condition-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:context-receiver-list-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:context-receiver-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_curly_braces"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:curly-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:curly-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:discouraged-comment-location",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:dot-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_all_spacing"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:double-colon-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:spacing-around-double-colon"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "alias",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:enum-entry-name-case",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:enum-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:enum-wrapping"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:expression-operand-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-evaluated"
+      },
+      "id": "standard:filename",
+      "katarisEnabled": false,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:filename"
+      ],
+      "priority": "P2",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "disabled-by-kataris"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "auto_fix final-newline normalization"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:final-newline",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:final-newline"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:fun-keyword-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-evaluated"
+      },
+      "id": "standard:function-expression-body",
+      "katarisEnabled": false,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:function-expression-body"
+      ],
+      "priority": "P2",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "disabled-by-kataris"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:function-literal",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-evaluated"
+      },
+      "id": "standard:function-naming",
+      "katarisEnabled": false,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:function-naming"
+      ],
+      "priority": "P2",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "disabled-by-kataris"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:function-return-type-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:function-return-type-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:function-signature",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 2,
+      "ownerRustRuleIds": [
+        "standard:function-signature"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:function-start-of-body-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 2,
+      "ownerRustRuleIds": [
+        "standard:function-start-of-body-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:function-type-modifier-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:function-type-reference-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:if-else-bracing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:if-else-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:import-ordering",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:import-ordering"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_indentation"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:indent",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:indent"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-fixable"
+      },
+      "id": "standard:kdoc",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:kdoc"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:kdoc-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:keyword-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:keyword-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:max-line-length",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:max-line-length"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:mixed-condition-operators",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:modifier-list-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:modifier-order",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:modifier-order"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:multiline-expression-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:multiline-expression-wrapping"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:multiline-if-else",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:multiline-if-else"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:multiline-loop",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_blank_lines"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:no-blank-line-before-rbrace",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-blank-line-before-rbrace"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_blank_line_in_list"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:no-blank-line-in-list",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-blank-line-in-list"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:no-blank-lines-in-chained-method-calls",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_blank_lines"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:no-consecutive-blank-lines",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-consecutive-blank-lines"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:no-consecutive-comments",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-consecutive-comments"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-fixable"
+      },
+      "id": "standard:no-empty-class-body",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-empty-class-body"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:no-empty-file",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-empty-file"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:no-empty-first-line-in-class-body",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-empty-first-line-in-class-body"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:no-empty-first-line-in-method-block",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-leading-empty-lines-in-method"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "alias",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:no-line-break-after-else",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:no-line-break-before-assignment",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_double_spaces"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:no-multi-spaces",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-multi-spaces"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_semicolons"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:no-semi",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-semicolons"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "alias",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:no-single-line-block-comment",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_trailing_ws_protected"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:no-trailing-spaces",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-trailing-spaces"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:no-unit-return",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:no-unused-imports",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-unused-imports"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-evaluated"
+      },
+      "id": "standard:no-wildcard-imports",
+      "katarisEnabled": false,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:no-wildcard-imports"
+      ],
+      "priority": "P2",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "disabled-by-kataris"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:nullable-type-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/oracle/SpreadOperator.kt",
+        "src/rules/spacing/operator.rs::spread_operator_*",
+        "src/formatter/mod.rs::cs68_spread_operator_*"
+      ],
+      "formatter": {
+        "passes": [
+          "fix_spread_operators",
+          "fix_operators"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:op-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 2,
+      "ownerRustRuleIds": [
+        "standard:op-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-evaluated"
+      },
+      "id": "standard:package-name",
+      "katarisEnabled": false,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:package-name"
+      ],
+      "priority": "P2",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "disabled-by-kataris"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_parens",
+          "fix_commas"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:parameter-list-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 2,
+      "ownerRustRuleIds": [
+        "standard:parameter-list-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:parameter-list-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:parameter-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_parens"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:paren-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 2,
+      "ownerRustRuleIds": [
+        "standard:paren-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "not-fixable"
+      },
+      "id": "standard:property-naming",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:property-naming"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:property-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_range_spacing"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:range-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:spacing-around-range-operator"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "alias",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_angle_brackets"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:spacing-around-angle-brackets",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:spacing-around-angle-brackets"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:spacing-between-declarations-with-annotations",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:spacing-between-declarations-with-comments",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:spacing-between-function-name-and-opening-parenthesis",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:spacing-between-function-name-and-parenthesis"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "alias",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:square-brackets-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:statement-wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:string-template",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:string-template-indent",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:then-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_single_line_trailing_comma"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:trailing-comma-on-call-site",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:trailing-comma-on-call-site"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_single_line_trailing_comma"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:trailing-comma-on-declaration-site",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:trailing-comma-on-declaration-site"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:try-catch-finally-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:type-argument-comment",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:type-argument-list-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:type-argument-list-spacing"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:type-parameter-comment",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:type-parameter-list-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:unary-op-spacing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:unnecessary-parentheses-before-trailing-lambda",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P1",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:value-argument-comment",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "missing"
+      },
+      "id": "standard:value-parameter-comment",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [],
+      "priority": "P0",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
+      "requiresTypeResolution": false,
+      "status": "missing"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [],
+        "status": "unverified"
+      },
+      "id": "standard:when-entry-bracing",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:when-entry-bracing"
+      ],
+      "priority": "P1",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    },
+    {
+      "fixtures": [],
+      "formatter": {
+        "passes": [
+          "fix_all_wrapping"
+        ],
+        "status": "unverified"
+      },
+      "id": "standard:wrapping",
+      "katarisEnabled": true,
+      "knownDirtyMismatchHits": 0,
+      "ownerRustRuleIds": [
+        "standard:wrapping"
+      ],
+      "priority": "P0",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
+      "requiresTypeResolution": false,
+      "status": "partial"
+    }
+  ],
+  "schemaVersion": 1,
+  "summary": {
+    "extraRustRuleIds": 1,
+    "matchedOracleRules": 55,
+    "registeredDetekt": 148,
+    "registeredKtlintRuleIds": 56,
+    "registeredStandardOriented": 71,
+    "registeredUniqueAll": 219,
+    "statuses": {
+      "disabled-by-kataris": 5,
+      "missing": 46,
+      "partial": 50
+    }
+  }
+}

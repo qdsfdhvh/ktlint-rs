@@ -80,6 +80,22 @@ fn print_parity_configs(files: &[PathBuf], base_config: &KtlintConfig) -> anyhow
     Ok(())
 }
 
+fn print_rule_inventory(config: &KtlintConfig) -> anyhow::Result<()> {
+    let inventory: Vec<_> = RuleEngine::inventory(config)
+        .into_iter()
+        .map(|rule| {
+            serde_json::json!({
+                "id": rule.id,
+                "auto_fixable": rule.auto_fixable,
+                "requires_type_resolution": rule.requires_type_resolution,
+                "enabled_by_ruleset": rule.enabled_by_ruleset,
+            })
+        })
+        .collect();
+    println!("{}", serde_json::to_string_pretty(&inventory)?);
+    Ok(())
+}
+
 fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse_args();
@@ -87,6 +103,10 @@ fn main() -> anyhow::Result<()> {
     let mut config = KtlintConfig::load(&cli)?;
     if let Some(ref config_path) = cli.config {
         yaml_config::load_and_apply(&mut config, std::path::Path::new(config_path))?;
+    }
+    if cli.print_rule_inventory {
+        print_rule_inventory(&config)?;
+        return Ok(());
     }
 
     let files = FileCollector::new(&cli, &config).collect()?;

@@ -55,6 +55,14 @@ pub trait Rule: Send + Sync {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuleMetadata {
+    pub id: &'static str,
+    pub auto_fixable: bool,
+    pub requires_type_resolution: bool,
+    pub enabled_by_ruleset: bool,
+}
+
 pub struct RuleEngine {
     config: KtlintConfig,
     rules: Vec<Box<dyn Rule>>,
@@ -67,6 +75,22 @@ impl RuleEngine {
             config: config.clone(),
             rules,
         }
+    }
+
+    pub fn inventory(config: &KtlintConfig) -> Vec<RuleMetadata> {
+        let engine = Self::new(config);
+        let mut inventory: Vec<_> = engine
+            .rules
+            .iter()
+            .map(|rule| RuleMetadata {
+                id: rule.id(),
+                auto_fixable: rule.auto_fixable(),
+                requires_type_resolution: rule.requires_type_resolution(),
+                enabled_by_ruleset: engine.rule_set_allows(rule.id()),
+            })
+            .collect();
+        inventory.sort_by_key(|rule| rule.id);
+        inventory
     }
 
     pub fn check(&self, path: &str, tree: &Tree, source: &str) -> Vec<Violation> {

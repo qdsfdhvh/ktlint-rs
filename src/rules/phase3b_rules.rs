@@ -117,8 +117,10 @@ impl Rule for KeywordSpacing {
         let mut violations = Vec::new();
         let mut stack = vec![tree.root_node()];
         while let Some(node) = stack.pop() {
-            if matches!(node.kind(), "if" | "for" | "while" | "when")
-                && bytes.get(node.end_byte()) == Some(&b'(')
+            if matches!(
+                node.kind(),
+                "if" | "for" | "while" | "when" | "try" | "catch"
+            ) && bytes.get(node.end_byte()) == Some(&b'(')
             {
                 let pos = node.start_position();
                 violations.push(Violation {
@@ -160,5 +162,27 @@ impl Rule for ParameterListSpacingRule {
             }
         }
         v
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn keyword_check(source: &str) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(source);
+        KeywordSpacing.check(&tree, source)
+    }
+
+    #[test]
+    fn keyword_spacing_covers_control_and_catch_keywords() {
+        assert_eq!(keyword_check("if(true) println(1)\n").len(), 1);
+        assert_eq!(
+            keyword_check("try { run() } catch(e: E) { fail() }\n").len(),
+            1
+        );
+        assert!(keyword_check("if (true) println(1)\n").is_empty());
     }
 }

@@ -90,6 +90,10 @@ pub struct Cli {
     #[arg(long, hide = true)]
     pub print_effective_config: bool,
 
+    /// Print registered rule metadata as JSON and exit (parity inventory)
+    #[arg(long, hide = true)]
+    pub print_rule_inventory: bool,
+
     /// File / directory patterns to check
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     pub patterns: Vec<String>,
