@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **62**
+- Partial/unverified: **61**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -53,7 +53,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:parameter-list-wrapping` | yes | parity-verified | `standard:parameter-list-wrapping` | parity-verified: fix_parameter_list_wrapping | 6/6 | 8 | 0 |
 | P0 | `standard:parameter-wrapping` | yes | partial | `standard:parameter-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:property-wrapping` | yes | partial | `standard:property-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:range-spacing` | yes | partial | `standard:spacing-around-range-operator` | unverified: fix_range_spacing | 0/6 | 0 | 0 |
+| P0 | `standard:range-spacing` | yes | parity-verified | `standard:range-spacing` | parity-verified: fix_range_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:spacing-around-angle-brackets` | yes | partial | `standard:spacing-around-angle-brackets` | unverified: fix_angle_brackets | 0/6 | 0 | 0 |
 | P0 | `standard:spacing-between-declarations-with-annotations` | yes | parity-verified | `standard:spacing-between-declarations-with-annotations` | parity-verified: fix_spacing_before_annotated_declarations | 6/6 | 7 | 0 |
 | P0 | `standard:spacing-between-declarations-with-comments` | yes | partial | `standard:spacing-between-declarations-with-comments` | unverified | 0/6 | 0 | 0 |

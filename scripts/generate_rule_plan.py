@@ -25,7 +25,6 @@ ALIASES = {
         "standard:no-leading-empty-lines-in-method"
     ],
     "standard:no-semi": ["standard:no-semicolons"],
-    "standard:range-spacing": ["standard:spacing-around-range-operator"],
     "standard:spacing-between-function-name-and-opening-parenthesis": [
         "standard:spacing-between-function-name-and-parenthesis"
     ],
