@@ -178,27 +178,30 @@ if [[ "$OFFLINE" == false ]]; then
 elif [[ -d "$ORACLE_SOURCE/expected/formatted/src" ]]; then
     cp -R "$ORACLE_SOURCE/expected/formatted/src/." "$TMP_ROOT/oracle/src/"
 fi
-(
-    cd "$TMP_ROOT/actual"
-    "$KTLINT_RS" \
-        --ruleset ktlint \
-        --format \
-        --include '**/src/**/*.kt' \
-        --exclude '**/generated/**' \
-        --exclude '**/expected/**' \
-        .
-)
+run_actual_format() {
+    set +e
+    (
+        cd "$TMP_ROOT/actual"
+        "$KTLINT_RS" \
+            --ruleset ktlint \
+            --format \
+            --include '**/src/**/*.kt' \
+            --exclude '**/generated/**' \
+            --exclude '**/expected/**' \
+            .
+    )
+    local status=$?
+    set -e
+    # Exit 1 is the expected ktlint/Spotless result when non-autocorrectable
+    # violations remain. Syntax/config/runtime failures use exit 2 and must fail.
+    if [[ $status -gt 1 ]]; then
+        echo "ktlint-rs format failed with exit code $status" >&2
+        exit "$status"
+    fi
+}
+run_actual_format
 cp -R "$TMP_ROOT/actual/src" "$TMP_ROOT/results/actual-first-src"
-(
-    cd "$TMP_ROOT/actual"
-    "$KTLINT_RS" \
-        --ruleset ktlint \
-        --format \
-        --include '**/src/**/*.kt' \
-        --exclude '**/generated/**' \
-        --exclude '**/expected/**' \
-        .
-)
+run_actual_format
 if [[ "$INJECT_MISMATCH" == "idempotence" ]]; then
     printf '\n// injected idempotence mismatch\n' \
         >>"$TMP_ROOT/results/actual-first-src/main/kotlin/oracle/SpreadOperator.kt"

@@ -32,6 +32,22 @@
     "rule": "standard:modifier-list-spacing"
   },
   {
+    "auto_fixable": false,
+    "column": 17,
+    "file": "src/main/kotlin/rules/backing_property_naming/nonfixable/Interaction.kt",
+    "line": 4,
+    "message": "Backing property is only allowed when a matching property or function exists",
+    "rule": "standard:backing-property-naming"
+  },
+  {
+    "auto_fixable": false,
+    "column": 9,
+    "file": "src/main/kotlin/rules/backing_property_naming/nonfixable/Negative.kt",
+    "line": 4,
+    "message": "Backing property not allowed when 'private' modifier is missing",
+    "rule": "standard:backing-property-naming"
+  },
+  {
     "auto_fixable": true,
     "column": 12,
     "file": "src/main/kotlin/rules/block_comment_alignment/Interaction.kt",

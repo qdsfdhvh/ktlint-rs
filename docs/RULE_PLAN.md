@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **72**
+- Partial/unverified: **71**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -73,7 +73,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:value-parameter-comment` | yes | partial | `standard:value-parameter-comment` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:wrapping` | yes | partial | `standard:wrapping` | unverified: fix_all_wrapping | 0/6 | 0 | 0 |
 | P1 | `standard:annotation` | yes | partial | `standard:annotation` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:backing-property-naming` | yes | partial | `standard:backing-property-naming` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:backing-property-naming` | yes | parity-verified | `standard:backing-property-naming` | not-fixable | 6/6 | 7 | 0 |
 | P1 | `standard:blank-line-between-when-conditions` | yes | partial | `standard:blank-line-between-when-conditions` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:class-naming` | yes | partial | `standard:class-naming` | not-fixable | 0/6 | 0 | 0 |
 | P1 | `standard:class-signature` | yes | partial | `standard:class-signature` | unverified | 0/6 | 0 | 0 |

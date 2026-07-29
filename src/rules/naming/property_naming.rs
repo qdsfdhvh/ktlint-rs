@@ -52,7 +52,11 @@ impl Rule for PropertyNaming {
                 let name = name.split(':').next().unwrap_or(&name);
                 // Kotlin permits object-like immutable properties to use PascalCase and
                 // deeply immutable values to use constant-style UPPER_SNAKE_CASE.
-                if !is_camel_case(name) && !is_upper_snake(name) && !is_pascal_case(name) {
+                if !name.starts_with('_')
+                    && !is_camel_case(name)
+                    && !is_upper_snake(name)
+                    && !is_pascal_case(name)
+                {
                     violations.push(Violation {
                         file: String::new(),
                         line: i + 1,
@@ -66,7 +70,7 @@ impl Rule for PropertyNaming {
             }
             if let Some(name) = extract_name_after_keyword(trimmed, "var ") {
                 let name = name.split(':').next().unwrap_or(&name);
-                if !is_camel_case(name) {
+                if !name.starts_with('_') && !is_camel_case(name) {
                     violations.push(Violation {
                         file: String::new(),
                         line: i + 1,
