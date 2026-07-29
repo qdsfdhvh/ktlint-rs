@@ -834,15 +834,24 @@ fn fix_operators(source: &str) -> String {
 }
 
 fn fix_commas(source: &str) -> String {
-    let mut output = String::with_capacity(source.len());
     let chars: Vec<char> = source.chars().collect();
-    for (index, ch) in chars.iter().copied().enumerate() {
-        output.push(ch);
-        if ch == ','
-            && chars
-                .get(index + 1)
-                .is_some_and(|next| !next.is_whitespace() && !matches!(*next, ')' | ']'))
-        {
+    let mut output = String::with_capacity(source.len());
+    let mut index = 0;
+    while index < chars.len() {
+        if chars[index] != ',' {
+            output.push(chars[index]);
+            index += 1;
+            continue;
+        }
+        while output.ends_with(' ') || output.ends_with('\t') {
+            output.pop();
+        }
+        output.push(',');
+        index += 1;
+        while matches!(chars.get(index), Some(' ' | '\t')) {
+            index += 1;
+        }
+        if !matches!(chars.get(index), None | Some('\n' | '\r' | ')' | ']' | '>')) {
             output.push(' ');
         }
     }
