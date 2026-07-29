@@ -6,8 +6,8 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **97**
-- Missing: **3**
+- Matched to ktlint-rs registrations: **98**
+- Missing: **2**
 - Partial/unverified: **72**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
@@ -40,7 +40,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:dot-spacing` | yes | partial | `standard:dot-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:double-colon-spacing` | yes | partial | `standard:spacing-around-double-colon` | unverified: fix_all_spacing | 0/6 | 0 | 0 |
 | P0 | `standard:enum-wrapping` | yes | partial | `standard:enum-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:expression-operand-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:expression-operand-wrapping` | yes | parity-verified | `standard:expression-operand-wrapping` | parity-verified: fix_expression_operand_wrapping | 6/6 | 8 | 0 |
 | P0 | `standard:fun-keyword-spacing` | yes | partial | `standard:fun-keyword-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:function-return-type-spacing` | yes | partial | `standard:function-return-type-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:function-type-modifier-spacing` | yes | parity-verified | `standard:function-type-modifier-spacing` | parity-verified: fix_function_type_modifier_spacing | 6/6 | 7 | 0 |

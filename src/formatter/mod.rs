@@ -402,12 +402,16 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 20] = [
+        let passes: [(&'static str, fn(&str) -> String); 21] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
                 "standard:spacing-between-declarations-with-annotations",
                 fix_spacing_before_annotated_declarations,
+            ),
+            (
+                "standard:expression-operand-wrapping",
+                fix_expression_operand_wrapping,
             ),
             (
                 "standard:function-type-modifier-spacing",
@@ -996,6 +1000,27 @@ fn looks_like_declaration_line(line: &str) -> bool {
         || line.ends_with('}')
         || line.starts_with("constructor(")
         || line.starts_with("init ")
+}
+
+fn fix_expression_operand_wrapping(source: &str) -> String {
+    let mut output = String::with_capacity(source.len() + 8);
+    for line in source.split_inclusive('\n') {
+        if let Some(operator_end) =
+            crate::rules::wrapping::compatibility::unwrapped_operand_after_operator(line)
+        {
+            let operand_start = line[operator_end..]
+                .find(|character: char| !character.is_whitespace())
+                .map_or(operator_end, |offset| operator_end + offset);
+            let indent = line.len() - line.trim_start().len();
+            output.push_str(&line[..operator_end]);
+            output.push('\n');
+            output.push_str(&" ".repeat(indent + 4));
+            output.push_str(&line[operand_start..]);
+        } else {
+            output.push_str(line);
+        }
+    }
+    output
 }
 
 fn fix_function_type_modifier_spacing(source: &str) -> String {

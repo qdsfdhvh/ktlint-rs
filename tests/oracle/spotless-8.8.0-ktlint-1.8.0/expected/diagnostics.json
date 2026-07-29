@@ -89,6 +89,22 @@
   },
   {
     "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/expression_operand_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Newline expected before operand in multiline expression",
+    "rule": "standard:expression-operand-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/expression_operand_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Newline expected before operand in multiline expression",
+    "rule": "standard:expression-operand-wrapping"
+  },
+  {
+    "auto_fixable": true,
     "column": 38,
     "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
     "line": 3,
