@@ -27,9 +27,9 @@ while [[ $# -gt 0 ]]; do
             ;;
         --inject-mismatch)
             shift
-            INJECT_MISMATCH="${1:?--inject-mismatch requires discovery, config, diagnostics, or format}"
+            INJECT_MISMATCH="${1:?--inject-mismatch requires discovery, config, diagnostics, format, or idempotence}"
             case "$INJECT_MISMATCH" in
-                discovery|config|diagnostics|format) ;;
+                discovery|config|diagnostics|format|idempotence) ;;
                 *) echo "invalid mismatch kind: $INJECT_MISMATCH" >&2; exit 2 ;;
             esac
             EXPECT_MISMATCH=true
@@ -166,6 +166,14 @@ fi
 
 if [[ "$OFFLINE" == false ]]; then
     "$GRADLE" -p "$TMP_ROOT/oracle" --no-daemon --no-configuration-cache oracleFormat >/dev/null
+    cp -R "$TMP_ROOT/oracle/src" "$TMP_ROOT/results/oracle-first-src"
+    "$GRADLE" -p "$TMP_ROOT/oracle" --no-daemon --no-configuration-cache oracleFormat >/dev/null
+    if ! diff -ru "$TMP_ROOT/results/oracle-first-src" "$TMP_ROOT/oracle/src" \
+        >"$TMP_ROOT/results/oracle-idempotence.diff"; then
+        MISMATCHES=$((MISMATCHES + 1))
+    fi
+elif [[ -d "$ORACLE_SOURCE/expected/formatted/src" ]]; then
+    cp -R "$ORACLE_SOURCE/expected/formatted/src/." "$TMP_ROOT/oracle/src/"
 fi
 (
     cd "$TMP_ROOT/actual"
@@ -176,6 +184,24 @@ fi
         --exclude '**/generated/**' \
         .
 )
+cp -R "$TMP_ROOT/actual/src" "$TMP_ROOT/results/actual-first-src"
+(
+    cd "$TMP_ROOT/actual"
+    "$KTLINT_RS" \
+        --ruleset ktlint \
+        --format \
+        --include '**/src/**/*.kt' \
+        --exclude '**/generated/**' \
+        .
+)
+if [[ "$INJECT_MISMATCH" == "idempotence" ]]; then
+    printf '\n// injected idempotence mismatch\n' \
+        >>"$TMP_ROOT/results/actual-first-src/main/kotlin/oracle/SpreadOperator.kt"
+fi
+if ! diff -ru "$TMP_ROOT/results/actual-first-src" "$TMP_ROOT/actual/src" \
+    >"$TMP_ROOT/results/actual-idempotence.diff"; then
+    MISMATCHES=$((MISMATCHES + 1))
+fi
 if [[ "$INJECT_MISMATCH" == "format" ]]; then
     printf '\n// Injected formatter mismatch\n' >>"$TMP_ROOT/actual/src/main/kotlin/oracle/SpreadOperator.kt"
 fi
@@ -196,7 +222,7 @@ if [[ $MISMATCHES -gt 0 ]]; then
     "$PYTHON" "$HELPER" minimize-artifacts \
         "$TMP_ROOT/input" "$TMP_ROOT/oracle" "$TMP_ROOT/actual" \
         "$ORACLE_DIAGNOSTICS" "$ACTUAL_DIAGNOSTICS" "$ARTIFACTS_DIR"
-    cp "$TMP_ROOT/results/"* "$ARTIFACTS_DIR/"
+    cp -R "$TMP_ROOT/results/"* "$ARTIFACTS_DIR/"
     cp "$TMP_ROOT/oracle/oracle-manifest.json" "$ARTIFACTS_DIR/"
     cp "$TMP_ROOT/oracle/effective-config.json" "$ARTIFACTS_DIR/"
 fi
@@ -214,4 +240,4 @@ if [[ $MISMATCHES -gt 0 ]]; then
     exit 1
 fi
 
-echo "Discovery, config, diagnostics, exit code, and formatting all match the Spotless oracle."
+echo "Discovery, config, diagnostics, exit code, formatting, and idempotence all match the Spotless oracle."

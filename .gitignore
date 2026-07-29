@@ -8,6 +8,8 @@ tests/oracle/spotless-8.8.0-ktlint-1.8.0/.gradle/
 tests/fixtures/*
 !tests/fixtures/spotless-parity/
 !tests/fixtures/spotless-parity/**
+!tests/fixtures/ktlint-1.8-rule-parity/
+!tests/fixtures/ktlint-1.8-rule-parity/**
 !.gitkeep
 task_plan.md
 findings.md

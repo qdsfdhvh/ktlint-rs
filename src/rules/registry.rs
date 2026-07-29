@@ -9,8 +9,9 @@ pub struct Registry;
 impl Registry {
     pub fn all_rules(config: &KtlintConfig) -> Vec<Box<dyn Rule>> {
         use crate::rules::{
-            detekt, final_rules, imports, naming, phase1_more, phase3b_rules, spacing, structure,
-            wrapping, FinalNewline, NoConsecutiveBlankLines, NoTrailingSpaces, NoWildcardImports,
+            detekt, final_rules, imports, naming, new_rules, new_rules2, new_rules3, new_rules4,
+            phase1_more, phase3_rules, phase3b_rules, spacing, structure, wrapping, FinalNewline,
+            NoConsecutiveBlankLines, NoTrailingSpaces, NoWildcardImports,
         };
 
         vec![
@@ -36,6 +37,12 @@ impl Registry {
             Box::new(spacing::ParenSpacing),
             Box::new(spacing::RangeOperatorSpacing),
             // `standard:keyword-spacing` is registered in phase3b below.
+            Box::new(new_rules::SpacingAroundDot),
+            Box::new(new_rules::SpacingAroundSquareBrackets),
+            Box::new(new_rules::NullableTypeSpacing),
+            Box::new(new_rules2::SpacingAroundUnaryOperatorRule),
+            Box::new(new_rules2::FunKeywordSpacingRule),
+            Box::new(new_rules3::ThenSpacingRule),
             // ── Structure ─────────────────────────────────────────────
             Box::new(structure::BlankLineBeforeDeclaration),
             Box::new(structure::IJTrailingComma),
@@ -62,6 +69,22 @@ impl Registry {
             Box::new(structure::SpacingBetweenDeclarations),
             Box::new(structure::TrailingComma),
             Box::new(structure::TrailingSpacesInComment),
+            Box::new(new_rules::NoBlankLinesInChainedMethodCalls),
+            Box::new(new_rules::NoLineBreakAfterElse),
+            Box::new(new_rules::NoLineBreakBeforeAssignment),
+            Box::new(new_rules2::FunctionLiteralRule),
+            Box::new(new_rules2::NoUnitReturnRule),
+            Box::new(new_rules2::NoSingleLineBlockCommentRule),
+            Box::new(new_rules2::MixedConditionOperatorsRule),
+            Box::new(new_rules3::TypeArgumentCommentRule),
+            Box::new(new_rules3::TypeParameterCommentRule),
+            Box::new(new_rules3::ValueArgumentCommentRule),
+            Box::new(new_rules3::ValueParameterCommentRule),
+            Box::new(phase3_rules::IfElseBracingRule),
+            Box::new(phase3_rules::StringTemplateRule),
+            Box::new(phase3_rules::TypeParameterListSpacing),
+            Box::new(structure::spacing_between_declarations_with_comments::SpacingBetweenDeclarationsWithComments),
+            Box::new(structure::unnecessary_paren_lambda::UnnecessaryParenBeforeLambda),
             // ── Imports ───────────────────────────────────────────────
             Box::new(NoWildcardImports),
             Box::new(imports::ImportOrdering),
@@ -85,6 +108,17 @@ impl Registry {
             Box::new(wrapping::WhenExpressionLineBreak),
             // ── Wrapping (more) ────────────────────────────────────────
             Box::new(wrapping::WhenEntryBracing),
+            Box::new(new_rules4::BinaryExpressionWrappingRule),
+            Box::new(new_rules4::ChainMethodContinuationRule),
+            Box::new(new_rules4::CommentWrappingRule),
+            Box::new(new_rules4::IfElseWrappingRule),
+            Box::new(new_rules4::KdocWrappingRule),
+            Box::new(new_rules4::MultilineLoopRule),
+            Box::new(new_rules4::ParameterWrappingRule),
+            Box::new(new_rules4::PropertyWrappingRule),
+            Box::new(new_rules4::StatementWrappingRule),
+            Box::new(phase3_rules::ContextReceiverWrapping),
+            Box::new(wrapping::string_template_indent::StringTemplateIndent),
             // ── Structure (more) ────────────────────────────────────────
             Box::new(structure::BlankLineBetweenWhenConditions),
             // ── Phase 1 more ──────────────────────────────────────────

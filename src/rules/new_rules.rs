@@ -12,7 +12,7 @@ use crate::rules::{Rule, Violation};
 pub struct SpacingAroundDot;
 impl Rule for SpacingAroundDot {
     fn id(&self) -> &'static str {
-        "standard:spacing-around-dot"
+        "standard:dot-spacing"
     }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
@@ -37,7 +37,7 @@ impl Rule for SpacingAroundDot {
 pub struct SpacingAroundSquareBrackets;
 impl Rule for SpacingAroundSquareBrackets {
     fn id(&self) -> &'static str {
-        "standard:spacing-around-square-brackets"
+        "standard:square-brackets-spacing"
     }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();

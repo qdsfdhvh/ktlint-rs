@@ -155,7 +155,7 @@ impl Rule for SpacingAroundAngleBracketsRule {
 pub struct SpacingAroundUnaryOperatorRule;
 impl Rule for SpacingAroundUnaryOperatorRule {
     fn id(&self) -> &'static str {
-        "standard:spacing-around-unary-operator"
+        "standard:unary-op-spacing"
     }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();

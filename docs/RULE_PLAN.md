@@ -6,9 +6,9 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **55**
-- Missing: **46**
-- Partial/unverified: **50**
+- Matched to ktlint-rs registrations: **88**
+- Missing: **13**
+- Partial/unverified: **83**
 - Disabled by Kataris: **5**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -16,109 +16,109 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 
 ## Rules
 
-| Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Fixtures | Known dirty hits |
-|---|---|---:|---|---|---|---:|---:|
-| P0 | `standard:function-signature` | yes | partial | `standard:function-signature` | unverified | 0 | 2 |
-| P0 | `standard:function-start-of-body-spacing` | yes | partial | `standard:function-start-of-body-spacing` | unverified | 0 | 2 |
-| P0 | `standard:op-spacing` | yes | partial | `standard:op-spacing` | unverified: fix_spread_operators, fix_operators | 3 | 2 |
-| P0 | `standard:parameter-list-spacing` | yes | partial | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0 | 2 |
-| P0 | `standard:paren-spacing` | yes | partial | `standard:paren-spacing` | unverified: fix_parens | 0 | 2 |
-| P0 | `standard:colon-spacing` | yes | partial | `standard:colon-spacing` | unverified: fix_colons | 0 | 1 |
-| P0 | `standard:annotation-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:argument-list-wrapping` | yes | partial | `standard:argument-list-wrapping` | unverified | 0 | 0 |
-| P0 | `standard:binary-expression-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:block-comment-initial-star-alignment` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:chain-wrapping` | yes | partial | `standard:chain-wrapping` | unverified | 0 | 0 |
-| P0 | `standard:comma-spacing` | yes | partial | `standard:comma-spacing` | unverified: fix_commas | 0 | 0 |
-| P0 | `standard:comment-spacing` | yes | partial | `standard:comment-spacing` | unverified: fix_comment_spacing | 0 | 0 |
-| P0 | `standard:comment-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:condition-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:context-receiver-list-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:context-receiver-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:curly-spacing` | yes | partial | `standard:curly-spacing` | unverified: fix_curly_braces | 0 | 0 |
-| P0 | `standard:discouraged-comment-location` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:dot-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:double-colon-spacing` | yes | partial | `standard:spacing-around-double-colon` | unverified: fix_all_spacing | 0 | 0 |
-| P0 | `standard:enum-wrapping` | yes | partial | `standard:enum-wrapping` | unverified | 0 | 0 |
-| P0 | `standard:expression-operand-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:fun-keyword-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:function-return-type-spacing` | yes | partial | `standard:function-return-type-spacing` | unverified | 0 | 0 |
-| P0 | `standard:function-type-modifier-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:function-type-reference-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:if-else-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:indent` | yes | partial | `standard:indent` | unverified: fix_indentation | 0 | 0 |
-| P0 | `standard:kdoc-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:keyword-spacing` | yes | partial | `standard:keyword-spacing` | unverified | 0 | 0 |
-| P0 | `standard:modifier-list-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:multiline-expression-wrapping` | yes | partial | `standard:multiline-expression-wrapping` | unverified | 0 | 0 |
-| P0 | `standard:no-consecutive-comments` | yes | partial | `standard:no-consecutive-comments` | unverified | 0 | 0 |
-| P0 | `standard:no-single-line-block-comment` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:nullable-type-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:parameter-list-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:parameter-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:property-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:range-spacing` | yes | partial | `standard:spacing-around-range-operator` | unverified: fix_range_spacing | 0 | 0 |
-| P0 | `standard:spacing-around-angle-brackets` | yes | partial | `standard:spacing-around-angle-brackets` | unverified: fix_angle_brackets | 0 | 0 |
-| P0 | `standard:spacing-between-declarations-with-annotations` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:spacing-between-declarations-with-comments` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:spacing-between-function-name-and-opening-parenthesis` | yes | partial | `standard:spacing-between-function-name-and-parenthesis` | unverified | 0 | 0 |
-| P0 | `standard:square-brackets-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:statement-wrapping` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:string-template` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:string-template-indent` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:then-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:trailing-comma-on-call-site` | yes | partial | `standard:trailing-comma-on-call-site` | unverified: fix_single_line_trailing_comma | 0 | 0 |
-| P0 | `standard:trailing-comma-on-declaration-site` | yes | partial | `standard:trailing-comma-on-declaration-site` | unverified: fix_single_line_trailing_comma | 0 | 0 |
-| P0 | `standard:try-catch-finally-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:type-argument-comment` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:type-argument-list-spacing` | yes | partial | `standard:type-argument-list-spacing` | unverified | 0 | 0 |
-| P0 | `standard:type-parameter-comment` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:type-parameter-list-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:unary-op-spacing` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:value-argument-comment` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:value-parameter-comment` | yes | missing | — | missing | 0 | 0 |
-| P0 | `standard:wrapping` | yes | partial | `standard:wrapping` | unverified: fix_all_wrapping | 0 | 0 |
-| P1 | `standard:annotation` | yes | partial | `standard:annotation` | unverified | 0 | 0 |
-| P1 | `standard:backing-property-naming` | yes | partial | `standard:backing-property-naming` | not-fixable | 0 | 0 |
-| P1 | `standard:blank-line-before-declaration` | yes | partial | `standard:blank-line-before-declaration` | unverified | 0 | 0 |
-| P1 | `standard:blank-line-between-when-conditions` | yes | partial | `standard:blank-line-between-when-conditions` | unverified | 0 | 0 |
-| P1 | `standard:chain-method-continuation` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:class-naming` | yes | partial | `standard:class-naming` | not-fixable | 0 | 0 |
-| P1 | `standard:class-signature` | yes | partial | `standard:class-signature` | unverified | 0 | 0 |
-| P1 | `standard:enum-entry-name-case` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:final-newline` | yes | partial | `standard:final-newline` | unverified: auto_fix final-newline normalization | 0 | 0 |
-| P1 | `standard:function-literal` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:if-else-bracing` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:import-ordering` | yes | partial | `standard:import-ordering` | unverified | 0 | 0 |
-| P1 | `standard:kdoc` | yes | partial | `standard:kdoc` | not-fixable | 0 | 0 |
-| P1 | `standard:max-line-length` | yes | partial | `standard:max-line-length` | unverified | 0 | 0 |
-| P1 | `standard:mixed-condition-operators` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:modifier-order` | yes | partial | `standard:modifier-order` | unverified | 0 | 0 |
-| P1 | `standard:multiline-if-else` | yes | partial | `standard:multiline-if-else` | unverified | 0 | 0 |
-| P1 | `standard:multiline-loop` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:no-blank-line-before-rbrace` | yes | partial | `standard:no-blank-line-before-rbrace` | unverified: fix_blank_lines | 0 | 0 |
-| P1 | `standard:no-blank-line-in-list` | yes | partial | `standard:no-blank-line-in-list` | unverified: fix_blank_line_in_list | 0 | 0 |
-| P1 | `standard:no-blank-lines-in-chained-method-calls` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:no-consecutive-blank-lines` | yes | partial | `standard:no-consecutive-blank-lines` | unverified: fix_blank_lines | 0 | 0 |
-| P1 | `standard:no-empty-class-body` | yes | partial | `standard:no-empty-class-body` | not-fixable | 0 | 0 |
-| P1 | `standard:no-empty-file` | yes | partial | `standard:no-empty-file` | unverified | 0 | 0 |
-| P1 | `standard:no-empty-first-line-in-class-body` | yes | partial | `standard:no-empty-first-line-in-class-body` | unverified | 0 | 0 |
-| P1 | `standard:no-empty-first-line-in-method-block` | yes | partial | `standard:no-leading-empty-lines-in-method` | unverified | 0 | 0 |
-| P1 | `standard:no-line-break-after-else` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:no-line-break-before-assignment` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:no-multi-spaces` | yes | partial | `standard:no-multi-spaces` | unverified: fix_double_spaces | 0 | 0 |
-| P1 | `standard:no-semi` | yes | partial | `standard:no-semicolons` | unverified: fix_semicolons | 0 | 0 |
-| P1 | `standard:no-trailing-spaces` | yes | partial | `standard:no-trailing-spaces` | unverified: fix_trailing_ws_protected | 0 | 0 |
-| P1 | `standard:no-unit-return` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:no-unused-imports` | yes | partial | `standard:no-unused-imports` | unverified | 0 | 0 |
-| P1 | `standard:property-naming` | yes | partial | `standard:property-naming` | not-fixable | 0 | 0 |
-| P1 | `standard:unnecessary-parentheses-before-trailing-lambda` | yes | missing | — | missing | 0 | 0 |
-| P1 | `standard:when-entry-bracing` | yes | partial | `standard:when-entry-bracing` | unverified | 0 | 0 |
-| P2 | `standard:filename` | no | disabled-by-kataris | `standard:filename` | not-evaluated | 0 | 0 |
-| P2 | `standard:function-expression-body` | no | disabled-by-kataris | `standard:function-expression-body` | not-evaluated | 0 | 0 |
-| P2 | `standard:function-naming` | no | disabled-by-kataris | `standard:function-naming` | not-evaluated | 0 | 0 |
-| P2 | `standard:no-wildcard-imports` | no | disabled-by-kataris | `standard:no-wildcard-imports` | not-evaluated | 0 | 0 |
-| P2 | `standard:package-name` | no | disabled-by-kataris | `standard:package-name` | not-evaluated | 0 | 0 |
+| Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Coverage | Fixtures | Known dirty hits |
+|---|---|---:|---|---|---|---:|---:|---:|
+| P0 | `standard:function-signature` | yes | partial | `standard:function-signature` | unverified | 0/6 | 0 | 2 |
+| P0 | `standard:function-start-of-body-spacing` | yes | partial | `standard:function-start-of-body-spacing` | unverified | 0/6 | 0 | 2 |
+| P0 | `standard:op-spacing` | yes | partial | `standard:op-spacing` | unverified: fix_spread_operators, fix_operators | 3/6 | 5 | 2 |
+| P0 | `standard:parameter-list-spacing` | yes | partial | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0/6 | 0 | 2 |
+| P0 | `standard:paren-spacing` | yes | partial | `standard:paren-spacing` | unverified: fix_parens | 0/6 | 0 | 2 |
+| P0 | `standard:colon-spacing` | yes | partial | `standard:colon-spacing` | unverified: fix_colons | 0/6 | 0 | 1 |
+| P0 | `standard:annotation-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:argument-list-wrapping` | yes | partial | `standard:argument-list-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:binary-expression-wrapping` | yes | partial | `standard:binary-expression-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:block-comment-initial-star-alignment` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:chain-wrapping` | yes | partial | `standard:chain-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:comma-spacing` | yes | partial | `standard:comma-spacing` | unverified: fix_commas | 0/6 | 0 | 0 |
+| P0 | `standard:comment-spacing` | yes | partial | `standard:comment-spacing` | unverified: fix_comment_spacing | 0/6 | 0 | 0 |
+| P0 | `standard:comment-wrapping` | yes | partial | `standard:comment-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:condition-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:context-receiver-list-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:context-receiver-wrapping` | yes | partial | `standard:context-receiver-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:curly-spacing` | yes | partial | `standard:curly-spacing` | unverified: fix_curly_braces | 0/6 | 0 | 0 |
+| P0 | `standard:discouraged-comment-location` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:dot-spacing` | yes | partial | `standard:dot-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:double-colon-spacing` | yes | partial | `standard:spacing-around-double-colon` | unverified: fix_all_spacing | 0/6 | 0 | 0 |
+| P0 | `standard:enum-wrapping` | yes | partial | `standard:enum-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:expression-operand-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:fun-keyword-spacing` | yes | partial | `standard:fun-keyword-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:function-return-type-spacing` | yes | partial | `standard:function-return-type-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:function-type-modifier-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:function-type-reference-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:if-else-wrapping` | yes | partial | `standard:if-else-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:indent` | yes | partial | `standard:indent` | unverified: fix_indentation | 0/6 | 0 | 0 |
+| P0 | `standard:kdoc-wrapping` | yes | partial | `standard:kdoc-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:keyword-spacing` | yes | partial | `standard:keyword-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:modifier-list-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:multiline-expression-wrapping` | yes | partial | `standard:multiline-expression-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:no-consecutive-comments` | yes | partial | `standard:no-consecutive-comments` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:no-single-line-block-comment` | yes | partial | `standard:no-single-line-block-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:nullable-type-spacing` | yes | partial | `standard:nullable-type-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:parameter-list-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:parameter-wrapping` | yes | partial | `standard:parameter-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:property-wrapping` | yes | partial | `standard:property-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:range-spacing` | yes | partial | `standard:spacing-around-range-operator` | unverified: fix_range_spacing | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-around-angle-brackets` | yes | partial | `standard:spacing-around-angle-brackets` | unverified: fix_angle_brackets | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-between-declarations-with-annotations` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-between-declarations-with-comments` | yes | partial | `standard:spacing-between-declarations-with-comments` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-between-function-name-and-opening-parenthesis` | yes | partial | `standard:spacing-between-function-name-and-parenthesis` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:square-brackets-spacing` | yes | partial | `standard:square-brackets-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:statement-wrapping` | yes | partial | `standard:statement-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:string-template` | yes | partial | `standard:string-template` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:string-template-indent` | yes | partial | `standard:string-template-indent` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:then-spacing` | yes | partial | `standard:then-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:trailing-comma-on-call-site` | yes | partial | `standard:trailing-comma-on-call-site` | unverified: fix_single_line_trailing_comma | 0/6 | 0 | 0 |
+| P0 | `standard:trailing-comma-on-declaration-site` | yes | partial | `standard:trailing-comma-on-declaration-site` | unverified: fix_single_line_trailing_comma | 0/6 | 0 | 0 |
+| P0 | `standard:try-catch-finally-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:type-argument-comment` | yes | partial | `standard:type-argument-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:type-argument-list-spacing` | yes | partial | `standard:type-argument-list-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:type-parameter-comment` | yes | partial | `standard:type-parameter-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:type-parameter-list-spacing` | yes | partial | `standard:type-parameter-list-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:unary-op-spacing` | yes | partial | `standard:unary-op-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:value-argument-comment` | yes | partial | `standard:value-argument-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:value-parameter-comment` | yes | partial | `standard:value-parameter-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:wrapping` | yes | partial | `standard:wrapping` | unverified: fix_all_wrapping | 0/6 | 0 | 0 |
+| P1 | `standard:annotation` | yes | partial | `standard:annotation` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:backing-property-naming` | yes | partial | `standard:backing-property-naming` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:blank-line-before-declaration` | yes | partial | `standard:blank-line-before-declaration` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:blank-line-between-when-conditions` | yes | partial | `standard:blank-line-between-when-conditions` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:chain-method-continuation` | yes | partial | `standard:chain-method-continuation` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:class-naming` | yes | partial | `standard:class-naming` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:class-signature` | yes | partial | `standard:class-signature` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:enum-entry-name-case` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P1 | `standard:final-newline` | yes | partial | `standard:final-newline` | unverified: auto_fix final-newline normalization | 0/6 | 0 | 0 |
+| P1 | `standard:function-literal` | yes | partial | `standard:function-literal` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:if-else-bracing` | yes | partial | `standard:if-else-bracing` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:import-ordering` | yes | partial | `standard:import-ordering` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:kdoc` | yes | partial | `standard:kdoc` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:max-line-length` | yes | partial | `standard:max-line-length` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:mixed-condition-operators` | yes | partial | `standard:mixed-condition-operators` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:modifier-order` | yes | partial | `standard:modifier-order` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:multiline-if-else` | yes | partial | `standard:multiline-if-else` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:multiline-loop` | yes | partial | `standard:multiline-loop` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-blank-line-before-rbrace` | yes | partial | `standard:no-blank-line-before-rbrace` | unverified: fix_blank_lines | 0/6 | 0 | 0 |
+| P1 | `standard:no-blank-line-in-list` | yes | partial | `standard:no-blank-line-in-list` | unverified: fix_blank_line_in_list | 0/6 | 0 | 0 |
+| P1 | `standard:no-blank-lines-in-chained-method-calls` | yes | partial | `standard:no-blank-lines-in-chained-method-calls` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-consecutive-blank-lines` | yes | partial | `standard:no-consecutive-blank-lines` | unverified: fix_blank_lines | 0/6 | 0 | 0 |
+| P1 | `standard:no-empty-class-body` | yes | partial | `standard:no-empty-class-body` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:no-empty-file` | yes | partial | `standard:no-empty-file` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-empty-first-line-in-class-body` | yes | partial | `standard:no-empty-first-line-in-class-body` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-empty-first-line-in-method-block` | yes | partial | `standard:no-leading-empty-lines-in-method` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-line-break-after-else` | yes | partial | `standard:no-line-break-after-else` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-line-break-before-assignment` | yes | partial | `standard:no-line-break-before-assignment` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-multi-spaces` | yes | partial | `standard:no-multi-spaces` | unverified: fix_double_spaces | 0/6 | 0 | 0 |
+| P1 | `standard:no-semi` | yes | partial | `standard:no-semicolons` | unverified: fix_semicolons | 0/6 | 0 | 0 |
+| P1 | `standard:no-trailing-spaces` | yes | partial | `standard:no-trailing-spaces` | unverified: fix_trailing_ws_protected | 0/6 | 0 | 0 |
+| P1 | `standard:no-unit-return` | yes | partial | `standard:no-unit-return` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-unused-imports` | yes | partial | `standard:no-unused-imports` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:property-naming` | yes | partial | `standard:property-naming` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:unnecessary-parentheses-before-trailing-lambda` | yes | partial | `standard:unnecessary-parentheses-before-trailing-lambda` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:when-entry-bracing` | yes | partial | `standard:when-entry-bracing` | unverified | 0/6 | 0 | 0 |
+| P2 | `standard:filename` | no | disabled-by-kataris | `standard:filename` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:function-expression-body` | no | disabled-by-kataris | `standard:function-expression-body` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:function-naming` | no | disabled-by-kataris | `standard:function-naming` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:no-wildcard-imports` | no | disabled-by-kataris | `standard:no-wildcard-imports` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:package-name` | no | disabled-by-kataris | `standard:package-name` | not-evaluated | 0/6 | 0 | 0 |
 
 ## Extra ktlint-rs standard IDs
 

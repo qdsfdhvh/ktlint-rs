@@ -22,6 +22,15 @@
   },
   "rules": [
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -40,6 +49,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -56,6 +74,15 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -74,6 +101,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -92,22 +128,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:binary-expression-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:binary-expression-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -126,6 +182,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -144,6 +209,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -160,22 +234,42 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:chain-method-continuation",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:chain-method-continuation"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -194,6 +288,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -212,6 +315,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -230,6 +342,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -250,6 +371,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -270,6 +400,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -290,22 +429,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:comment-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:comment-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -322,6 +481,15 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -338,22 +506,42 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:context-receiver-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:context-receiver-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -374,6 +562,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -390,22 +587,42 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:dot-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:dot-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -426,6 +643,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -442,6 +668,15 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -460,6 +695,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -476,6 +720,15 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -494,6 +747,15 @@
       "status": "disabled-by-kataris"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -514,22 +776,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:fun-keyword-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:fun-keyword-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -548,22 +830,42 @@
       "status": "disabled-by-kataris"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:function-literal",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:function-literal"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -582,6 +884,15 @@
       "status": "disabled-by-kataris"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -600,6 +911,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -618,6 +938,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -636,6 +965,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -652,6 +990,15 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -668,38 +1015,69 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:if-else-bracing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:if-else-bracing"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:if-else-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:if-else-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -718,6 +1096,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -738,6 +1125,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -756,22 +1152,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:kdoc-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:kdoc-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -790,6 +1206,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -808,22 +1233,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "not-fixable"
       },
       "id": "standard:mixed-condition-operators",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:mixed-condition-operators"
+      ],
       "priority": "P1",
       "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -840,6 +1285,15 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -858,6 +1312,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -876,6 +1339,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -894,22 +1366,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:multiline-loop",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:multiline-loop"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -930,6 +1422,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -950,22 +1451,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:no-blank-lines-in-chained-method-calls",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:no-blank-lines-in-chained-method-calls"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -986,6 +1507,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1004,6 +1534,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1022,6 +1561,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1040,6 +1588,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1058,6 +1615,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1076,38 +1642,69 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:no-line-break-after-else",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:no-line-break-after-else"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:no-line-break-before-assignment",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:no-line-break-before-assignment"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1128,6 +1725,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1148,22 +1754,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:no-single-line-block-comment",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:no-single-line-block-comment"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1184,22 +1810,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:no-unit-return",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:no-unit-return"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1218,6 +1864,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1236,26 +1891,54 @@
       "status": "disabled-by-kataris"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:nullable-type-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:nullable-type-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "src/formatter/mod.rs::safety_corpus_preserves_nested_protected_regions_and_operator_meaning"
+        ],
+        "negative": [],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/oracle/SpreadOperator.kt"
+        ]
+      },
       "fixtures": [
         "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/oracle/SpreadOperator.kt",
         "src/rules/spacing/operator.rs::spread_operator_*",
-        "src/formatter/mod.rs::cs68_spread_operator_*"
+        "src/formatter/mod.rs::cs68_spread_operator_*",
+        "scripts/spotless-differential.sh",
+        "src/formatter/mod.rs::safety_corpus_preserves_nested_protected_regions_and_operator_meaning"
       ],
       "formatter": {
         "passes": [
@@ -1277,6 +1960,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1295,6 +1987,15 @@
       "status": "disabled-by-kataris"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1316,6 +2017,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1332,22 +2042,42 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:parameter-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:parameter-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1368,6 +2098,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1386,22 +2125,42 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:property-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:property-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1422,6 +2181,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1442,6 +2210,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1458,22 +2235,42 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:spacing-between-declarations-with-comments",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:spacing-between-declarations-with-comments"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1492,86 +2289,150 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:square-brackets-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:square-brackets-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:statement-wrapping",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:statement-wrapping"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:string-template",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:string-template"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:string-template-indent",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:string-template-indent"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:then-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:then-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1592,6 +2453,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1612,6 +2482,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1628,22 +2507,42 @@
       "status": "missing"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:type-argument-comment",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:type-argument-comment"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1662,102 +2561,177 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:type-parameter-comment",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:type-parameter-comment"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:type-parameter-list-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:type-parameter-list-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:unary-op-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:unary-op-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:unnecessary-parentheses-before-trailing-lambda",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:unnecessary-parentheses-before-trailing-lambda"
+      ],
       "priority": "P1",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:value-argument-comment",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:value-argument-comment"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "unverified"
       },
       "id": "standard:value-parameter-comment",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:value-parameter-comment"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [],
@@ -1776,6 +2750,15 @@
       "status": "partial"
     },
     {
+      "coverageComplete": false,
+      "fixtureCoverage": {
+        "autofix": [],
+        "config": [],
+        "idempotence": [],
+        "interaction": [],
+        "negative": [],
+        "positive": []
+      },
       "fixtures": [],
       "formatter": {
         "passes": [
@@ -1799,15 +2782,15 @@
   "schemaVersion": 1,
   "summary": {
     "extraRustRuleIds": 1,
-    "matchedOracleRules": 55,
+    "matchedOracleRules": 88,
     "registeredDetekt": 148,
-    "registeredKtlintRuleIds": 56,
-    "registeredStandardOriented": 71,
-    "registeredUniqueAll": 219,
+    "registeredKtlintRuleIds": 89,
+    "registeredStandardOriented": 104,
+    "registeredUniqueAll": 252,
     "statuses": {
       "disabled-by-kataris": 5,
-      "missing": 46,
-      "partial": 50
+      "missing": 13,
+      "partial": 83
     }
   }
 }

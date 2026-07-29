@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "spotlessVersion": "8.8.0",
+    "ktlintVersion": "1.8.0"
+  },
+  "requiredDimensions": [
+    "positive",
+    "negative",
+    "autofix",
+    "idempotence",
+    "config",
+    "interaction"
+  ],
+  "rules": {
+    "standard:op-spacing": {
+      "category": "spacing",
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/oracle/SpreadOperator.kt"
+        ],
+        "negative": [],
+        "autofix": [],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [],
+        "interaction": [
+          "src/formatter/mod.rs::safety_corpus_preserves_nested_protected_regions_and_operator_meaning"
+        ]
+      }
+    }
+  }
+}

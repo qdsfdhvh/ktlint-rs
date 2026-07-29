@@ -18,6 +18,7 @@ EFFECTIVE_CONFIG = ORACLE_DIR / "effective-config.json"
 MANIFEST = ORACLE_DIR / "parity-manifest.json"
 RULE_PLAN = ROOT / "docs/RULE_PLAN.md"
 README = ROOT / "README.md"
+RULE_CASES = ROOT / "tests/fixtures/ktlint-1.8-rule-parity/cases.json"
 
 ALIASES = {
     "standard:double-colon-spacing": ["standard:spacing-around-double-colon"],
@@ -73,6 +74,32 @@ KNOWN_MISMATCH_HITS = {
 }
 
 
+
+def load_rule_cases(oracle_ids: list[str]) -> tuple[list[str], dict[str, dict[str, Any]]]:
+    document = load_json(RULE_CASES)
+    if document.get("schemaVersion") != 1:
+        raise RuntimeError("unsupported rule parity case schema")
+    required = document.get("requiredDimensions", [])
+    if required != ["positive", "negative", "autofix", "idempotence", "config", "interaction"]:
+        raise RuntimeError("rule parity cases must declare the six required dimensions in canonical order")
+    cases = document.get("rules", {})
+    unknown = sorted(set(cases) - set(oracle_ids))
+    if unknown:
+        raise RuntimeError(f"rule parity cases contain unknown oracle ids: {unknown}")
+    for rule_id, entry in cases.items():
+        dimensions = entry.get("dimensions", {})
+        if set(dimensions) != set(required):
+            raise RuntimeError(f"incomplete dimension schema for {rule_id}")
+        for dimension, references in dimensions.items():
+            if not isinstance(references, list) or not all(isinstance(item, str) for item in references):
+                raise RuntimeError(f"invalid {dimension} references for {rule_id}")
+            for reference in references:
+                path = ROOT / reference.split("::", 1)[0]
+                if not path.exists():
+                    raise RuntimeError(f"missing rule parity evidence for {rule_id}: {reference}")
+        if entry.get("verified", False) and not all(dimensions[item] for item in required):
+            raise RuntimeError(f"verified rule lacks all required evidence dimensions: {rule_id}")
+    return required, cases
 def load_json(path: pathlib.Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -125,6 +152,14 @@ def validate_manifest(manifest: dict[str, Any], oracle_ids: list[str]) -> None:
             )
         if "formatter" not in rule or "status" not in rule["formatter"]:
             raise RuntimeError(f"formatter coverage missing for {rule['id']}")
+        if set(rule["fixtureCoverage"]) != {
+            "positive", "negative", "autofix", "idempotence", "config", "interaction"
+        }:
+            raise RuntimeError(f"fixture coverage schema missing for {rule['id']}")
+        if rule["coverageComplete"] != all(rule["fixtureCoverage"].values()):
+            raise RuntimeError(f"fixture coverage completeness mismatch for {rule['id']}")
+        if rule["status"] == "parity-verified" and not rule["coverageComplete"]:
+            raise RuntimeError(f"parity-verified rule lacks six-dimensional coverage: {rule['id']}")
         owners.extend(rule["ownerRustRuleIds"])
     duplicate_owners = sorted(
         owner for owner, count in collections.Counter(owners).items() if count > 1
@@ -140,6 +175,7 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
     oracle_ids = oracle[0]["rules"]
     if len(oracle_ids) != 101 or len(set(oracle_ids)) != len(oracle_ids):
         raise RuntimeError("pinned oracle inventory must contain 101 unique rules")
+    required_dimensions, rule_cases = load_rule_cases(oracle_ids)
 
     actual_all = rust_inventory(binary)
     actual = [entry for entry in actual_all if entry["enabled_by_ruleset"]]
@@ -180,6 +216,25 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
         else:
             formatter_status = "unverified"
         hit_count = KNOWN_MISMATCH_HITS.get(rule_id, 0)
+        case_entry = rule_cases.get(rule_id, {})
+        dimensions = case_entry.get(
+            "dimensions", {dimension: [] for dimension in required_dimensions}
+        )
+        coverage_complete = all(dimensions[dimension] for dimension in required_dimensions)
+        if (
+            status == "partial"
+            and case_entry.get("verified", False)
+            and coverage_complete
+        ):
+            status = "parity-verified"
+            formatter_status = "parity-verified" if auto_fixable else "not-fixable"
+        fixture_refs = list(FIXTURES.get(rule_id, []))
+        fixture_refs.extend(
+            reference
+            for dimension in required_dimensions
+            for reference in dimensions[dimension]
+            if reference not in fixture_refs
+        )
         rules.append(
             {
                 "id": rule_id,
@@ -192,7 +247,9 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
                     actual_by_id[item]["requires_type_resolution"] for item in rust_ids
                 ),
                 "formatter": {"status": formatter_status, "passes": passes},
-                "fixtures": FIXTURES.get(rule_id, []),
+                "fixtures": fixture_refs,
+                "fixtureCoverage": dimensions,
+                "coverageComplete": coverage_complete,
                 "knownDirtyMismatchHits": hit_count,
                 "priority": priority(rule_id, disabled, hit_count),
             }
@@ -262,8 +319,8 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         "",
         "## Rules",
         "",
-        "| Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Fixtures | Known dirty hits |",
-        "|---|---|---:|---|---|---|---:|---:|",
+        "| Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Coverage | Fixtures | Known dirty hits |",
+        "|---|---|---:|---|---|---|---:|---:|---:|",
     ]
     ordered = sorted(
         manifest["rules"],
@@ -279,13 +336,14 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         if rule["formatter"]["passes"]:
             formatter += ": " + ", ".join(rule["formatter"]["passes"])
         lines.append(
-            "| {priority} | `{rule_id}` | {enabled} | {status} | {owners} | {formatter} | {fixtures} | {hits} |".format(
+            "| {priority} | `{rule_id}` | {enabled} | {status} | {owners} | {formatter} | {coverage}/6 | {fixtures} | {hits} |".format(
                 priority=rule["priority"],
                 rule_id=rule["id"],
                 enabled="yes" if rule["katarisEnabled"] else "no",
                 status=rule["status"],
                 owners=owners,
                 formatter=formatter,
+                coverage=sum(bool(items) for items in rule["fixtureCoverage"].values()),
                 fixtures=len(rule["fixtures"]),
                 hits=rule["knownDirtyMismatchHits"],
             )
