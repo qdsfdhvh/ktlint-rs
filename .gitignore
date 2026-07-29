@@ -2,6 +2,9 @@
 **/*.rs.bk
 Cargo.lock
 .editorconfig
+!tests/oracle/spotless-8.8.0-ktlint-1.8.0/.editorconfig
+tests/oracle/spotless-8.8.0-ktlint-1.8.0/build/
+tests/oracle/spotless-8.8.0-ktlint-1.8.0/.gradle/
 tests/fixtures/*
 !tests/fixtures/spotless-parity/
 !tests/fixtures/spotless-parity/**
@@ -14,3 +17,5 @@ progress.md
 .cache/
 bench_results.tsv
 .pi/
+.pi-subagents/
+.planning/

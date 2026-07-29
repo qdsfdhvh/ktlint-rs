@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "source": "pinned-copy-of-kataris-root-editorconfig",
+  "sourceSha256": "90666631f9bda979b316727e7ab236e72352746dda0349ffed999a3cb21345e9",
+  "kotlin": {
+    "ktlint_code_style": "android_studio",
+    "indent_style": "space",
+    "indent_size": 4,
+    "tab_width": 4,
+    "max_line_length": 120,
+    "insert_final_newline": true,
+    "trim_trailing_whitespace": true,
+    "ij_kotlin_allow_trailing_comma": true,
+    "ij_kotlin_allow_trailing_comma_on_call_site": true,
+    "disabledRules": [
+      "standard:filename",
+      "standard:function-expression-body",
+      "standard:function-naming",
+      "standard:no-wildcard-imports",
+      "standard:package-name"
+    ]
+  }
+}
