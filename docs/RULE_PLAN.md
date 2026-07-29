@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **68**
+- Partial/unverified: **67**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -97,7 +97,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:no-line-break-before-assignment` | yes | partial | `standard:no-line-break-before-assignment` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-multi-spaces` | yes | partial | `standard:no-multi-spaces` | unverified: fix_double_spaces | 0/6 | 0 | 0 |
 | P1 | `standard:no-semi` | yes | partial | `standard:no-semicolons` | unverified: fix_semicolons | 0/6 | 0 | 0 |
-| P1 | `standard:no-trailing-spaces` | yes | partial | `standard:no-trailing-spaces` | unverified: fix_trailing_ws_protected | 0/6 | 0 | 0 |
+| P1 | `standard:no-trailing-spaces` | yes | parity-verified | `standard:no-trailing-spaces` | parity-verified: fix_trailing_ws_protected | 6/6 | 7 | 0 |
 | P1 | `standard:no-unit-return` | yes | partial | `standard:no-unit-return` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-unused-imports` | yes | partial | `standard:no-unused-imports` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:property-naming` | yes | partial | `standard:property-naming` | not-fixable | 0/6 | 0 | 0 |

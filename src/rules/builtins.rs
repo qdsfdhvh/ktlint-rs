@@ -32,10 +32,10 @@ impl Rule for NoTrailingSpaces {
             .filter(|(row, line)| {
                 !raw_string_rows.contains(row) && (line.ends_with(' ') || line.ends_with('\t'))
             })
-            .map(|(i, _)| Violation {
+            .map(|(i, line)| Violation {
                 file: String::new(),
                 line: i + 1,
-                col: 0,
+                col: line.trim_end_matches([' ', '\t']).chars().count() + 1,
                 rule_id: self.id().into(),
                 message: "Trailing space(s)".into(),
                 auto_fixable: true,
