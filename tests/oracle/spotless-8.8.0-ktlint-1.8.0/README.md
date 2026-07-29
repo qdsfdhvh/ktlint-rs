@@ -32,3 +32,19 @@ gradle --no-daemon --no-configuration-cache oracleFormat
 `oracleFormat` mutates the fixture copy, so differential tests must run it in a temporary copy. Never point it at the Kataris checkout.
 
 The Gradle wrapper properties are pinned, including the distribution checksum. The wrapper JAR is intentionally not duplicated here; CI should use its verified Gradle setup or generate the standard wrapper from Gradle 9.6.1.
+
+
+## Differential harness
+
+```sh
+# Fast committed-golden check (no JVM/Gradle invocation)
+./scripts/spotless-differential.sh --offline
+
+# Regenerate and compare all parity surfaces against the live pinned oracle
+GRADLE=/path/to/gradle-9.6.1 ./scripts/spotless-differential.sh
+
+# Prove mismatch detection and emit a minimized artifact set
+GRADLE=/path/to/gradle-9.6.1 ./scripts/spotless-differential.sh --expect-mismatch
+```
+
+The harness compares discovery, effective configuration, normalized diagnostics (including autocorrectability), exit codes, and formatted bytes. Mismatch artifacts contain only files implicated by diagnostic or byte differences plus the normalized evidence and pinned metadata.

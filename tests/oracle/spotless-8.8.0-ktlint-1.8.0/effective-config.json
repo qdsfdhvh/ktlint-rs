@@ -4,6 +4,7 @@
   "sourceSha256": "90666631f9bda979b316727e7ab236e72352746dda0349ffed999a3cb21345e9",
   "kotlin": {
     "ktlint_code_style": "android_studio",
+    "ktlint_function_naming_ignore_when_annotated_with": "Composable",
     "indent_style": "space",
     "indent_size": 4,
     "tab_width": 4,
@@ -12,6 +13,12 @@
     "trim_trailing_whitespace": true,
     "ij_kotlin_allow_trailing_comma": true,
     "ij_kotlin_allow_trailing_comma_on_call_site": true,
+    "ij_kotlin_properties": {
+      "ij_kotlin_allow_trailing_comma": true,
+      "ij_kotlin_allow_trailing_comma_on_call_site": true,
+      "ij_kotlin_name_count_to_use_star_import": 999,
+      "ij_kotlin_name_count_to_use_star_import_for_members": 999
+    },
     "disabledRules": [
       "standard:filename",
       "standard:function-expression-body",

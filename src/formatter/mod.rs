@@ -54,6 +54,13 @@ fn is_backtick_identifier(node: &tree_sitter::Node, source: &str) -> bool {
 }
 
 fn collect_protected(node: tree_sitter::Node, source: &str, out: &mut Vec<(usize, usize)>) {
+    if node.kind() == "spread_expression" && source.as_bytes().get(node.start_byte()) == Some(&b'*')
+    {
+        // The whitespace after `*` has already been canonicalized by
+        // `fix_spread_operators`; mask only the token so generic operator
+        // spacing cannot turn it back into `* value`.
+        out.push((node.start_byte(), node.start_byte() + 1));
+    }
     if is_protected_kind(node.kind())
         || is_backtick_identifier(&node, source)
         || is_space_before_colon(&node)
@@ -202,6 +209,40 @@ fn restore_protected(text: &str, store: &[String]) -> String {
     out
 }
 
+/// Canonicalize whitespace after Kotlin's spread operator using CST context.
+/// A spread `*` is unary syntax (`call(*args)`), not the binary multiplication
+/// operator handled by [`fix_operators`].
+fn fix_spread_operators(source: &str, tree: &tree_sitter::Tree) -> String {
+    fn collect(node: tree_sitter::Node<'_>, source: &[u8], edits: &mut Vec<(usize, usize)>) {
+        if node.kind() == "spread_expression" {
+            let start = node.start_byte();
+            let end = node.end_byte().min(source.len());
+            if source.get(start) == Some(&b'*') {
+                let mut whitespace_end = start + 1;
+                while whitespace_end < end && matches!(source[whitespace_end], b' ' | b'\t') {
+                    whitespace_end += 1;
+                }
+                if whitespace_end > start + 1 {
+                    edits.push((start + 1, whitespace_end));
+                }
+            }
+            return;
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            collect(child, source, edits);
+        }
+    }
+
+    let mut edits = Vec::new();
+    collect(tree.root_node(), source.as_bytes(), &mut edits);
+    let mut output = source.to_string();
+    for (start, end) in edits.into_iter().rev() {
+        output.replace_range(start..end, "");
+    }
+    output
+}
+
 pub fn auto_fix(
     _files: &[PathBuf],
     violations: &[Violation],
@@ -248,18 +289,23 @@ pub fn auto_fix(
 
 fn fix_all_spacing(source: &str) -> String {
     let mut parser = KotlinParser::new();
-    let tree = parser.parse(source);
+    let initial_tree = parser.parse(source);
     // If tree-sitter-kotlin-sg can't parse the file (grammar limitation), CST-based
     // masking is unreliable, so the text fixers could corrupt strings/comments/colons.
     // Skip the interior-editing passes entirely — safety over completeness. Clean
     // files parse fine and are fully formatted; only grammar-breaking files are
     // left untouched here (trailing-whitespace/newline normalization still applies).
+    if initial_tree.root_node().has_error() {
+        return source.to_string();
+    }
+    let spread_fixed = fix_spread_operators(source, &initial_tree);
+    let tree = parser.parse(&spread_fixed);
     if tree.root_node().has_error() {
         return source.to_string();
     }
     // Fence off string/char-literal and comment interiors: the text-level fixers
     // below are CST-unaware and would corrupt URLs, KDoc, and `//` inside strings.
-    let (masked, store) = mask_protected(source, &tree);
+    let (masked, store) = mask_protected(&spread_fixed, &tree);
     let mut text = masked;
     for _ in 0..5 {
         let before = text.clone();
@@ -1558,11 +1604,13 @@ catch(e: E) { b() }"
     #[test]
     fn cs68_spread_operator_preserved() {
         let src = "val arr = listOf(*array)\n";
-        let r = fix_all_spacing(src);
-        assert!(
-            r.contains("*array") || r.contains("* array"),
-            "entry lost: {r:?}"
-        );
+        assert_eq!(fix_all_spacing(src), src);
+    }
+
+    #[test]
+    fn cs68_spread_operator_removes_inner_space() {
+        let src = "val arr = listOf(* array)\n";
+        assert_eq!(fix_all_spacing(src), "val arr = listOf(*array)\n");
     }
 
     #[test]

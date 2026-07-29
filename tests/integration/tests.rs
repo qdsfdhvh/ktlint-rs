@@ -13,6 +13,10 @@ mod integration_tests {
             .join(name)
     }
 
+    fn oracle_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/oracle/spotless-8.8.0-ktlint-1.8.0")
+    }
+
     fn ensure_built() {
         // Build debug binary if not exists
         let bin = ktlint_bin();
@@ -495,6 +499,65 @@ mod integration_tests {
             stdout.contains("no-single-expression-body"),
             "--compat should enable rs-only rules: {}",
             stdout
+        );
+    }
+
+    #[test]
+    fn parity_print_files_matches_spotless_scope() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .current_dir(oracle_dir())
+            .args([
+                "--ruleset",
+                "ktlint",
+                "--include",
+                "**/src/**/*.kt",
+                "--exclude",
+                "**/generated/**",
+                "--print-files",
+                ".",
+            ])
+            .output()
+            .expect("ktlint-rs failed");
+        assert!(output.status.success());
+        let files: Vec<String> = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(files, ["src/main/kotlin/oracle/SpreadOperator.kt"]);
+    }
+
+    #[test]
+    fn parity_print_effective_config_includes_kataris_properties() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .current_dir(oracle_dir())
+            .args([
+                "--ruleset",
+                "ktlint",
+                "--include",
+                "**/src/**/*.kt",
+                "--exclude",
+                "**/generated/**",
+                "--print-effective-config",
+                ".",
+            ])
+            .output()
+            .expect("ktlint-rs failed");
+        assert!(output.status.success());
+        let entries: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(entries[0]["code_style"], "android_studio");
+        assert_eq!(entries[0]["tab_width"], 4);
+        assert_eq!(
+            entries[0]["rules"]["ktlint_function_naming_ignore_when_annotated_with"]["properties"]
+                ["annotated_with"],
+            "Composable"
+        );
+        assert_eq!(
+            entries[0]["rules"]["ij_kotlin_properties"]["properties"]
+                ["ij_kotlin_name_count_to_use_star_import_for_members"],
+            "999"
+        );
+        assert_eq!(
+            entries[0]["rules"]["standard:no-wildcard-imports"]["enabled"],
+            false
         );
     }
 }

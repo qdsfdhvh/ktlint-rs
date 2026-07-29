@@ -20,6 +20,7 @@ pub struct KtlintConfig {
     pub experimental: bool,
     pub project_root: PathBuf,
     pub indent_size: usize,
+    pub tab_width: usize,
     pub indent_style: IndentStyle,
     pub max_line_length: usize,
     pub insert_final_newline: bool,
@@ -61,6 +62,7 @@ impl Default for KtlintConfig {
             experimental: false,
             project_root: PathBuf::from("."),
             indent_size: 4,
+            tab_width: 4,
             indent_style: IndentStyle::Space,
             max_line_length: 0,
             insert_final_newline: true,
@@ -173,9 +175,10 @@ fn parse_ktlint_properties(ec_path: &Path, file_path: &Path) -> HashMap<String, 
             // Match: * or *.kt or *.{kt,kts} or {*.kt,*.kts}
             in_section = section == "*"
                 || section == &format!("*.{}", ext)
-                || section.contains(&format!("{{{}}}", ext))
-                || section.contains(&format!(".{}, ", ext))
-                || section.contains(&format!("*.{}", ext));
+                || section.contains(&format!("{{{},", ext))
+                || section.contains(&format!(",{}}}", ext))
+                || section.contains(&format!("{{*.{},", ext))
+                || section.contains(&format!(",*.{}}}", ext));
             continue;
         }
         if !in_section {
@@ -315,6 +318,7 @@ impl KtlintConfig {
                 "indent_size" if v != "tab" => {
                     self.indent_size = v.parse().unwrap_or(4);
                 }
+                "tab_width" => self.tab_width = v.parse().unwrap_or(4),
                 "indent_style" => {
                     self.indent_style = if v == "tab" {
                         IndentStyle::Tab
@@ -469,5 +473,18 @@ mod tests {
         let mut config = KtlintConfig::default();
         config.indent_style = IndentStyle::Tab;
         assert_eq!(config.indent_string(), "\t");
+    }
+
+    #[test]
+    fn loads_all_kataris_intellij_properties() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
+            "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/oracle/SpreadOperator.kt",
+        );
+        let config = KtlintConfig::load_for_file(&path).unwrap();
+        let properties = &config.rules["ij_kotlin_properties"].properties;
+        assert_eq!(
+            properties.get("ij_kotlin_name_count_to_use_star_import_for_members"),
+            Some(&"999".to_string())
+        );
     }
 }

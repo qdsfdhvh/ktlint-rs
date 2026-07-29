@@ -19,7 +19,66 @@ use discovery::FileCollector;
 use parser::KotlinParser;
 use reporter::DiagnosticReporter;
 use rules::{RuleEngine, Violation};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
+
+fn parity_path(path: &std::path::Path, root: &std::path::Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .trim_start_matches("./")
+        .replace('\\', "/")
+}
+
+fn print_parity_files(files: &[PathBuf], root: &std::path::Path) -> anyhow::Result<()> {
+    let mut paths: Vec<String> = files.iter().map(|path| parity_path(path, root)).collect();
+    paths.sort();
+    println!("{}", serde_json::to_string_pretty(&paths)?);
+    Ok(())
+}
+
+fn print_parity_configs(files: &[PathBuf], base_config: &KtlintConfig) -> anyhow::Result<()> {
+    let mut entries = Vec::new();
+    for file in files {
+        let config = KtlintConfig::load_for_file_with_base(file, base_config)
+            .unwrap_or_else(|_| base_config.clone());
+        let rules: BTreeMap<_, _> = config
+            .rules
+            .iter()
+            .map(|(id, rule)| {
+                let properties: BTreeMap<_, _> = rule.properties.iter().collect();
+                (
+                    id,
+                    serde_json::json!({
+                        "enabled": rule.enabled,
+                        "properties": properties,
+                    }),
+                )
+            })
+            .collect();
+        entries.push(serde_json::json!({
+            "file": parity_path(file, &base_config.project_root),
+            "code_style": match config.code_style {
+                config::CodeStyle::KtlintOfficial => "ktlint_official",
+                config::CodeStyle::AndroidStudio => "android_studio",
+                config::CodeStyle::IntelliJIdea => "intellij_idea",
+            },
+            "indent_size": config.indent_size,
+            "indent_style": match config.indent_style {
+                config::IndentStyle::Space => "space",
+                config::IndentStyle::Tab => "tab",
+            },
+            "tab_width": config.tab_width,
+            "max_line_length": config.max_line_length,
+            "insert_final_newline": config.insert_final_newline,
+            "trim_trailing_whitespace": config.trim_trailing_whitespace,
+            "rules": rules,
+        }));
+    }
+    entries.sort_by(|left, right| left["file"].as_str().cmp(&right["file"].as_str()));
+    println!("{}", serde_json::to_string_pretty(&entries)?);
+    Ok(())
+}
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -31,6 +90,14 @@ fn main() -> anyhow::Result<()> {
     }
 
     let files = FileCollector::new(&cli, &config).collect()?;
+    if cli.print_files {
+        print_parity_files(&files, &config.project_root)?;
+        return Ok(());
+    }
+    if cli.print_effective_config {
+        print_parity_configs(&files, &config)?;
+        return Ok(());
+    }
     // Issue #53: load per-file editorconfig, build per-file engine
     let base_config = config.clone();
     // (engine removed — built per-file below)

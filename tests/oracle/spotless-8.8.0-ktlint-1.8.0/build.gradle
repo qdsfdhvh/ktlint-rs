@@ -14,6 +14,9 @@ configurations {
 dependencies {
     ktlintOracle 'com.pinterest.ktlint:ktlint-cli:1.8.0'
     ktlintOracle 'com.pinterest.ktlint:ktlint-ruleset-standard:1.8.0'
+    implementation 'com.pinterest.ktlint:ktlint-cli:1.8.0'
+    implementation 'com.pinterest.ktlint:ktlint-rule-engine:1.8.0'
+    implementation 'com.pinterest.ktlint:ktlint-ruleset-standard:1.8.0'
 }
 
 spotless {
@@ -86,22 +89,16 @@ tasks.register('oracleCheck') {
 
 tasks.register('oracleLint', JavaExec) {
     group = 'verification'
-    description = 'Writes ktlint 1.8.0 JSON diagnostics for the fixture corpus.'
-    classpath = configurations.ktlintOracle
-    mainClass = 'com.pinterest.ktlint.Main'
-    workingDir = projectDir
-    ignoreExitValue = true
+    description = 'Writes ktlint 1.8.0 diagnostics, including autocorrectability.'
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'oracle.OracleDiagnostics'
     doFirst {
-        oracleOutputDir.get().asFile.mkdirs()
         args(
-            '--relative',
-            "--reporter=json,output=${oracleOutputDir.get().file('diagnostics.json').asFile}",
-            'src/**/*.kt',
-            '!**/generated/**'
+            projectDir.absolutePath,
+            oracleOutputDir.get().file('diagnostics.json').asFile.absolutePath,
+            oracleOutputDir.get().file('lint-exit-code.txt').asFile.absolutePath
         )
-    }
-    doLast {
-        oracleOutputDir.get().file('lint-exit-code.txt').asFile.text = "${executionResult.get().exitValue}\n"
     }
 }
 
@@ -119,11 +116,15 @@ tasks.register('oracleRuleInventory', JavaExec) {
     }
 }
 
-tasks.register('oracleMetadata', Copy) {
+tasks.register('oracleMetadata') {
     group = 'verification'
     description = 'Copies the pinned oracle contract and effective Kataris config.'
-    from('oracle-manifest.json', 'effective-config.json')
-    into(oracleOutputDir)
+    doLast {
+        copy {
+            from('oracle-manifest.json', 'effective-config.json')
+            into(oracleOutputDir)
+        }
+    }
 }
 
 tasks.register('oracleSnapshot') {

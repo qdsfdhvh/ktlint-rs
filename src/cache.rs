@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
-/// Bump on format change to invalidate old caches.
-const CACHE_VERSION: u32 = 4;
+/// Bump whenever cache serialization or rule semantics change.
+const CACHE_VERSION: u32 = 5;
 
 #[derive(Serialize, Deserialize)]
 struct CacheFile {
