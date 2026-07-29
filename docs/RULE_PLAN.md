@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **69**
+- Partial/unverified: **68**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -90,7 +90,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:no-blank-line-before-rbrace` | yes | partial | `standard:no-blank-line-before-rbrace` | unverified: fix_blank_lines | 0/6 | 0 | 0 |
 | P1 | `standard:no-blank-lines-in-chained-method-calls` | yes | partial | `standard:no-blank-lines-in-chained-method-calls` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-consecutive-blank-lines` | yes | partial | `standard:no-consecutive-blank-lines` | unverified: fix_blank_lines | 0/6 | 0 | 0 |
-| P1 | `standard:no-empty-class-body` | yes | partial | `standard:no-empty-class-body` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:no-empty-class-body` | yes | parity-verified | `standard:no-empty-class-body` | parity-verified: fix_empty_class_body | 6/6 | 7 | 0 |
 | P1 | `standard:no-empty-file` | yes | partial | `standard:no-empty-file` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-empty-first-line-in-method-block` | yes | partial | `standard:no-leading-empty-lines-in-method` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-line-break-after-else` | yes | partial | `standard:no-line-break-after-else` | unverified | 0/6 | 0 | 0 |

@@ -273,6 +273,22 @@
   },
   {
     "auto_fixable": true,
+    "column": 18,
+    "file": "src/main/kotlin/rules/no_empty_class_body/Interaction.kt",
+    "line": 3,
+    "message": "Unnecessary block (\"{}\")",
+    "rule": "standard:no-empty-class-body"
+  },
+  {
+    "auto_fixable": true,
+    "column": 13,
+    "file": "src/main/kotlin/rules/no_empty_class_body/Negative.kt",
+    "line": 3,
+    "message": "Unnecessary block (\"{}\")",
+    "rule": "standard:no-empty-class-body"
+  },
+  {
+    "auto_fixable": true,
     "column": 17,
     "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
     "line": 3,

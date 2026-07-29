@@ -66,6 +66,7 @@ FORMATTER_PASSES = {
     "standard:no-blank-line-before-rbrace": ["fix_blank_lines"],
     "standard:no-blank-line-in-list": ["fix_blank_line_in_list"],
     "standard:no-consecutive-blank-lines": ["fix_blank_lines"],
+    "standard:no-empty-class-body": ["fix_empty_class_body"],
     "standard:no-multi-spaces": ["fix_double_spaces"],
     "standard:modifier-list-spacing": ["fix_annotation_blank_lines", "fix_double_spaces"],
     "standard:nullable-type-spacing": ["fix_function_type_reference_spacing"],
