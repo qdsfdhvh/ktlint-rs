@@ -56,6 +56,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release
       - run: ./scripts/spotless-differential.sh --offline
+      - run: python3 scripts/generate_rule_plan.py --binary target/release/ktlint-rs --check
       - name: Verify every mismatch surface fails closed
         run: |
           for kind in discovery config diagnostics format; do

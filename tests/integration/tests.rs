@@ -560,4 +560,41 @@ mod integration_tests {
             false
         );
     }
+
+    #[test]
+    fn parity_rule_inventory_is_unique_and_matches_manifest_summary() {
+        ensure_built();
+        let output = Command::new(ktlint_bin())
+            .args(["--ruleset", "ktlint", "--print-rule-inventory"])
+            .output()
+            .expect("ktlint-rs failed");
+        assert!(output.status.success());
+        let entries: Vec<serde_json::Value> = serde_json::from_slice(&output.stdout).unwrap();
+        let enabled: Vec<_> = entries
+            .iter()
+            .filter(|entry| entry["enabled_by_ruleset"] == true)
+            .collect();
+        let ids: std::collections::HashSet<_> = enabled
+            .iter()
+            .map(|entry| entry["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(ids.len(), enabled.len(), "enabled rule ids must be unique");
+        assert_eq!(
+            enabled
+                .iter()
+                .filter(|entry| entry["id"] == "standard:wrapping")
+                .count(),
+            1
+        );
+
+        let manifest: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(oracle_dir().join("parity-manifest.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(manifest["oracle"]["ruleCount"], 101);
+        assert_eq!(
+            manifest["summary"]["registeredKtlintRuleIds"],
+            enabled.len()
+        );
+    }
 }

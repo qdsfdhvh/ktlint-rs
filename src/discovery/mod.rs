@@ -161,6 +161,7 @@ mod tests {
             patterns_from_stdin: vec![],
             print_files: false,
             print_effective_config: false,
+            print_rule_inventory: false,
             editorconfig: None,
             code_style: None,
             baseline: None,

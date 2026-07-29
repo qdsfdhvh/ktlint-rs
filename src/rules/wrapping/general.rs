@@ -39,7 +39,9 @@ impl Rule for GeneralWrapping {
             }
 
             // Check `if/else` chain consistency
-            if trimmed.starts_with("if (")
+            if (trimmed.starts_with("if (")
+                || trimmed.starts_with("for (")
+                || trimmed.starts_with("while ("))
                 && trimmed.ends_with('{')
                 && i + 1 < lines.len()
                 && lines[i + 1].trim().is_empty()
@@ -75,5 +77,11 @@ mod tests {
         let v = check("if (x) {\n\n    doA()\n}\n");
         assert!(!v.is_empty());
         assert_eq!(v[0].rule_id, "standard:wrapping");
+    }
+
+    #[test]
+    fn loop_with_blank() {
+        assert!(!check("for (x in xs) {\n\n    use(x)\n}\n").is_empty());
+        assert!(!check("while (ready) {\n\n    tick()\n}\n").is_empty());
     }
 }

@@ -35,7 +35,7 @@ impl Registry {
             Box::new(spacing::OperatorSpacing),
             Box::new(spacing::ParenSpacing),
             Box::new(spacing::RangeOperatorSpacing),
-            Box::new(spacing::SpacingAroundKeyword),
+            // `standard:keyword-spacing` is registered in phase3b below.
             // ── Structure ─────────────────────────────────────────────
             Box::new(structure::BlankLineBeforeDeclaration),
             Box::new(structure::IJTrailingComma),
@@ -88,7 +88,7 @@ impl Registry {
             // ── Structure (more) ────────────────────────────────────────
             Box::new(structure::BlankLineBetweenWhenConditions),
             // ── Phase 1 more ──────────────────────────────────────────
-            Box::new(phase1_more::KtlintWrapping),
+            // `standard:wrapping` is provided by wrapping::GeneralWrapping above.
             Box::new(phase1_more::KtlintNoConsecutiveComments),
             // ── Phase 3b ──────────────────────────────────────────────
             Box::new(phase3b_rules::FunctionSignatureSpacing),

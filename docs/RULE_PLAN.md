@@ -1,489 +1,136 @@
-# ktlint-rs Rule Plan
+# ktlint 1.8.0 parity plan
 
-> **Target**: 100% parity with JVM ktlint (formatting rules) + detekt (static analysis rules).
-> **Coverage**: 61/105 JVM ktlint rules ✅ (3 🟡 partial) | 148 detekt rules in registry ✅ // Phase 13 TypeInfo bridge ready (L0+L1) ✅ | L2 ~51 rules (skip mechanism ready) ✅
-
----
-
-## Part 1: ktlint Standard Rules (JVM)
-
-Status legend: ✅ implemented | 🟡 partial / needs tuning | ❌ missing
-
-### Spacing Rules
-
-| Rule ID | Status | Notes |
-|---|---|---|
-| `annotation-spacing` | ✅ | |
-| `block-comment-initial-star-alignment` | ✅ | `block-comment-star` in rs |
-| `class-signature` | ✅ | `class-signature-spacing` in rs |
-| `comment-spacing` | ✅ | |
-| `fun-keyword-spacing` | ✅ | `function-name-paren-spacing` in rs |
-| `function-return-type-spacing` | ✅ | |
-| `function-signature` | ✅ | `function-signature-spacing` in rs |
-| `function-start-of-body-spacing` | ✅ | |
-| `modifier-list-spacing` | ❌ | |
-| `modifier-order` | ✅ | |
-| `nullable-type-spacing` | ❌ | |
-| `parameter-list-spacing` | ✅ | |
-| `spacing-around-angle-brackets` | ✅ | |
-| `spacing-around-colon` | ✅ | `colon-spacing` in rs |
-| `spacing-around-comma` | ✅ | `comma-spacing` in rs |
-| `spacing-around-curly` | ✅ | `curly-spacing` in rs |
-| `spacing-around-dot` | ❌ | |
-| `spacing-around-double-colon` | ✅ | `double-colon-spacing` in rs |
-| `spacing-around-keyword` | ✅ | |
-| `spacing-around-operators` | ✅ | `operator-spacing` in rs |
-| `spacing-around-parens` | ✅ | `paren-spacing` in rs |
-| `spacing-around-range-operator` | ✅ | `range-operator-spacing` in rs |
-| `spacing-around-square-brackets` | ❌ | |
-| `spacing-around-unary-operator` | ❌ | |
-| `spacing-between-declarations-with-annotations` | ❌ | |
-| `spacing-between-declarations-with-comments` | ✅ | |
-| `spacing-between-function-name-and-opening-parenthesis` | ✅ | |
-| `then-spacing` | ❌ | |
-| `try-catch-finally-spacing` | ❌ | |
-| `type-argument-list-spacing` | ✅ | |
-| `type-parameter-list-spacing` | ❌ | |
-| `function-type-modifier-spacing` | ❌ | |
-| `function-type-reference-spacing` | ❌ | |
-| `package-import-spacing` | ❌ | |
-
-### Wrapping Rules
-
-| Rule ID | Status | Notes |
-|---|---|---|
-| `argument-list-wrapping` | ✅ | |
-| `binary-expression-wrapping` | ❌ | |
-| `call-expression-wrapping` | ❌ | |
-| `chain-method-continuation` | ❌ | |
-| `chain-wrapping` | ✅ | |
-| `comment-wrapping` | ❌ | |
-| `context-receiver-list-wrapping` | ❌ | |
-| `context-receiver-wrapping` | ❌ | |
-| `enum-wrapping` | ✅ | |
-| `expression-operand-wrapping` | ❌ | |
-| `if-else-wrapping` | ❌ | |
-| `kdoc-wrapping` | ❌ | |
-| `multi-line-if-else` | ✅ | `multiline-if-else` in rs |
-| `multiline-expression-wrapping` | ✅ | |
-| `multiline-loop` | ❌ | |
-| `parameter-list-wrapping` | ❌ | |
-| `parameter-wrapping` | ❌ | |
-| `property-wrapping` | ❌ | |
-| `statement-wrapping` | ❌ | |
-| `string-template-indent` | ✅ | |
-| `wrapping` | ✅ | `general-wrapping` in rs |
-
-### Structure / Blank-line Rules
-
-| Rule ID | Status | Notes |
-|---|---|---|
-| `blank-line-before-declaration` | 🟡 | Too aggressive — needs top-level only |
-| `blank-line-before-file-annotation` | ❌ | |
-| `blank-line-before-imports` | ❌ | |
-| `blank-line-before-package` | ❌ | |
-| `blank-line-between-when-conditions` | ✅ | |
-| `final-newline` | ✅ | |
-| `indentation` | 🟡 | 6,948 vs 15 — needs context-aware logic |
-| `max-line-length` | ✅ | |
-| `no-blank-line-before-rbrace` | ✅ | |
-| `no-blank-line-in-list` | ✅ | |
-| `no-blank-lines-in-chained-method-calls` | ❌ | |
-| `no-consecutive-blank-lines` | ✅ | |
-| `no-consecutive-comments` | ❌ | |
-| `no-empty-class-body` | ✅ | |
-| `no-empty-file` | ✅ | |
-| `no-empty-first-line-in-class-body` | ✅ | |
-| `no-empty-first-line-in-method-block` | ✅ | `no-leading-empty-lines-in-method` in rs |
-| `no-line-break-after-else` | ❌ | |
-| `no-line-break-before-assignment` | ❌ | |
-| `no-multiple-spaces` | ✅ | `no-multi-spaces` in rs |
-| `no-semicolons` | ✅ | |
-| `no-single-line-block-comment` | ❌ | |
-| `no-trailing-spaces` | ✅ | |
-| `no-unit-return` | ❌ | |
-| `trailing-comma-on-call-site` | ✅ | |
-| `trailing-comma-on-declaration-site` | ✅ | |
-| `unnecessary-parentheses-before-trailing-lambda` | ✅ | |
-
-### Import Rules
-
-| Rule ID | Status | Notes |
-|---|---|---|
-| `import-ordering` | ✅ | |
-| `no-unused-imports` | ✅ | |
-| `no-wildcard-imports` | ✅ | |
-
-### Naming Rules
-
-| Rule ID | Status | Notes |
-|---|---|---|
-| `backing-property-naming` | ✅ | |
-| `class-naming` | ✅ | |
-| `enum-entry-name-case` | ✅ | `enum-entry` in rs |
-| `filename` | 🟡 | JVM detects 0 matches (implementation differs) |
-| `function-naming` | ✅ | |
-| `package-name` | ✅ | |
-| `property-naming` | ✅ | |
-
-### KDoc Rules
-
-| Rule ID | Status | Notes |
-|---|---|---|
-| `kdoc` | ✅ | `kdoc-formatting` in rs |
-| `kdoc-wrapping` | ❌ | |
-
-### Expression / Brace Rules
-
-| Rule ID | Status | Notes |
-|---|---|---|
-| `function-expression-body` | ✅ | |
-| `function-literal` | ❌ | |
-| `if-else-bracing` | ❌ | |
-| `lambda-return` | ❌ | |
-| `mixed-condition-operators` | ❌ | |
-| `string-template` | ❌ | |
-| `when-entry-bracing` | ✅ | |
-
-### Argument / Type Comment Rules
-
-| Rule ID | Status | Notes |
-|---|---|---|
-| `type-argument-comment` | ❌ | |
-| `type-parameter-comment` | ❌ | |
-| `value-argument-comment` | ❌ | |
-| `value-parameter-comment` | ❌ | |
-
----
-
-## Part 2: ktlint-rs-only Rules (no direct JVM equivalent)
-
-These exist in rs but not as separate JVM rules (subset, combined, or internal):
-
-| Rule ID | Notes |
-|---|---|
-| `ij-trailing-comma` | IntelliJ-specific — keep for IDE compat |
-| `kdoc-no-empty-first-line` | Subset of JVM `kdoc` |
-| `kdoc-no-trailing-space` | Subset of JVM `kdoc` |
-| `ktlint-annotation` | ktlint internal — keep |
-| `ktlint-wrapping` | ktlint internal — keep |
-| `ktlint-no-consecutive-comments` | ktlint internal — keep |
-| `lambda-paren` | May overlap with `function-literal` |
-| `no-blank-after-kdoc` | Subset of JVM `kdoc` |
-| `no-blank-before-list-close` | Subset of `parameter-list-spacing` |
-| `no-empty-file-body` | No JVM equivalent |
-| `no-single-expression-body` | No JVM equivalent |
-| `no-trailing-spaces-in-string` | No JVM equivalent |
-| `no-wildcard-imports-either` | rs-only variant |
-| `spacing-between-declarations` | rs-only — JVM has annotated/commented variants |
-| `trailing-comma` | Generic — JVM has site-specific variants |
-| `trailing-spaces-in-comment` | Might overlap with `comment-spacing` |
-| `try-catch-finally-wrapping` | rs-only — JVM has `try-catch-finally-spacing` |
-| `when-expression-line-break` | rs-only variant |
-
----
-
-## Part 3: detekt Native Rules — Full Inventory (226 rules)
-
-> Source: [detekt 2.0.0-alpha.0 docs](https://detekt.dev/docs/2.0.0-alpha.0/rules/)
-> **Excluded**: `formatting` and `ktlint` rule sets — these are ktlint wrappers, already covered by Part 1.
-> **Overlap**: ~8 rules already ✅ in ktlint-rs (MaxLineLength, NoWildcardImports, NoSemicolons, Filename, etc.)
-
-### comments (9 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `AbsentOrWrongFileLicense` | No | — |
-| `CommentOverPrivateFunction` | No | — |
-| `DeprecatedBlockTag` | No | — |
-| `EndOfSentenceFormat` | No | — |
-| `KDocReferencesNonPublicProperty` | No | ❗ |
-| `OutdatedDocumentation` | No | ❗ |
-| `UndocumentedPublicClass` | No | ❗ |
-| `UndocumentedPublicFunction` | No | ❗ |
-| `UndocumentedPublicProperty` | No | ❗ |
-
-### complexity (15 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `CognitiveComplexMethod` | Yes | — |
-| `ComplexCondition` | Yes | — |
-| `ComplexInterface` | Yes | — |
-| `CyclomaticComplexMethod` | Yes | — |
-| `LabeledExpression` | No | — |
-| `LargeClass` | Yes | — |
-| `LongMethod` | Yes | — |
-| `LongParameterList` | Yes | ❗ |
-| `MethodOverloading` | Yes | — |
-| `NamedArguments` | No | ❗ |
-| `NestedBlockDepth` | Yes | — |
-| `NestedScopeFunctions` | No | — |
-| `ReplaceSafeCallChainWithRun` | No | — |
-| `StringLiteralDuplication` | Yes | — |
-| `TooManyFunctions` | Yes | ❗ |
-
-### coroutines (8 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `CoroutineLaunchedInTestWithoutRunTest` | Yes | ❗ |
-| `GlobalCoroutineUsage` | Yes | ❗ |
-| `InjectDispatcher` | No | — |
-| `RedundantSuspendModifier` | Yes | ❗ |
-| `SleepInsteadOfDelay` | Yes | ❗ |
-| `SuspendFunSwallowedCancellation` | Yes | ❗ |
-| `SuspendFunWithCoroutineScopeReceiver` | No | ❗ |
-| `SuspendFunWithFlowReturnType` | No | ❗ |
-
-### empty-blocks (14 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `EmptyCatchBlock` | Yes | — |
-| `EmptyClassBlock` | Yes | — |
-| `EmptyDoWhileBlock` | Yes | — |
-| `EmptyElseBlock` | Yes | — |
-| `EmptyFinallyBlock` | Yes | — |
-| `EmptyForBlock` | Yes | — |
-| `EmptyFunctionBlock` | Yes | — |
-| `EmptyIfBlock` | Yes | — |
-| `EmptyInitBlock` | Yes | — |
-| `EmptyKtFile` | Yes | — |
-| `EmptySecondaryConstructor` | Yes | — |
-| `EmptyTryBlock` | Yes | — |
-| `EmptyWhenBlock` | Yes | — |
-| `EmptyWhileBlock` | Yes | — |
-
-### exceptions (17 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `ErrorUsageWithThrowable` | Yes | — |
-| `ExceptionRaisedInCurrentContext` | Yes | ❗ |
-| `ExceptionRaisedInUnexpectedLocation` | No | ❗ |
-| `InstanceOfCheckForException` | Yes | ❗ |
-| `NotImplementedDeclaration` | Yes | — |
-| `ObjectExtendsThrowable` | Yes | — |
-| `PrintStackTrace` | Yes | — |
-| `RethrowCaughtException` | Yes | ❗ |
-| `ReturnFromFinally` | Yes | — |
-| `SwallowedException` | Yes | ❗ |
-| `ThrowingExceptionFromFinally` | Yes | — |
-| `ThrowingExceptionInMain` | No | — |
-| `ThrowingExceptionsWithoutOrCause` | Yes | ❗ |
-| `ThrowingNewInstanceOfSameException` | Yes | ❗ |
-| `TooGenericExceptionCaught` | Yes | ❗ |
-| `TooGenericExceptionThrown` | Yes | ❗ |
-| `UnusedProcessNextRuntimeException` | Yes | ❗ |
-
-### libraries (3 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `ForbiddenPublicDataClass` | No | ❗ |
-| `LibraryCodeMustSpecifyReturnType` | No | ❗ |
-| `LibraryEntitiesShouldNotBePublic` | Yes | ❗ |
-
-### naming (21 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `BooleanPropertyNaming` | No | — |
-| `ClassNaming` | Yes | — |
-| `ConstructorParameterNaming` | No | — |
-| `EnumNaming` | Yes | — |
-| `ForbiddenClassName` | No | — |
-| `FunctionMaxLength` | No | — |
-| `FunctionMinLength` | No | — |
-| `FunctionNaming` | Yes | — |
-| `FunctionParameterNaming` | No | — |
-| `InvalidPackageDeclaration` | Yes | — |
-| `LambdaParameterNaming` | No | — |
-| `MatchingDeclarationName` | No | — |
-| `MemberNameEqualsClassName` | No | ❗ |
-| `NoNameShadowing` | Yes | ❗ |
-| `NonBooleanPropertyPrefixedWithIs` | No | — |
-| `ObjectPropertyNaming` | No | — |
-| `PackageNaming` | Yes | — |
-| `TopLevelPropertyNaming` | No | — |
-| `VariableMaxLength` | No | — |
-| `VariableMinLength` | No | — |
-| `VariableNaming` | No | — |
-
-### performance (10 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `ArrayPrimitive` | Yes | ❗ |
-| `CouldBeSequence` | No | ❗ |
-| `DoubleMutabilityForCollection` | No | — |
-| `ForEachOnRange` | Yes | ❗ |
-| `HashtableSize` | No | ❗ |
-| `SpreadOperator` | Yes | ❗ |
-| `UnnecessaryPartOfBinaryExpression` | Yes | — |
-| `UnnecessaryTemporaryInstantiation` | Yes | ❗ |
-| `UnnecessaryTypeCasting` | No | ❗ |
-| `UnnecessaryToString` | No | ❗ |
-
-### potential-bugs (39 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `AvoidDirectByteBuffer` | Yes | ❗ |
-| `AvoidReferentialEquality` | No | ❗ |
-| `AvoidUsingVolatile` | No | — |
-| `CastDueToProgressionResolution` | Yes | ❗ |
-| `CastNullableToNonNullableType` | Yes | ❗ |
-| `CastToNotNullableType` | Yes | ❗ |
-| `Deprecation` | Yes | ❗ |
-| `DontDowncastCollectionTypes` | Yes | ❗ |
-| `ElseCaseInsteadOfExhaustiveWhen` | No | — |
-| `EqualsAlwaysReturnsTrueOrFalse` | Yes | ❗ |
-| `EqualsWithHashCodeExist` | Yes | ❗ |
-| `ExitOutsideMain` | Yes | — |
-| `ExplicitGarbageCollectionCall` | Yes | — |
-| `ExpressionBodySyntax` | No | ❗ |
-| `HasPlatformType` | Yes | ❗ |
-| `IgnoredReturnValue` | Yes | ❗ |
-| `ImplicitDefaultLocale` | Yes | ❗ |
-| `ImplicitUnitReturnType` | No | ❗ |
-| `InvalidRange` | Yes | — |
-| `IteratorHasNextCallsNextMethod` | Yes | — |
-| `IteratorNotThrowingNoSuchElementException` | Yes | — |
-| `LateinitUsage` | No | — |
-| `MapGetWithNotNullAssertionOperator` | Yes | ❗ |
-| `MapOperationGrouping` | No | ❗ |
-| `MissingPackageDeclaration` | Yes | — |
-| `NullCheckOnMutableProperty` | Yes | — |
-| `NullableToStringCall` | Yes | ❗ |
-| `PropertyUsedBeforeDeclaration` | No | — |
-| `RedundantElseInWhen` | Yes | — |
-| `UnconditionalJumpStatementInLoop` | No | — |
-| `UnreachableCatchBlock` | Yes | ❗ |
-| `UnreachableCode` | Yes | — |
-| `UnsafeCallOnNullableType` | Yes | — |
-| `UnsafeCast` | Yes | — |
-| `UnusedUnaryOperator` | Yes | ❗ |
-| `UselessPostfixExpression` | Yes | ❗ |
-| `WrongEqualsTypeParameter` | Yes | ❗ |
-
-### ruleauthors (2 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `ForbiddenSuppress` | No | — |
-| `UseEntityAtCurrentDirectory` | No | — |
-
-### style (88 rules)
-
-| Rule ID | Active | Type Resolution |
-|---|---|---|
-| `AbstractClassCanBeConcreteClass` | Yes | ❗ |
-| `AlsoCouldBeApply` | No | — |
-| `BracesOnIfStatements` | No | — |
-| `BracesOnWhenStatements` | No | — |
-| `CanBeNonNullable` | Yes | ❗ |
-| `CascadingCallWrapping` | No | — |
-| `ClassOrdering` | No | ❗ |
-| `CollapsibleIfStatements` | Yes | — |
-| `ConstructorParameterOrdering` | No | — |
-| `DataClassContainsFunctions` | Yes | ❗ |
-| `DataClassShouldBeImmutable` | No | ❗ |
-| `DestructuringDeclarationWithTooManyEntries` | Yes | — |
-| `DoubleNegativeLambda` | No | ❗ |
-| `EqualsNullCall` | No | — |
-| `EqualsOnSignatureLine` | No | — |
-| `ExplicitCollectionElementAccessMethod` | No | ❗ |
-| `ExplicitItLambdaParameter` | No | — |
-| `ExpressionBodySyntax` | No | ❗ |
-| `ForbiddenAnnotation` | No | ❗ |
-| `ForbiddenComment` | No | — |
-| `ForbiddenImport` | No | — |
-| `ForbiddenMethodCall` | No | ❗ |
-| `ForbiddenSuppress` | No | — |
-| `ForbiddenVoid` | Yes | — |
-| `FunctionOnlyReturningConstant` | Yes | ❗ |
-| `LoopWithTooManyJumpStatements` | Yes | — |
-| `MagicNumber` | Yes | ❗ |
-| `Mandelbrot` | No | — |
-| `MaxChainedCallsOnSameLine` | No | — |
-| `MayBeConst` | No | ❗ |
-| `ModifierOrder` | No | ❗ |
-| `MultilineLambdaItParameter` | No | — |
-| `MultilineRawStringIndentation` | No | — |
-| `NewLineAtEndOfFile` | Yes | — |
-| `NoTabs` | No | — |
-| `NullableBooleanProperty` | No | — |
-| `ObjectLiteralToLambda` | No | ❗ |
-| `OptionalAbstractKeyword` | No | — |
-| `OptionalUnit` | No | — |
-| `OptionalWhenBraces` | No | — |
-| `PreferToOverPairSyntax` | No | ❗ |
-| `ProtectedMemberInFinalClass` | Yes | ❗ |
-| `RedundantVisibilityModifierRule` | No | ❗ |
-| `ReturnCount` | No | — |
-| `SerialVersionUIDInSerializableClass` | No | ❗ |
-| `SpacingBetweenPackageAndImports` | No | — |
-| `ThrowsCount` | No | — |
-| `TrailingWhitespace` | No | — |
-| `TrimMultilineRawString` | No | — |
-| `UnderscoresInNumericLiterals` | No | — |
-| `UnnecessaryAnnotationUseSiteTarget` | No | — |
-| `UnnecessaryApply` | No | ❗ |
-| `UnnecessaryBackticks` | No | — |
-| `UnnecessaryBracesInTrailingLambda` | No | — |
-| `UnnecessaryFilter` | No | ❗ |
-| `UnnecessaryInnerClass` | No | ❗ |
-| `UnnecessaryLet` | No | ❗ |
-| `UnnecessaryMixIn` | No | ❗ |
-| `UnnecessaryStringReplaceAll` | No | ❗ |
-| `UntilInsteadOfRangeTo` | No | ❗ |
-| `UnusedParameter` | No | ❗ |
-| `UnusedPrivateClass` | Yes | ❗ |
-| `UnusedPrivateFunction` | No | ❗ |
-| `UnusedPrivateProperty` | Yes | ❗ |
-| `UseAnyOrNoneInsteadOfFind` | No | ❗ |
-| `UseArrayLiteralsInAnnotations` | Yes | — |
-| `UseCheckNotNull` | No | ❗ |
-| `UseCheckOrError` | Yes | ❗ |
-| `UseChunkedInsteadOfWindowedWithSameParam` | No | ❗ |
-| `UseDataClass` | No | ❗ |
-| `UseEmptyCounterpart` | No | — |
-| `UseEmptyRequestBody` | No | ❗ |
-| `UseIfInsteadOfWhen` | No | — |
-| `UseIsNullOrEmpty` | Yes | ❗ |
-| `UseLet` | No | ❗ |
-| `UseOrEmpty` | No | ❗ |
-| `UseRequire` | Yes | ❗ |
-| `UseRequireNotNull` | Yes | ❗ |
-| `UseSumOfInsteadOfFlatMapSize` | No | ❗ |
-| `UtilityClassWithPublicConstructor` | Yes | — |
-| `VarCouldBeVal` | Yes | ❗ |
-
-> ⚠️ **Type Resolution requirement**: 116/226 rules (~51%) need Kotlin compiler type resolution.
-> Pure Rust implementation may need alternative approaches or FFI bindings for these.
-
----
+> Generated by `scripts/generate_rule_plan.py`; do not edit manually.
+> Target: Kataris Spotless 8.8.0 + ktlint 1.8.0 standard rules.
 
 ## Summary
 
-| Layer | Total | ✅ Done | 🟡 Needs Tuning | ❌ Missing
-|---|---|---|---|---|
-| ktlint standard (JVM) | 105 | 61 | 3 | 41 |
-| ktlint-rs-only | 18 | 18 | 0 | 0 |
-| detekt comments | 9 | 0 | 0 | 9 |
-| detekt complexity | 15 | 0 | 0 | 15 |
-| detekt coroutines | 8 | 0 | 0 | 8 |
-| detekt empty-blocks | 14 | 0 | 0 | 14 |
-| detekt exceptions | 17 | 0 | 0 | 17 |
-| detekt libraries | 3 | 0 | 0 | 3 |
-| detekt naming | 21 | 0 | 0 | 21 |
-| detekt performance | 10 | 0 | 0 | 10 |
-| detekt potential-bugs | 37 | 0 | 0 | 37 |
-| detekt ruleauthors | 2 | 0 | 0 | 2 |
-| detekt style | 81 | ~5 | 0 | ~76 |
-| **Total** | **340** | **~84** | **3** | **~253** |
+- Oracle rules: **101**
+- Matched to ktlint-rs registrations: **55**
+- Missing: **46**
+- Partial/unverified: **50**
+- Disabled by Kataris: **5**
+- Extra ktlint-rs standard IDs: **1**
 
-> Note: detekt `formatting` and `ktlint` rule sets excluded (ktlint wrappers).
-> ~8 detekt rules overlap with ktlint-rs (MaxLineLength, NoWildcardImports, etc.).
+Registration is not parity evidence. Only byte/diagnostic differential fixtures may move a rule to `parity-verified`.
+
+## Rules
+
+| Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Fixtures | Known dirty hits |
+|---|---|---:|---|---|---|---:|---:|
+| P0 | `standard:function-signature` | yes | partial | `standard:function-signature` | unverified | 0 | 2 |
+| P0 | `standard:function-start-of-body-spacing` | yes | partial | `standard:function-start-of-body-spacing` | unverified | 0 | 2 |
+| P0 | `standard:op-spacing` | yes | partial | `standard:op-spacing` | unverified: fix_spread_operators, fix_operators | 3 | 2 |
+| P0 | `standard:parameter-list-spacing` | yes | partial | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0 | 2 |
+| P0 | `standard:paren-spacing` | yes | partial | `standard:paren-spacing` | unverified: fix_parens | 0 | 2 |
+| P0 | `standard:colon-spacing` | yes | partial | `standard:colon-spacing` | unverified: fix_colons | 0 | 1 |
+| P0 | `standard:annotation-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:argument-list-wrapping` | yes | partial | `standard:argument-list-wrapping` | unverified | 0 | 0 |
+| P0 | `standard:binary-expression-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:block-comment-initial-star-alignment` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:chain-wrapping` | yes | partial | `standard:chain-wrapping` | unverified | 0 | 0 |
+| P0 | `standard:comma-spacing` | yes | partial | `standard:comma-spacing` | unverified: fix_commas | 0 | 0 |
+| P0 | `standard:comment-spacing` | yes | partial | `standard:comment-spacing` | unverified: fix_comment_spacing | 0 | 0 |
+| P0 | `standard:comment-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:condition-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:context-receiver-list-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:context-receiver-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:curly-spacing` | yes | partial | `standard:curly-spacing` | unverified: fix_curly_braces | 0 | 0 |
+| P0 | `standard:discouraged-comment-location` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:dot-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:double-colon-spacing` | yes | partial | `standard:spacing-around-double-colon` | unverified: fix_all_spacing | 0 | 0 |
+| P0 | `standard:enum-wrapping` | yes | partial | `standard:enum-wrapping` | unverified | 0 | 0 |
+| P0 | `standard:expression-operand-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:fun-keyword-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:function-return-type-spacing` | yes | partial | `standard:function-return-type-spacing` | unverified | 0 | 0 |
+| P0 | `standard:function-type-modifier-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:function-type-reference-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:if-else-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:indent` | yes | partial | `standard:indent` | unverified: fix_indentation | 0 | 0 |
+| P0 | `standard:kdoc-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:keyword-spacing` | yes | partial | `standard:keyword-spacing` | unverified | 0 | 0 |
+| P0 | `standard:modifier-list-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:multiline-expression-wrapping` | yes | partial | `standard:multiline-expression-wrapping` | unverified | 0 | 0 |
+| P0 | `standard:no-consecutive-comments` | yes | partial | `standard:no-consecutive-comments` | unverified | 0 | 0 |
+| P0 | `standard:no-single-line-block-comment` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:nullable-type-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:parameter-list-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:parameter-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:property-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:range-spacing` | yes | partial | `standard:spacing-around-range-operator` | unverified: fix_range_spacing | 0 | 0 |
+| P0 | `standard:spacing-around-angle-brackets` | yes | partial | `standard:spacing-around-angle-brackets` | unverified: fix_angle_brackets | 0 | 0 |
+| P0 | `standard:spacing-between-declarations-with-annotations` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:spacing-between-declarations-with-comments` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:spacing-between-function-name-and-opening-parenthesis` | yes | partial | `standard:spacing-between-function-name-and-parenthesis` | unverified | 0 | 0 |
+| P0 | `standard:square-brackets-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:statement-wrapping` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:string-template` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:string-template-indent` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:then-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:trailing-comma-on-call-site` | yes | partial | `standard:trailing-comma-on-call-site` | unverified: fix_single_line_trailing_comma | 0 | 0 |
+| P0 | `standard:trailing-comma-on-declaration-site` | yes | partial | `standard:trailing-comma-on-declaration-site` | unverified: fix_single_line_trailing_comma | 0 | 0 |
+| P0 | `standard:try-catch-finally-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:type-argument-comment` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:type-argument-list-spacing` | yes | partial | `standard:type-argument-list-spacing` | unverified | 0 | 0 |
+| P0 | `standard:type-parameter-comment` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:type-parameter-list-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:unary-op-spacing` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:value-argument-comment` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:value-parameter-comment` | yes | missing | — | missing | 0 | 0 |
+| P0 | `standard:wrapping` | yes | partial | `standard:wrapping` | unverified: fix_all_wrapping | 0 | 0 |
+| P1 | `standard:annotation` | yes | partial | `standard:annotation` | unverified | 0 | 0 |
+| P1 | `standard:backing-property-naming` | yes | partial | `standard:backing-property-naming` | not-fixable | 0 | 0 |
+| P1 | `standard:blank-line-before-declaration` | yes | partial | `standard:blank-line-before-declaration` | unverified | 0 | 0 |
+| P1 | `standard:blank-line-between-when-conditions` | yes | partial | `standard:blank-line-between-when-conditions` | unverified | 0 | 0 |
+| P1 | `standard:chain-method-continuation` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:class-naming` | yes | partial | `standard:class-naming` | not-fixable | 0 | 0 |
+| P1 | `standard:class-signature` | yes | partial | `standard:class-signature` | unverified | 0 | 0 |
+| P1 | `standard:enum-entry-name-case` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:final-newline` | yes | partial | `standard:final-newline` | unverified: auto_fix final-newline normalization | 0 | 0 |
+| P1 | `standard:function-literal` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:if-else-bracing` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:import-ordering` | yes | partial | `standard:import-ordering` | unverified | 0 | 0 |
+| P1 | `standard:kdoc` | yes | partial | `standard:kdoc` | not-fixable | 0 | 0 |
+| P1 | `standard:max-line-length` | yes | partial | `standard:max-line-length` | unverified | 0 | 0 |
+| P1 | `standard:mixed-condition-operators` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:modifier-order` | yes | partial | `standard:modifier-order` | unverified | 0 | 0 |
+| P1 | `standard:multiline-if-else` | yes | partial | `standard:multiline-if-else` | unverified | 0 | 0 |
+| P1 | `standard:multiline-loop` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:no-blank-line-before-rbrace` | yes | partial | `standard:no-blank-line-before-rbrace` | unverified: fix_blank_lines | 0 | 0 |
+| P1 | `standard:no-blank-line-in-list` | yes | partial | `standard:no-blank-line-in-list` | unverified: fix_blank_line_in_list | 0 | 0 |
+| P1 | `standard:no-blank-lines-in-chained-method-calls` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:no-consecutive-blank-lines` | yes | partial | `standard:no-consecutive-blank-lines` | unverified: fix_blank_lines | 0 | 0 |
+| P1 | `standard:no-empty-class-body` | yes | partial | `standard:no-empty-class-body` | not-fixable | 0 | 0 |
+| P1 | `standard:no-empty-file` | yes | partial | `standard:no-empty-file` | unverified | 0 | 0 |
+| P1 | `standard:no-empty-first-line-in-class-body` | yes | partial | `standard:no-empty-first-line-in-class-body` | unverified | 0 | 0 |
+| P1 | `standard:no-empty-first-line-in-method-block` | yes | partial | `standard:no-leading-empty-lines-in-method` | unverified | 0 | 0 |
+| P1 | `standard:no-line-break-after-else` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:no-line-break-before-assignment` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:no-multi-spaces` | yes | partial | `standard:no-multi-spaces` | unverified: fix_double_spaces | 0 | 0 |
+| P1 | `standard:no-semi` | yes | partial | `standard:no-semicolons` | unverified: fix_semicolons | 0 | 0 |
+| P1 | `standard:no-trailing-spaces` | yes | partial | `standard:no-trailing-spaces` | unverified: fix_trailing_ws_protected | 0 | 0 |
+| P1 | `standard:no-unit-return` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:no-unused-imports` | yes | partial | `standard:no-unused-imports` | unverified | 0 | 0 |
+| P1 | `standard:property-naming` | yes | partial | `standard:property-naming` | not-fixable | 0 | 0 |
+| P1 | `standard:unnecessary-parentheses-before-trailing-lambda` | yes | missing | — | missing | 0 | 0 |
+| P1 | `standard:when-entry-bracing` | yes | partial | `standard:when-entry-bracing` | unverified | 0 | 0 |
+| P2 | `standard:filename` | no | disabled-by-kataris | `standard:filename` | not-evaluated | 0 | 0 |
+| P2 | `standard:function-expression-body` | no | disabled-by-kataris | `standard:function-expression-body` | not-evaluated | 0 | 0 |
+| P2 | `standard:function-naming` | no | disabled-by-kataris | `standard:function-naming` | not-evaluated | 0 | 0 |
+| P2 | `standard:no-wildcard-imports` | no | disabled-by-kataris | `standard:no-wildcard-imports` | not-evaluated | 0 | 0 |
+| P2 | `standard:package-name` | no | disabled-by-kataris | `standard:package-name` | not-evaluated | 0 | 0 |
+
+## Extra ktlint-rs standard IDs
+
+These IDs do not directly match a ktlint 1.8.0 oracle rule after configured aliases:
+
+- `standard:block-comment-initial-star-blank-line`
+
+## Validation
+
+```sh
+cargo build --release
+python3 scripts/generate_rule_plan.py --binary target/release/ktlint-rs --check
+```
+
+Detekt inventory is intentionally out of scope for the Kataris Spotless replacement.
