@@ -27,6 +27,7 @@ impl Registry {
             Box::new(spacing::function_type_spacing::FunctionTypeReferenceSpacing),
             Box::new(spacing::ArgumentListWrapping),
             Box::new(spacing::BlockCommentStar),
+            Box::new(spacing::block_comment_alignment::BlockCommentInitialStarAlignment),
             Box::new(spacing::ClassSignatureSpacing),
             Box::new(spacing::ColonSpacing),
             Box::new(spacing::CommaSpacing),

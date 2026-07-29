@@ -234,29 +234,54 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/block_comment_alignment/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/block_comment_alignment/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Interaction.kt"
+      ],
       "formatter": {
-        "passes": [],
-        "status": "missing"
+        "passes": [
+          "apply_block_comment_alignment"
+        ],
+        "status": "parity-verified"
       },
       "id": "standard:block-comment-initial-star-alignment",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:block-comment-initial-star-alignment"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": false,
@@ -2951,15 +2976,15 @@
   "schemaVersion": 1,
   "summary": {
     "extraRustRuleIds": 1,
-    "matchedOracleRules": 94,
+    "matchedOracleRules": 95,
     "registeredDetekt": 148,
-    "registeredKtlintRuleIds": 95,
-    "registeredStandardOriented": 110,
-    "registeredUniqueAll": 258,
+    "registeredKtlintRuleIds": 96,
+    "registeredStandardOriented": 111,
+    "registeredUniqueAll": 259,
     "statuses": {
       "disabled-by-kataris": 17,
-      "missing": 6,
-      "parity-verified": 6,
+      "missing": 5,
+      "parity-verified": 7,
       "partial": 72
     }
   }

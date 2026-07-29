@@ -132,6 +132,29 @@
         ]
       }
     },
+    "standard:block-comment-initial-star-alignment": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/block_comment_alignment/Negative.kt"
+        ],
+        "idempotence": ["scripts/spotless-differential.sh"],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Interaction.kt"
+        ]
+      }
+    },
     "standard:discouraged-comment-location": {
       "category": "edge-syntax",
       "verified": true,

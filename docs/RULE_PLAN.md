@@ -6,8 +6,8 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **94**
-- Missing: **6**
+- Matched to ktlint-rs registrations: **95**
+- Missing: **5**
 - Partial/unverified: **72**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
@@ -27,7 +27,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:annotation-spacing` | yes | parity-verified | `standard:annotation-spacing` | parity-verified: fix_annotation_blank_lines | 6/6 | 7 | 0 |
 | P0 | `standard:argument-list-wrapping` | yes | partial | `standard:argument-list-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:binary-expression-wrapping` | yes | partial | `standard:binary-expression-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:block-comment-initial-star-alignment` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:block-comment-initial-star-alignment` | yes | parity-verified | `standard:block-comment-initial-star-alignment` | parity-verified: apply_block_comment_alignment | 6/6 | 7 | 0 |
 | P0 | `standard:chain-wrapping` | yes | partial | `standard:chain-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:comma-spacing` | yes | partial | `standard:comma-spacing` | unverified: fix_commas | 0/6 | 0 | 0 |
 | P0 | `standard:comment-spacing` | yes | partial | `standard:comment-spacing` | unverified: fix_comment_spacing | 0/6 | 0 | 0 |

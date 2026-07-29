@@ -460,7 +460,15 @@ fn format_once(
     rule_configs: &HashMap<String, RuleConfig>,
     code_style: CodeStyle,
 ) -> anyhow::Result<String> {
-    let mut text = apply_spacing_rules(source, rule_configs, code_style)?;
+    let mut text = source.to_string();
+    if rule_enabled(
+        rule_configs,
+        "standard:block-comment-initial-star-alignment",
+        code_style,
+    ) {
+        text = apply_block_comment_alignment(&text)?;
+    }
+    text = apply_spacing_rules(&text, rule_configs, code_style)?;
     if rule_enabled(
         rule_configs,
         "standard:try-catch-finally-spacing",
@@ -1038,6 +1046,63 @@ fn remove_whitespace_before_receiver_dot(header: &str) -> String {
         }
     }
     output
+}
+
+fn block_comment_alignment_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<edit::TextEdit> {
+    let mut edits = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if matches!(node.kind(), "block_comment" | "multiline_comment") {
+            let expected = " ".repeat(node.start_position().column + 1);
+            let text = &source[node.byte_range()];
+            let mut absolute = node.start_byte();
+            for (line_index, line) in text.split_inclusive('\n').enumerate() {
+                if line_index > 0 {
+                    let whitespace = line
+                        .bytes()
+                        .take_while(|byte| matches!(byte, b' ' | b'\t'))
+                        .count();
+                    if line.as_bytes().get(whitespace) == Some(&b'*')
+                        && whitespace != expected.len()
+                    {
+                        edits.push(edit::TextEdit::new(
+                            "standard:block-comment-initial-star-alignment",
+                            absolute..absolute + whitespace,
+                            expected.clone(),
+                        ));
+                    }
+                }
+                absolute += line.len();
+            }
+            continue;
+        }
+        for index in (0..node.child_count()).rev() {
+            if let Some(child) = node.child(index) {
+                stack.push(child);
+            }
+        }
+    }
+    edits
+}
+
+fn apply_block_comment_alignment(source: &str) -> anyhow::Result<String> {
+    let Some(tree) = parse_clean(source) else {
+        return Ok(source.to_string());
+    };
+    let edits = block_comment_alignment_edits(source, &tree);
+    if edits.is_empty() {
+        return Ok(source.to_string());
+    }
+    let output = EditSet::new(edits).apply(source)?;
+    let Some(after_tree) = parse_clean(&output) else {
+        anyhow::bail!(
+            "standard:block-comment-initial-star-alignment produced invalid Kotlin syntax"
+        );
+    };
+    if !block_comment_alignment_edits(&output, &after_tree).is_empty() {
+        anyhow::bail!("standard:block-comment-initial-star-alignment is not idempotent");
+    }
+    Ok(output)
 }
 
 fn comment_spacing_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<edit::TextEdit> {

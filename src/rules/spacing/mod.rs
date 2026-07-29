@@ -1,6 +1,7 @@
 pub mod annotation;
 pub mod annotation_spacing;
 pub mod argument_list;
+pub mod block_comment_alignment;
 pub mod block_comment_star;
 pub mod class_signature;
 pub mod colon;

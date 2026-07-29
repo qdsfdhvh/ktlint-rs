@@ -48,6 +48,7 @@ OFFICIAL_CODE_STYLE_ONLY = {
 }
 FORMATTER_PASSES = {
     "standard:annotation-spacing": ["fix_annotation_blank_lines"],
+    "standard:block-comment-initial-star-alignment": ["apply_block_comment_alignment"],
     "standard:colon-spacing": ["fix_colons"],
     "standard:comma-spacing": ["fix_commas"],
     "standard:comment-spacing": ["fix_comment_spacing"],

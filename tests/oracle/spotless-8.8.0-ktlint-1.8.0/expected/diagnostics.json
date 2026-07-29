@@ -33,6 +33,46 @@
   },
   {
     "auto_fixable": true,
+    "column": 12,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Interaction.kt",
+    "line": 5,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
+    "column": 4,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Interaction.kt",
+    "line": 6,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
+    "column": 10,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Interaction.kt",
+    "line": 7,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
+    "column": 8,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Negative.kt",
+    "line": 4,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
+    "column": 6,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Negative.kt",
+    "line": 5,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
     "column": 38,
     "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
     "line": 3,
