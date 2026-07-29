@@ -11,6 +11,7 @@ pub mod double_colon;
 pub mod function_name_paren;
 pub mod function_return_type;
 pub mod function_start_body;
+pub mod function_type_spacing;
 pub mod modifier_list_spacing;
 pub mod modifier_order;
 pub mod operator;

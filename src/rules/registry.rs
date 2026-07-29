@@ -23,6 +23,8 @@ impl Registry {
             Box::new(spacing::AnnotationSpacing),
             Box::new(spacing::annotation_spacing::AnnotationConstructSpacing),
             Box::new(spacing::modifier_list_spacing::ModifierListSpacing),
+            Box::new(spacing::function_type_spacing::FunctionTypeModifierSpacing),
+            Box::new(spacing::function_type_spacing::FunctionTypeReferenceSpacing),
             Box::new(spacing::ArgumentListWrapping),
             Box::new(spacing::BlockCommentStar),
             Box::new(spacing::ClassSignatureSpacing),

@@ -1,7 +1,7 @@
 //! Auto-fix formatter — applies text-level corrections for fixable violations.
 pub(crate) mod edit;
 
-use crate::config::RuleConfig;
+use crate::config::{CodeStyle, RuleConfig};
 use crate::parser::KotlinParser;
 use crate::rules::Violation;
 use edit::{minimal_edit, EditSet};
@@ -375,20 +375,26 @@ fn masked_transform(source: &str, transform: fn(&str) -> String) -> String {
     restore_protected(&transform(&masked), &store)
 }
 
-fn rule_enabled(rule_configs: &HashMap<String, RuleConfig>, rule_id: &str) -> bool {
-    rule_configs
-        .get(rule_id)
-        .is_none_or(|config| config.enabled)
+fn rule_enabled(
+    rule_configs: &HashMap<String, RuleConfig>,
+    rule_id: &str,
+    code_style: CodeStyle,
+) -> bool {
+    crate::rules::code_style_allows(rule_id, code_style)
+        && rule_configs
+            .get(rule_id)
+            .is_none_or(|config| config.enabled)
 }
 
 fn apply_spacing_rules(
     source: &str,
     rule_configs: &HashMap<String, RuleConfig>,
+    code_style: CodeStyle,
 ) -> anyhow::Result<String> {
     let mut text = source.to_string();
     for _ in 0..5 {
         let before = text.clone();
-        if rule_enabled(rule_configs, "standard:op-spacing") {
+        if rule_enabled(rule_configs, "standard:op-spacing", code_style) {
             text = safe_transform("standard:op-spacing", &text, |input| {
                 let Some(tree) = parse_clean(input) else {
                     return input.to_string();
@@ -396,9 +402,17 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 17] = [
+        let passes: [(&'static str, fn(&str) -> String); 19] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
+            (
+                "standard:function-type-modifier-spacing",
+                fix_function_type_modifier_spacing,
+            ),
+            (
+                "standard:function-type-reference-spacing",
+                fix_function_type_reference_spacing,
+            ),
             ("standard:curly-spacing", fix_curly_braces),
             ("standard:op-spacing", fix_operators),
             ("standard:comma-spacing", fix_commas),
@@ -419,7 +433,7 @@ fn apply_spacing_rules(
             ("legacy:double-space-pass", fix_double_spaces),
         ];
         for (owner, transform) in passes {
-            if owner.starts_with("legacy:") || rule_enabled(rule_configs, owner) {
+            if owner.starts_with("legacy:") || rule_enabled(rule_configs, owner, code_style) {
                 text = safe_transform(owner, &text, |input| masked_transform(input, transform))?;
             }
         }
@@ -433,7 +447,7 @@ fn apply_spacing_rules(
         }
     }
 
-    if rule_enabled(rule_configs, "standard:comment-spacing") {
+    if rule_enabled(rule_configs, "standard:comment-spacing", code_style) {
         text = apply_comment_spacing(&text)?;
     }
     Ok(text)
@@ -444,31 +458,36 @@ fn format_once(
     indent_size: usize,
     insert_final_newline: bool,
     rule_configs: &HashMap<String, RuleConfig>,
+    code_style: CodeStyle,
 ) -> anyhow::Result<String> {
-    let mut text = apply_spacing_rules(source, rule_configs)?;
-    if rule_enabled(rule_configs, "standard:try-catch-finally-spacing") {
+    let mut text = apply_spacing_rules(source, rule_configs, code_style)?;
+    if rule_enabled(
+        rule_configs,
+        "standard:try-catch-finally-spacing",
+        code_style,
+    ) {
         text = safe_transform("standard:try-catch-finally-spacing", &text, |input| {
             masked_transform(input, fix_try_catch)
         })?;
     }
-    if rule_enabled(rule_configs, "standard:wrapping") {
+    if rule_enabled(rule_configs, "standard:wrapping", code_style) {
         text = safe_transform("standard:wrapping", &text, |input| {
             masked_transform(input, fix_single_line_control_blocks)
         })?;
     }
-    if rule_enabled(rule_configs, "standard:indent") {
+    if rule_enabled(rule_configs, "standard:indent", code_style) {
         text = safe_transform("standard:indent", &text, |input| {
             fix_indentation(input, indent_size)
         })?;
     }
-    if rule_enabled(rule_configs, "standard:no-trailing-spaces") {
+    if rule_enabled(rule_configs, "standard:no-trailing-spaces", code_style) {
         text = safe_transform(
             "standard:no-trailing-spaces",
             &text,
             fix_trailing_ws_protected,
         )?;
     }
-    if rule_enabled(rule_configs, "standard:final-newline") {
+    if rule_enabled(rule_configs, "standard:final-newline", code_style) {
         text = safe_transform("standard:final-newline", &text, |input| {
             let mut output = input.to_string();
             if insert_final_newline && !output.ends_with('\n') {
@@ -486,6 +505,7 @@ pub fn auto_fix(
     indent_size: usize,
     insert_final_newline: bool,
     rule_configs: &HashMap<String, RuleConfig>,
+    code_style: CodeStyle,
 ) -> anyhow::Result<()> {
     let fixable: Vec<&Violation> = violations.iter().filter(|v| v.auto_fixable).collect();
     if fixable.is_empty() {
@@ -514,8 +534,21 @@ pub fn auto_fix(
         if original.contains(SENTINEL) || parse_clean(&original).is_none() {
             continue;
         }
-        let text = format_once(&original, indent_size, insert_final_newline, rule_configs)?;
-        if format_once(&text, indent_size, insert_final_newline, rule_configs)? != text {
+        let text = format_once(
+            &original,
+            indent_size,
+            insert_final_newline,
+            rule_configs,
+            code_style,
+        )?;
+        if format_once(
+            &text,
+            indent_size,
+            insert_final_newline,
+            rule_configs,
+            code_style,
+        )? != text
+        {
             anyhow::bail!("formatter pipeline is not idempotent for {file_path}");
         }
         if text != original {
@@ -927,6 +960,85 @@ fn is_annotation_or_declaration(line: &str) -> bool {
         .any(|prefix| line.starts_with(prefix))
 }
 
+fn fix_function_type_modifier_spacing(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let mut output = String::with_capacity(source.len());
+    let mut cursor = 0usize;
+    while cursor < bytes.len() {
+        let Some(relative) = source[cursor..].find("suspend") else {
+            output.push_str(&source[cursor..]);
+            break;
+        };
+        let start = cursor + relative;
+        let end = start + "suspend".len();
+        output.push_str(&source[cursor..end]);
+        let before_is_identifier = start > 0
+            && source[..start]
+                .chars()
+                .next_back()
+                .is_some_and(|character| character == '_' || character.is_alphanumeric());
+        let after_is_identifier = source[end..]
+            .chars()
+            .next()
+            .is_some_and(|character| character == '_' || character.is_alphanumeric());
+        if before_is_identifier || after_is_identifier {
+            cursor = end;
+            continue;
+        }
+        let mut next = end;
+        while next < bytes.len() && bytes[next].is_ascii_whitespace() {
+            next += 1;
+        }
+        if bytes.get(next) == Some(&b'(') {
+            output.push(' ');
+            cursor = next;
+        } else {
+            cursor = end;
+        }
+    }
+    output
+}
+
+fn fix_function_type_reference_spacing(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        if !line.contains("fun ") {
+            output.push_str(line);
+            continue;
+        }
+        let header_end = line.find('(').unwrap_or(line.len());
+        let (header, suffix) = line.split_at(header_end);
+        output.push_str(&remove_whitespace_before_receiver_dot(header));
+        output.push_str(suffix);
+    }
+    output
+}
+
+fn remove_whitespace_before_receiver_dot(header: &str) -> String {
+    let bytes = header.as_bytes();
+    let mut output = String::with_capacity(header.len());
+    let mut index = 0usize;
+    while index < bytes.len() {
+        if bytes[index].is_ascii_whitespace() {
+            let start = index;
+            while index < bytes.len() && bytes[index].is_ascii_whitespace() {
+                index += 1;
+            }
+            let receiver_dot = bytes.get(index) == Some(&b'.')
+                || (bytes.get(index) == Some(&b'?') && bytes.get(index + 1) == Some(&b'.'));
+            if receiver_dot {
+                continue;
+            }
+            output.push_str(&header[start..index]);
+        } else {
+            let character = header[index..].chars().next().expect("valid UTF-8");
+            output.push(character);
+            index += character.len_utf8();
+        }
+    }
+    output
+}
+
 fn comment_spacing_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<edit::TextEdit> {
     let bytes = source.as_bytes();
     let mut edits = Vec::new();
@@ -1333,8 +1445,12 @@ mod tests {
     #[test]
     fn formatter_pipeline_is_idempotent() {
         let source = "fun main(){val x=1}  ";
-        let once = format_once(source, 4, true, &HashMap::new()).unwrap();
-        assert_eq!(format_once(&once, 4, true, &HashMap::new()).unwrap(), once);
+        let once =
+            format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
+        assert_eq!(
+            format_once(&once, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial,).unwrap(),
+            once
+        );
     }
 
     #[test]
@@ -1352,7 +1468,8 @@ mod tests {
 "####;
         let before_tree = parse_clean(source).unwrap();
         let before = protected_snapshot(source, &before_tree).unwrap().fragments;
-        let output = format_once(source, 4, true, &HashMap::new()).unwrap();
+        let output =
+            format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
         let after_tree = parse_clean(&output).unwrap();
         assert_eq!(
             protected_snapshot(&output, &after_tree).unwrap().fragments,
@@ -1363,7 +1480,7 @@ mod tests {
         assert!(output.contains("val binary = unary + 2"));
         assert!(!output.contains('\u{FFFD}'));
         assert_eq!(
-            format_once(&output, 4, true, &HashMap::new()).unwrap(),
+            format_once(&output, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial,).unwrap(),
             output
         );
     }

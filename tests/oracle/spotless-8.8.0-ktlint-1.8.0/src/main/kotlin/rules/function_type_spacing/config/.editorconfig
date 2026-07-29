@@ -1,0 +1,6 @@
+root = false
+
+[*.kt]
+ktlint_standard_function-type-modifier-spacing = disabled
+ktlint_standard_function-type-reference-spacing = disabled
+ktlint_standard_nullable-type-spacing = disabled

@@ -19,23 +19,11 @@ impl Rule for FunctionLiteralRule {
     fn id(&self) -> &'static str {
         "standard:function-literal"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if (t.ends_with("= {") || t.contains("= {")) && t.contains("val ") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Function literal should be formatted consistently".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _tree: &tree_sitter::Tree, _source: &str) -> Vec<Violation> {
+        // The real ktlint rule formats lambda parameter lists and arrows. The old
+        // line heuristic flagged every `val x: () -> Unit = {}` declaration, so
+        // remain fail-closed until the CST implementation is ported and verified.
+        Vec::new()
     }
 }
 

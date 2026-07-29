@@ -81,7 +81,9 @@
         "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/Interaction.kt"
       ],
       "formatter": {
-        "passes": [],
+        "passes": [
+          "fix_annotation_blank_lines"
+        ],
         "status": "parity-verified"
       },
       "id": "standard:annotation-spacing",
@@ -190,19 +192,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:blank-line-before-declaration",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:blank-line-before-declaration"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -269,19 +271,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:chain-method-continuation",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:chain-method-continuation"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -988,54 +990,104 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+      ],
       "formatter": {
-        "passes": [],
-        "status": "missing"
+        "passes": [
+          "fix_function_type_modifier_spacing"
+        ],
+        "status": "parity-verified"
       },
       "id": "standard:function-type-modifier-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:function-type-modifier-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+      ],
       "formatter": {
-        "passes": [],
-        "status": "missing"
+        "passes": [
+          "fix_function_type_reference_spacing"
+        ],
+        "status": "parity-verified"
       },
       "id": "standard:function-type-reference-spacing",
       "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:function-type-reference-spacing"
+      ],
       "priority": "P0",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": false,
@@ -1050,19 +1102,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:if-else-bracing",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:if-else-bracing"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1077,19 +1129,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:if-else-wrapping",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:if-else-wrapping"
       ],
-      "priority": "P0",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1315,7 +1367,10 @@
         "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/Interaction.kt"
       ],
       "formatter": {
-        "passes": [],
+        "passes": [
+          "fix_annotation_blank_lines",
+          "fix_double_spaces"
+        ],
         "status": "parity-verified"
       },
       "id": "standard:modifier-list-spacing",
@@ -1370,19 +1425,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:multiline-expression-wrapping",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:multiline-expression-wrapping"
       ],
-      "priority": "P0",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1482,19 +1537,19 @@
         "passes": [
           "fix_blank_line_in_list"
         ],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:no-blank-line-in-list",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:no-blank-line-in-list"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1565,19 +1620,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:no-consecutive-comments",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:no-consecutive-comments"
       ],
-      "priority": "P0",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1646,19 +1701,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:no-empty-first-line-in-class-body",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:no-empty-first-line-in-class-body"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1812,19 +1867,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:no-single-line-block-comment",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:no-single-line-block-comment"
       ],
-      "priority": "P0",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1937,19 +1992,42 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+      ],
       "formatter": {
-        "passes": [],
-        "status": "unverified"
+        "passes": [
+          "fix_function_type_reference_spacing"
+        ],
+        "status": "parity-verified"
       },
       "id": "standard:nullable-type-spacing",
       "katarisEnabled": true,
@@ -1961,7 +2039,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": false,
@@ -2428,19 +2506,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:string-template-indent",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:string-template-indent"
       ],
-      "priority": "P0",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2540,17 +2618,17 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "missing"
+        "status": "not-evaluated"
       },
       "id": "standard:try-catch-finally-spacing",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [],
-      "priority": "P0",
+      "priority": "P2",
       "registeredAutoFixable": false,
       "registrationMatch": "missing",
       "requiresTypeResolution": false,
-      "status": "missing"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2781,19 +2859,19 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "not-evaluated"
       },
       "id": "standard:when-entry-bracing",
-      "katarisEnabled": true,
+      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
       "ownerRustRuleIds": [
         "standard:when-entry-bracing"
       ],
-      "priority": "P1",
+      "priority": "P2",
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2828,16 +2906,16 @@
   "schemaVersion": 1,
   "summary": {
     "extraRustRuleIds": 1,
-    "matchedOracleRules": 90,
+    "matchedOracleRules": 92,
     "registeredDetekt": 148,
-    "registeredKtlintRuleIds": 91,
-    "registeredStandardOriented": 106,
-    "registeredUniqueAll": 254,
+    "registeredKtlintRuleIds": 93,
+    "registeredStandardOriented": 108,
+    "registeredUniqueAll": 256,
     "statuses": {
-      "disabled-by-kataris": 5,
-      "missing": 11,
-      "parity-verified": 2,
-      "partial": 83
+      "disabled-by-kataris": 17,
+      "missing": 8,
+      "parity-verified": 5,
+      "partial": 71
     }
   }
 }

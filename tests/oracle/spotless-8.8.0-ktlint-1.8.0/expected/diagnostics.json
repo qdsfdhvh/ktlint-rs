@@ -33,6 +33,54 @@
   },
   {
     "auto_fixable": true,
+    "column": 38,
+    "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Expected a single space between the modifier list and the function type",
+    "rule": "standard:function-type-modifier-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Unexpected whitespace",
+    "rule": "standard:function-type-reference-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Unexpected whitespace",
+    "rule": "standard:nullable-type-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 22,
+    "file": "src/main/kotlin/rules/function_type_spacing/Negative.kt",
+    "line": 3,
+    "message": "Expected a single space between the modifier list and the function type",
+    "rule": "standard:function-type-modifier-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/function_type_spacing/Negative.kt",
+    "line": 4,
+    "message": "Unexpected whitespace",
+    "rule": "standard:function-type-reference-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/function_type_spacing/Negative.kt",
+    "line": 4,
+    "message": "Unexpected whitespace",
+    "rule": "standard:nullable-type-spacing"
+  },
+  {
+    "auto_fixable": true,
     "column": 9,
     "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
     "line": 3,

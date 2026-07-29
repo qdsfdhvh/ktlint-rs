@@ -1,6 +1,6 @@
 //! ktlint rule engine — linting rules for Kotlin code.
 
-use crate::config::KtlintConfig;
+use crate::config::{CodeStyle, KtlintConfig};
 use crate::resolver::builder::build_symbol_table;
 use crate::resolver::SymbolTable;
 use tree_sitter::Tree;
@@ -56,6 +56,25 @@ pub trait Rule: Send + Sync {
     }
 }
 
+const OFFICIAL_CODE_STYLE_ONLY: &[&str] = &[
+    "standard:blank-line-before-declaration",
+    "standard:chain-method-continuation",
+    "standard:if-else-bracing",
+    "standard:if-else-wrapping",
+    "standard:multiline-expression-wrapping",
+    "standard:no-blank-line-in-list",
+    "standard:no-consecutive-comments",
+    "standard:no-empty-first-line-in-class-body",
+    "standard:no-single-line-block-comment",
+    "standard:string-template-indent",
+    "standard:try-catch-finally-spacing",
+    "standard:when-entry-bracing",
+];
+
+pub(crate) fn code_style_allows(rule_id: &str, code_style: CodeStyle) -> bool {
+    code_style == CodeStyle::KtlintOfficial || !OFFICIAL_CODE_STYLE_ONLY.contains(&rule_id)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuleMetadata {
     pub id: &'static str,
@@ -101,6 +120,9 @@ impl RuleEngine {
         let mut violations = Vec::new();
         for rule in &self.rules {
             if !self.config.is_rule_enabled(rule.id()) {
+                continue;
+            }
+            if !code_style_allows(rule.id(), self.config.code_style) {
                 continue;
             }
             if !self.rule_set_allows(rule.id()) {

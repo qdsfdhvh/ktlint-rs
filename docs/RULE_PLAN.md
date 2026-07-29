@@ -6,10 +6,10 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **90**
-- Missing: **11**
-- Partial/unverified: **83**
-- Disabled by Kataris: **5**
+- Matched to ktlint-rs registrations: **92**
+- Missing: **8**
+- Partial/unverified: **71**
+- Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
 Registration is not parity evidence. Only byte/diagnostic differential fixtures may move a rule to `parity-verified`.
@@ -24,7 +24,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:parameter-list-spacing` | yes | partial | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0/6 | 0 | 2 |
 | P0 | `standard:paren-spacing` | yes | partial | `standard:paren-spacing` | unverified: fix_parens | 0/6 | 0 | 2 |
 | P0 | `standard:colon-spacing` | yes | partial | `standard:colon-spacing` | unverified: fix_colons | 0/6 | 0 | 1 |
-| P0 | `standard:annotation-spacing` | yes | parity-verified | `standard:annotation-spacing` | parity-verified | 6/6 | 7 | 0 |
+| P0 | `standard:annotation-spacing` | yes | parity-verified | `standard:annotation-spacing` | parity-verified: fix_annotation_blank_lines | 6/6 | 7 | 0 |
 | P0 | `standard:argument-list-wrapping` | yes | partial | `standard:argument-list-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:binary-expression-wrapping` | yes | partial | `standard:binary-expression-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:block-comment-initial-star-alignment` | yes | missing | — | missing | 0/6 | 0 | 0 |
@@ -43,17 +43,13 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:expression-operand-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
 | P0 | `standard:fun-keyword-spacing` | yes | partial | `standard:fun-keyword-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:function-return-type-spacing` | yes | partial | `standard:function-return-type-spacing` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:function-type-modifier-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
-| P0 | `standard:function-type-reference-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
-| P0 | `standard:if-else-wrapping` | yes | partial | `standard:if-else-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:function-type-modifier-spacing` | yes | parity-verified | `standard:function-type-modifier-spacing` | parity-verified: fix_function_type_modifier_spacing | 6/6 | 7 | 0 |
+| P0 | `standard:function-type-reference-spacing` | yes | parity-verified | `standard:function-type-reference-spacing` | parity-verified: fix_function_type_reference_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:indent` | yes | partial | `standard:indent` | unverified: fix_indentation | 0/6 | 0 | 0 |
 | P0 | `standard:kdoc-wrapping` | yes | partial | `standard:kdoc-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:keyword-spacing` | yes | partial | `standard:keyword-spacing` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:modifier-list-spacing` | yes | parity-verified | `standard:modifier-list-spacing` | parity-verified | 6/6 | 7 | 0 |
-| P0 | `standard:multiline-expression-wrapping` | yes | partial | `standard:multiline-expression-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:no-consecutive-comments` | yes | partial | `standard:no-consecutive-comments` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:no-single-line-block-comment` | yes | partial | `standard:no-single-line-block-comment` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:nullable-type-spacing` | yes | partial | `standard:nullable-type-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:modifier-list-spacing` | yes | parity-verified | `standard:modifier-list-spacing` | parity-verified: fix_annotation_blank_lines, fix_double_spaces | 6/6 | 7 | 0 |
+| P0 | `standard:nullable-type-spacing` | yes | parity-verified | `standard:nullable-type-spacing` | parity-verified: fix_function_type_reference_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:parameter-list-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
 | P0 | `standard:parameter-wrapping` | yes | partial | `standard:parameter-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:property-wrapping` | yes | partial | `standard:property-wrapping` | unverified | 0/6 | 0 | 0 |
@@ -65,11 +61,9 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:square-brackets-spacing` | yes | partial | `standard:square-brackets-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:statement-wrapping` | yes | partial | `standard:statement-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:string-template` | yes | partial | `standard:string-template` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:string-template-indent` | yes | partial | `standard:string-template-indent` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:then-spacing` | yes | partial | `standard:then-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:trailing-comma-on-call-site` | yes | partial | `standard:trailing-comma-on-call-site` | unverified: fix_single_line_trailing_comma | 0/6 | 0 | 0 |
 | P0 | `standard:trailing-comma-on-declaration-site` | yes | partial | `standard:trailing-comma-on-declaration-site` | unverified: fix_single_line_trailing_comma | 0/6 | 0 | 0 |
-| P0 | `standard:try-catch-finally-spacing` | yes | missing | — | missing | 0/6 | 0 | 0 |
 | P0 | `standard:type-argument-comment` | yes | partial | `standard:type-argument-comment` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:type-argument-list-spacing` | yes | partial | `standard:type-argument-list-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:type-parameter-comment` | yes | partial | `standard:type-parameter-comment` | unverified | 0/6 | 0 | 0 |
@@ -80,15 +74,12 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:wrapping` | yes | partial | `standard:wrapping` | unverified: fix_all_wrapping | 0/6 | 0 | 0 |
 | P1 | `standard:annotation` | yes | partial | `standard:annotation` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:backing-property-naming` | yes | partial | `standard:backing-property-naming` | not-fixable | 0/6 | 0 | 0 |
-| P1 | `standard:blank-line-before-declaration` | yes | partial | `standard:blank-line-before-declaration` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:blank-line-between-when-conditions` | yes | partial | `standard:blank-line-between-when-conditions` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:chain-method-continuation` | yes | partial | `standard:chain-method-continuation` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:class-naming` | yes | partial | `standard:class-naming` | not-fixable | 0/6 | 0 | 0 |
 | P1 | `standard:class-signature` | yes | partial | `standard:class-signature` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:enum-entry-name-case` | yes | missing | — | missing | 0/6 | 0 | 0 |
 | P1 | `standard:final-newline` | yes | partial | `standard:final-newline` | unverified: auto_fix final-newline normalization | 0/6 | 0 | 0 |
 | P1 | `standard:function-literal` | yes | partial | `standard:function-literal` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:if-else-bracing` | yes | partial | `standard:if-else-bracing` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:import-ordering` | yes | partial | `standard:import-ordering` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:kdoc` | yes | partial | `standard:kdoc` | not-fixable | 0/6 | 0 | 0 |
 | P1 | `standard:max-line-length` | yes | partial | `standard:max-line-length` | unverified | 0/6 | 0 | 0 |
@@ -97,12 +88,10 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:multiline-if-else` | yes | partial | `standard:multiline-if-else` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:multiline-loop` | yes | partial | `standard:multiline-loop` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-blank-line-before-rbrace` | yes | partial | `standard:no-blank-line-before-rbrace` | unverified: fix_blank_lines | 0/6 | 0 | 0 |
-| P1 | `standard:no-blank-line-in-list` | yes | partial | `standard:no-blank-line-in-list` | unverified: fix_blank_line_in_list | 0/6 | 0 | 0 |
 | P1 | `standard:no-blank-lines-in-chained-method-calls` | yes | partial | `standard:no-blank-lines-in-chained-method-calls` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-consecutive-blank-lines` | yes | partial | `standard:no-consecutive-blank-lines` | unverified: fix_blank_lines | 0/6 | 0 | 0 |
 | P1 | `standard:no-empty-class-body` | yes | partial | `standard:no-empty-class-body` | not-fixable | 0/6 | 0 | 0 |
 | P1 | `standard:no-empty-file` | yes | partial | `standard:no-empty-file` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:no-empty-first-line-in-class-body` | yes | partial | `standard:no-empty-first-line-in-class-body` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-empty-first-line-in-method-block` | yes | partial | `standard:no-leading-empty-lines-in-method` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-line-break-after-else` | yes | partial | `standard:no-line-break-after-else` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-line-break-before-assignment` | yes | partial | `standard:no-line-break-before-assignment` | unverified | 0/6 | 0 | 0 |
@@ -113,12 +102,23 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:no-unused-imports` | yes | partial | `standard:no-unused-imports` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:property-naming` | yes | partial | `standard:property-naming` | not-fixable | 0/6 | 0 | 0 |
 | P1 | `standard:unnecessary-parentheses-before-trailing-lambda` | yes | partial | `standard:unnecessary-parentheses-before-trailing-lambda` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:when-entry-bracing` | yes | partial | `standard:when-entry-bracing` | unverified | 0/6 | 0 | 0 |
+| P2 | `standard:blank-line-before-declaration` | no | disabled-by-kataris | `standard:blank-line-before-declaration` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:chain-method-continuation` | no | disabled-by-kataris | `standard:chain-method-continuation` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:filename` | no | disabled-by-kataris | `standard:filename` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:function-expression-body` | no | disabled-by-kataris | `standard:function-expression-body` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:function-naming` | no | disabled-by-kataris | `standard:function-naming` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:if-else-bracing` | no | disabled-by-kataris | `standard:if-else-bracing` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:if-else-wrapping` | no | disabled-by-kataris | `standard:if-else-wrapping` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:multiline-expression-wrapping` | no | disabled-by-kataris | `standard:multiline-expression-wrapping` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:no-blank-line-in-list` | no | disabled-by-kataris | `standard:no-blank-line-in-list` | not-evaluated: fix_blank_line_in_list | 0/6 | 0 | 0 |
+| P2 | `standard:no-consecutive-comments` | no | disabled-by-kataris | `standard:no-consecutive-comments` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:no-empty-first-line-in-class-body` | no | disabled-by-kataris | `standard:no-empty-first-line-in-class-body` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:no-single-line-block-comment` | no | disabled-by-kataris | `standard:no-single-line-block-comment` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:no-wildcard-imports` | no | disabled-by-kataris | `standard:no-wildcard-imports` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:package-name` | no | disabled-by-kataris | `standard:package-name` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:string-template-indent` | no | disabled-by-kataris | `standard:string-template-indent` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:try-catch-finally-spacing` | no | disabled-by-kataris | — | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:when-entry-bracing` | no | disabled-by-kataris | `standard:when-entry-bracing` | not-evaluated | 0/6 | 0 | 0 |
 
 ## Extra ktlint-rs standard IDs
 

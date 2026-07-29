@@ -32,18 +32,37 @@ ALIASES = {
     ],
 }
 
+OFFICIAL_CODE_STYLE_ONLY = {
+    "standard:blank-line-before-declaration",
+    "standard:chain-method-continuation",
+    "standard:if-else-bracing",
+    "standard:if-else-wrapping",
+    "standard:multiline-expression-wrapping",
+    "standard:no-blank-line-in-list",
+    "standard:no-consecutive-comments",
+    "standard:no-empty-first-line-in-class-body",
+    "standard:no-single-line-block-comment",
+    "standard:string-template-indent",
+    "standard:try-catch-finally-spacing",
+    "standard:when-entry-bracing",
+}
 FORMATTER_PASSES = {
+    "standard:annotation-spacing": ["fix_annotation_blank_lines"],
     "standard:colon-spacing": ["fix_colons"],
     "standard:comma-spacing": ["fix_commas"],
     "standard:comment-spacing": ["fix_comment_spacing"],
     "standard:curly-spacing": ["fix_curly_braces"],
     "standard:double-colon-spacing": ["fix_all_spacing"],
     "standard:final-newline": ["auto_fix final-newline normalization"],
+    "standard:function-type-modifier-spacing": ["fix_function_type_modifier_spacing"],
+    "standard:function-type-reference-spacing": ["fix_function_type_reference_spacing"],
     "standard:indent": ["fix_indentation"],
     "standard:no-blank-line-before-rbrace": ["fix_blank_lines"],
     "standard:no-blank-line-in-list": ["fix_blank_line_in_list"],
     "standard:no-consecutive-blank-lines": ["fix_blank_lines"],
     "standard:no-multi-spaces": ["fix_double_spaces"],
+    "standard:modifier-list-spacing": ["fix_annotation_blank_lines", "fix_double_spaces"],
+    "standard:nullable-type-spacing": ["fix_function_type_reference_spacing"],
     "standard:no-semi": ["fix_semicolons"],
     "standard:no-trailing-spaces": ["fix_trailing_ws_protected"],
     "standard:op-spacing": ["fix_spread_operators", "fix_operators"],
@@ -197,7 +216,10 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
             if rust_ids:
                 match = "alias"
         matched_actual.update(rust_ids)
-        disabled = rule_id in disabled_rules
+        disabled = rule_id in disabled_rules or (
+            effective.get("ktlint_code_style") != "ktlint_official"
+            and rule_id in OFFICIAL_CODE_STYLE_ONLY
+        )
         if disabled:
             status = "disabled-by-kataris"
         elif not rust_ids:
