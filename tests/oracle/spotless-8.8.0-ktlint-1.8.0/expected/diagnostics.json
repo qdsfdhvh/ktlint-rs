@@ -538,6 +538,38 @@
   {
     "auto_fixable": true,
     "column": 20,
+    "file": "src/main/kotlin/rules/paren_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Unexpected spacing after \"(\"",
+    "rule": "standard:paren-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 26,
+    "file": "src/main/kotlin/rules/paren_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/paren_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing after \"(\"",
+    "rule": "standard:paren-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/paren_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing before \")\"",
+    "rule": "standard:paren-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 20,
     "file": "src/main/kotlin/rules/range_spacing/Interaction.kt",
     "line": 3,
     "message": "Unexpected spacing before \"..\"",

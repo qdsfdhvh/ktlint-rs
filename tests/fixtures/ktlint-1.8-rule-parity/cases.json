@@ -631,6 +631,31 @@
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/range_spacing/Interaction.kt"
         ]
       }
+    },
+    "standard:paren-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/paren_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/Interaction.kt"
+        ]
+      }
     }
   }
 }

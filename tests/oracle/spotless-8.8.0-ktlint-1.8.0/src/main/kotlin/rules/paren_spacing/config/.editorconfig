@@ -1,0 +1,5 @@
+root = false
+
+[*.kt]
+ktlint_standard_paren-spacing = disabled
+ktlint_standard_parameter-list-spacing = disabled

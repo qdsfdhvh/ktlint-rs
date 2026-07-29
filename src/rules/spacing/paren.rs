@@ -9,6 +9,10 @@ impl Rule for ParenSpacing {
         "standard:paren-spacing"
     }
 
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
@@ -47,7 +51,7 @@ impl ParenSpacing {
                 line: pos.row + 1,
                 col: pos.column + 2,
                 rule_id: self.id().to_string(),
-                message: "Unexpected space after \"(\"".to_string(),
+                message: "Unexpected spacing after \"(\"".to_string(),
                 auto_fixable: true,
             });
         }
@@ -74,7 +78,7 @@ impl ParenSpacing {
                 line: pos.row + 1,
                 col: pos.column,
                 rule_id: self.id().to_string(),
-                message: "Unexpected space before \")\"".to_string(),
+                message: "Unexpected spacing before \")\"".to_string(),
                 auto_fixable: true,
             });
         }

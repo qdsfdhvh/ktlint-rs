@@ -15,6 +15,14 @@ impl Rule for ParameterListSpacing {
             let trimmed = line.trim();
             if trimmed.contains('(') && trimmed.contains(')') {
                 if let Some(paren_start) = trimmed.find('(') {
+                    let list_context = trimmed[..paren_start]
+                        .trim_end()
+                        .chars()
+                        .last()
+                        .is_some_and(|ch| ch.is_alphanumeric() || matches!(ch, '_' | ')' | ']'));
+                    if !list_context {
+                        continue;
+                    }
                     if let Some(paren_end) = trimmed.rfind(')') {
                         if paren_end > paren_start + 1 {
                             let params = &trimmed[paren_start + 1..paren_end];
