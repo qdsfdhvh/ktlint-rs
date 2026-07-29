@@ -11,6 +11,24 @@ impl Rule for ModifierListSpacing {
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
+        for (line_index, line) in source.lines().enumerate() {
+            let code = line.trim_start();
+            if code.starts_with("context(") {
+                if let Some(closing) = code.find(')') {
+                    let rest = &code[closing + 1..];
+                    if rest.starts_with(char::is_whitespace) && !rest.trim_start().is_empty() {
+                        violations.push(Violation {
+                            file: String::new(),
+                            line: line_index + 1,
+                            col: line.len() - code.len() + closing + 2,
+                            rule_id: self.id().into(),
+                            message: "Single newline expected after context receiver list".into(),
+                            auto_fixable: true,
+                        });
+                    }
+                }
+            }
+        }
         walk(tree.root_node(), &mut |node| {
             if node.kind() != "modifiers" {
                 return;

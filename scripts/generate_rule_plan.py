@@ -58,6 +58,9 @@ FORMATTER_PASSES = {
     "standard:function-type-modifier-spacing": ["fix_function_type_modifier_spacing"],
     "standard:function-type-reference-spacing": ["fix_function_type_reference_spacing"],
     "standard:expression-operand-wrapping": ["fix_expression_operand_wrapping"],
+    "standard:context-receiver-list-wrapping": [
+        "fix_context_receiver_list_wrapping"
+    ],
     "standard:indent": ["fix_indentation"],
     "standard:no-blank-line-before-rbrace": ["fix_blank_lines"],
     "standard:no-blank-line-in-list": ["fix_blank_line_in_list"],

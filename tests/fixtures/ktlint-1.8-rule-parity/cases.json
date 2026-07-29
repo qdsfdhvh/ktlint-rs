@@ -76,7 +76,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
@@ -99,7 +101,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
@@ -122,7 +126,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
@@ -145,7 +151,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/block_comment_alignment/Negative.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/Disabled.kt"
@@ -168,7 +176,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/declaration_annotation_spacing/Negative.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/config/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/config/Disabled.kt"
@@ -191,7 +201,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/condition_wrapping/Noop.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/Disabled.kt"
@@ -214,7 +226,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/expression_operand_wrapping/Negative.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/expression_operand_wrapping/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/expression_operand_wrapping/config/.editorconfig",
@@ -238,7 +252,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/Disabled.kt"
@@ -260,7 +276,9 @@
         "autofix": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/enum_entry_name_case/Negative.kt"
         ],
-        "idempotence": ["scripts/spotless-differential.sh"],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
         "config": [
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/.editorconfig",
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/Disabled.kt"
@@ -284,6 +302,32 @@
         "config": [],
         "interaction": [
           "src/formatter/mod.rs::safety_corpus_preserves_nested_protected_regions_and_operator_meaning"
+        ]
+      }
+    },
+    "standard:context-receiver-list-wrapping": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/context_receiver_list_wrapping/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/Interaction.kt"
         ]
       }
     }

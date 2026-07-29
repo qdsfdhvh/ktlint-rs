@@ -402,7 +402,7 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 21] = [
+        let passes: [(&'static str, fn(&str) -> String); 23] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -412,6 +412,14 @@ fn apply_spacing_rules(
             (
                 "standard:expression-operand-wrapping",
                 fix_expression_operand_wrapping,
+            ),
+            (
+                "standard:modifier-list-spacing",
+                fix_context_receiver_list_wrapping,
+            ),
+            (
+                "standard:context-receiver-list-wrapping",
+                fix_context_receiver_list_wrapping,
             ),
             (
                 "standard:function-type-modifier-spacing",
@@ -1016,6 +1024,25 @@ fn fix_expression_operand_wrapping(source: &str) -> String {
             output.push('\n');
             output.push_str(&" ".repeat(indent + 4));
             output.push_str(&line[operand_start..]);
+        } else {
+            output.push_str(line);
+        }
+    }
+    output
+}
+
+fn fix_context_receiver_list_wrapping(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        if let Some(declaration_start) =
+            crate::rules::wrapping::compatibility::context_declaration_on_same_line(line)
+        {
+            let indent = line.len() - line.trim_start().len();
+            let closing = line[..declaration_start].trim_end().len();
+            output.push_str(&line[..closing]);
+            output.push('\n');
+            output.push_str(&" ".repeat(indent));
+            output.push_str(&line[declaration_start..]);
         } else {
             output.push_str(line);
         }

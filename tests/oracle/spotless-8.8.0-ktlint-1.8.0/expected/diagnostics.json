@@ -73,6 +73,46 @@
   },
   {
     "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Interaction.kt",
+    "line": 3,
+    "message": "Single newline expected after context receiver list",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 25,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Interaction.kt",
+    "line": 3,
+    "message": "Expected a newline after the context parameter",
+    "rule": "standard:context-receiver-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Negative.kt",
+    "line": 3,
+    "message": "Single newline expected after context receiver list",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Negative.kt",
+    "line": 3,
+    "message": "Expected a newline after the context parameter",
+    "rule": "standard:context-receiver-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/config/Disabled.kt",
+    "line": 3,
+    "message": "Single newline expected after context receiver list",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
     "column": 1,
     "file": "src/main/kotlin/rules/declaration_annotation_spacing/Interaction.kt",
     "line": 4,

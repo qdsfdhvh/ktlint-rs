@@ -33,8 +33,12 @@ impl KotlinParser {
     }
 
     pub fn parse(&mut self, source: &str) -> tree_sitter::Tree {
+        // tree-sitter-kotlin-sg predates Kotlin 2.2 context parameters. Mask
+        // their unsupported prefix and normalize the declaration boundary only
+        // for CST construction. Every replacement preserves byte offsets.
+        let normalized = Self::normalize_context_parameters(source);
         self.parser
-            .parse(source, None)
+            .parse(normalized.as_deref().unwrap_or(source), None)
             .expect("Failed to parse Kotlin source")
     }
 
@@ -46,6 +50,35 @@ impl KotlinParser {
             source,
             tree,
         })
+    }
+
+    fn normalize_context_parameters(source: &str) -> Option<String> {
+        let mut bytes = source.as_bytes().to_vec();
+        let mut changed = false;
+        let mut line_start = 0usize;
+        for line in source.split_inclusive('\n') {
+            let indent = line.len() - line.trim_start().len();
+            let code = line.trim_start();
+            if code.starts_with("context(") {
+                if let Some(closing) = code.find(')') {
+                    let prefix_start = line_start + indent;
+                    let prefix_end = prefix_start + closing + 1;
+                    bytes[prefix_start..prefix_end].fill(b' ');
+                    changed = true;
+
+                    let boundary = prefix_end;
+                    let rest = &line[indent + closing + 1..];
+                    if rest.starts_with(char::is_whitespace)
+                        && !rest.starts_with('\n')
+                        && !rest.trim_start().is_empty()
+                    {
+                        bytes[boundary] = b'\n';
+                    }
+                }
+            }
+            line_start += line.len();
+        }
+        changed.then(|| String::from_utf8(bytes).expect("source was valid UTF-8"))
     }
 }
 
@@ -67,5 +100,12 @@ mod tests {
         let root = tree.root_node();
         assert_eq!(root.kind(), "source_file");
         assert!(root.child_count() > 0);
+    }
+
+    #[test]
+    fn parse_kotlin_2_context_parameter() {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse("context(_: Foo) fun example() = Unit\n");
+        assert!(!tree.root_node().has_error());
     }
 }

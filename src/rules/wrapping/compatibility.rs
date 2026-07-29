@@ -49,6 +49,52 @@ impl Rule for ExpressionOperandWrapping {
     }
 }
 
+/// Enforces a line break between a context parameter list and its declaration.
+pub struct ContextReceiverListWrapping;
+
+impl Rule for ContextReceiverListWrapping {
+    fn id(&self) -> &'static str {
+        "standard:context-receiver-list-wrapping"
+    }
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
+    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        source
+            .lines()
+            .enumerate()
+            .filter_map(|(line_index, line)| {
+                let operand = context_declaration_on_same_line(line)?;
+                Some(Violation {
+                    file: String::new(),
+                    line: line_index + 1,
+                    col: operand + 1,
+                    rule_id: self.id().to_string(),
+                    message: "Expected a newline after the context parameter".to_string(),
+                    auto_fixable: true,
+                })
+            })
+            .collect()
+    }
+}
+
+pub(crate) fn context_declaration_on_same_line(line: &str) -> Option<usize> {
+    let indent = line.len() - line.trim_start().len();
+    let code = line.trim_start();
+    if !code.starts_with("context(") {
+        return None;
+    }
+    let closing = code.find(')')?;
+    let rest = &code[closing + 1..];
+    if rest.starts_with(char::is_whitespace) && !rest.trim_start().is_empty() {
+        Some(indent + closing + 1 + (rest.len() - rest.trim_start().len()))
+    } else {
+        None
+    }
+}
+
 pub(crate) fn unwrapped_operand_after_operator(line: &str) -> Option<usize> {
     let code = line.trim_end();
     let operators = top_level_wrappable_operators(code);
@@ -119,5 +165,21 @@ mod tests {
         let violations = ExpressionOperandWrapping.check(&tree, source);
         assert_eq!(violations.len(), 1);
         assert_eq!((violations[0].line, violations[0].col), (2, 24));
+    }
+
+    #[test]
+    fn finds_context_declaration_on_same_line() {
+        let source = "context(_: Foo) fun example() = Unit\n";
+        let tree = KotlinParser::new().parse(source);
+        let violations = ContextReceiverListWrapping.check(&tree, source);
+        assert_eq!(violations.len(), 1);
+        assert_eq!((violations[0].line, violations[0].col), (1, 17));
+    }
+
+    #[test]
+    fn ignores_wrapped_context_parameter() {
+        let source = "context(_: Foo)\nfun example() = Unit\n";
+        let tree = KotlinParser::new().parse(source);
+        assert!(ContextReceiverListWrapping.check(&tree, source).is_empty());
     }
 }
