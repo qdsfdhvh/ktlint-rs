@@ -105,6 +105,38 @@
   },
   {
     "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/colon_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/colon_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/colon_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing before \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 15,
+    "file": "src/main/kotlin/rules/colon_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
     "column": 24,
     "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Interaction.kt",
     "line": 3,

@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **66**
+- Partial/unverified: **65**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -23,7 +23,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:op-spacing` | yes | partial | `standard:op-spacing` | unverified: fix_spread_operators, fix_operators | 3/6 | 5 | 2 |
 | P0 | `standard:parameter-list-spacing` | yes | partial | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0/6 | 0 | 2 |
 | P0 | `standard:paren-spacing` | yes | partial | `standard:paren-spacing` | unverified: fix_parens | 0/6 | 0 | 2 |
-| P0 | `standard:colon-spacing` | yes | partial | `standard:colon-spacing` | unverified: fix_colons | 0/6 | 0 | 1 |
+| P0 | `standard:colon-spacing` | yes | parity-verified | `standard:colon-spacing` | parity-verified: fix_colons | 6/6 | 7 | 1 |
 | P0 | `standard:annotation-spacing` | yes | parity-verified | `standard:annotation-spacing` | parity-verified: fix_annotation_blank_lines | 6/6 | 7 | 0 |
 | P0 | `standard:argument-list-wrapping` | yes | partial | `standard:argument-list-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:binary-expression-wrapping` | yes | partial | `standard:binary-expression-wrapping` | unverified | 0/6 | 0 | 0 |

@@ -888,41 +888,56 @@ fn strip_inner_bracket_spaces(
 }
 
 fn fix_colons(source: &str) -> String {
-    let s = source.to_string();
-    // `word:word` → `word: word`, EXCEPT annotation use-site targets (`@file:`,
-    // `@get:`, `@set:`, `@param:`, …) which take no space after the colon.
-    // Rebuilt as a single forward pass — the old in-place `insert` mutated `s`
-    // while indexing a stale `chars` snapshot.
-    let chars: Vec<char> = s.chars().collect();
-    let mut out = String::with_capacity(s.len());
-    for (i, &c) in chars.iter().enumerate() {
-        out.push(c);
-        if c == ':'
-            && i > 0
-            && i + 1 < chars.len()
-            && !chars[i + 1].is_whitespace()
-            && chars[i + 1] != ':'
-        {
-            let mut j = i;
-            while j > 0 && (chars[j - 1].is_alphanumeric() || chars[j - 1] == '_') {
-                j -= 1;
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        let chars: Vec<char> = line.chars().collect();
+        let mut index = 0;
+        while index < chars.len() {
+            if chars[index] != ':'
+                || chars.get(index + 1) == Some(&':')
+                || (index > 0 && chars[index - 1] == ':')
+            {
+                output.push(chars[index]);
+                index += 1;
+                continue;
             }
-            let is_annotation_target = j > 0 && chars[j - 1] == '@';
-            if !is_annotation_target {
-                out.push(' ');
+            let prefix: String = chars[..index].iter().collect();
+            let word_start = prefix
+                .char_indices()
+                .rev()
+                .find(|(_, ch)| !ch.is_alphanumeric() && *ch != '_')
+                .map_or(0, |(offset, ch)| offset + ch.len_utf8());
+            if prefix[..word_start].ends_with('@') {
+                output.push(':');
+                index += 1;
+                continue;
+            }
+            while output.ends_with(' ') || output.ends_with('\t') {
+                output.pop();
+            }
+            let trimmed = line.trim_start();
+            let class_header = trimmed.starts_with("class ")
+                || trimmed.starts_with("data class ")
+                || trimmed.starts_with("enum class ")
+                || trimmed.starts_with("sealed class ")
+                || trimmed.starts_with("object ")
+                || trimmed.starts_with("constructor");
+            let type_constraint =
+                prefix.rfind('<') > prefix.rfind('>') || prefix.contains(" where ");
+            if class_header || type_constraint {
+                output.push(' ');
+            }
+            output.push(':');
+            index += 1;
+            while matches!(chars.get(index), Some(' ' | '\t')) {
+                index += 1;
+            }
+            if !matches!(chars.get(index), None | Some('\n' | '\r')) {
+                output.push(' ');
             }
         }
     }
-    out.split('\n')
-        .map(|line| {
-            if line.contains("class ") {
-                line.replace("):", ") :")
-            } else {
-                line.to_string()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+    output
 }
 
 fn fix_annotation_blank_lines(source: &str) -> String {
