@@ -1,6 +1,9 @@
 //! Auto-fix formatter — applies text-level corrections for fixable violations.
+pub(crate) mod edit;
+
 use crate::parser::KotlinParser;
 use crate::rules::Violation;
+use edit::{minimal_edit, EditSet};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -8,11 +11,11 @@ use std::path::PathBuf;
 /// off masked spans (see [`mask_protected`]).
 const SENTINEL: char = '\u{E000}';
 
-/// True for CST node kinds whose *interior* the text-level spacing fixers must
-/// never edit: string/char literals and comments. The text fixers (`fix_operators`,
-/// `fix_colons`, `fix_comment_spacing`, …) are CST-unaware and would otherwise
-/// insert spaces inside `"https://x?a=b"`, KDoc, and `// url` comments. Matching
-/// on substrings keeps this robust across grammar naming variants
+/// True for CST node kinds whose *interior* generic text-level spacing fixers must
+/// never edit. Those fixers (`fix_operators`, `fix_colons`, and similar) are
+/// CST-unaware and would otherwise insert spaces inside strings, KDoc, and comments.
+/// The comment-spacing rule is a separate CST-owned edit exception. Matching on
+/// substrings keeps this robust across grammar naming variants
 /// (`line_string_literal`, `multiline_string_literal`, `line_comment`, …).
 fn is_protected_kind(kind: &str) -> bool {
     kind == "string_literal"
@@ -84,14 +87,14 @@ fn collect_protected(node: tree_sitter::Node, source: &str, out: &mut Vec<(usize
 /// with real `\n`s kept between fragments — this keeps line-oriented fixers
 /// (`fix_indentation`, `fix_blank_line_in_list`, `fix_trailing_ws`) seeing the same
 /// line structure, while the fragments contain no character any fixer targets.
-fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> (String, Vec<String>) {
+fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> Option<(String, Vec<String>)> {
     if source.contains(SENTINEL) {
-        return (source.to_string(), Vec::new());
+        return None;
     }
     let mut ranges: Vec<(usize, usize)> = Vec::new();
     collect_protected(tree.root_node(), source, &mut ranges);
     if ranges.is_empty() {
-        return (source.to_string(), Vec::new());
+        return Some((source.to_string(), Vec::new()));
     }
     ranges.sort_by_key(|r| r.0);
 
@@ -118,7 +121,7 @@ fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> (String, Vec<String
         last = end;
     }
     out.push_str(&source[last..]);
-    (out, store)
+    Some((out, store))
 }
 
 fn mask_strings_and_chars(
@@ -209,6 +212,121 @@ fn restore_protected(text: &str, store: &[String]) -> String {
     out
 }
 
+fn parse_clean(source: &str) -> Option<tree_sitter::Tree> {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    (!tree.root_node().has_error()).then_some(tree)
+}
+
+#[derive(Debug)]
+struct ProtectedSnapshot {
+    ranges: Vec<std::ops::Range<usize>>,
+    fragments: Vec<String>,
+}
+
+fn protected_snapshot(source: &str, tree: &tree_sitter::Tree) -> anyhow::Result<ProtectedSnapshot> {
+    let mut raw_ranges = Vec::new();
+    collect_protected(tree.root_node(), source, &mut raw_ranges);
+    raw_ranges.sort_unstable();
+    let mut previous_end = 0usize;
+    let mut ranges = Vec::with_capacity(raw_ranges.len());
+    let mut fragments = Vec::with_capacity(raw_ranges.len());
+    for (index, (start, end)) in raw_ranges.into_iter().enumerate() {
+        if index > 0 && start < previous_end {
+            anyhow::bail!("overlapping CST protected regions");
+        }
+        if start > end
+            || end > source.len()
+            || !source.is_char_boundary(start)
+            || !source.is_char_boundary(end)
+        {
+            anyhow::bail!("invalid CST protected region");
+        }
+        ranges.push(start..end);
+        fragments.push(source[start..end].to_string());
+        previous_end = end;
+    }
+    Ok(ProtectedSnapshot { ranges, fragments })
+}
+
+fn edits_around_protected_regions(
+    owner: &'static str,
+    source: &str,
+    transformed: &str,
+    before: &ProtectedSnapshot,
+    after: &ProtectedSnapshot,
+) -> Vec<edit::TextEdit> {
+    let mut edits = Vec::new();
+    let mut source_start = 0usize;
+    let mut transformed_start = 0usize;
+    for (source_range, transformed_range) in before.ranges.iter().zip(&after.ranges) {
+        if let Some(mut edit) = minimal_edit(
+            owner,
+            &source[source_start..source_range.start],
+            &transformed[transformed_start..transformed_range.start],
+        ) {
+            edit.range.start += source_start;
+            edit.range.end += source_start;
+            edits.push(edit);
+        }
+        source_start = source_range.end;
+        transformed_start = transformed_range.end;
+    }
+    if let Some(mut edit) = minimal_edit(
+        owner,
+        &source[source_start..],
+        &transformed[transformed_start..],
+    ) {
+        edit.range.start += source_start;
+        edit.range.end += source_start;
+        edits.push(edit);
+    }
+    edits
+}
+
+fn safe_transform<F>(owner: &'static str, source: &str, transform: F) -> anyhow::Result<String>
+where
+    F: Fn(&str) -> String,
+{
+    if source.contains(SENTINEL) {
+        return Ok(source.to_string());
+    }
+    let Some(before_tree) = parse_clean(source) else {
+        return Ok(source.to_string());
+    };
+    let protected_before = protected_snapshot(source, &before_tree)?;
+    let transformed = transform(source);
+    if transformed == source {
+        return Ok(source.to_string());
+    }
+    let Some(after_tree) = parse_clean(&transformed) else {
+        anyhow::bail!("{owner} produced invalid Kotlin syntax");
+    };
+    let protected_after = protected_snapshot(&transformed, &after_tree)?;
+    if protected_before.fragments != protected_after.fragments {
+        anyhow::bail!("{owner} modified a protected Kotlin region");
+    }
+    if transform(&transformed) != transformed {
+        anyhow::bail!("{owner} is not idempotent");
+    }
+
+    let edits = edits_around_protected_regions(
+        owner,
+        source,
+        &transformed,
+        &protected_before,
+        &protected_after,
+    );
+    if edits.is_empty() {
+        anyhow::bail!("{owner} changed text without producing an edit");
+    }
+    let applied = EditSet::new(edits).apply(source)?;
+    if applied != transformed {
+        anyhow::bail!("{owner} edit application diverged from pass output");
+    }
+    Ok(applied)
+}
+
 /// Canonicalize whitespace after Kotlin's spread operator using CST context.
 /// A spread `*` is unary syntax (`call(*args)`), not the binary multiplication
 /// operator handled by [`fix_operators`].
@@ -243,6 +361,92 @@ fn fix_spread_operators(source: &str, tree: &tree_sitter::Tree) -> String {
     output
 }
 
+fn masked_transform(source: &str, transform: fn(&str) -> String) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let Some((masked, store)) = mask_protected(source, &tree) else {
+        return source.to_string();
+    };
+    restore_protected(&transform(&masked), &store)
+}
+
+fn apply_spacing_rules(source: &str) -> anyhow::Result<String> {
+    let mut text = source.to_string();
+    for _ in 0..5 {
+        let before = text.clone();
+        text = safe_transform("standard:op-spacing", &text, |input| {
+            let Some(tree) = parse_clean(input) else {
+                return input.to_string();
+            };
+            fix_spread_operators(input, &tree)
+        })?;
+        let passes: [(&'static str, fn(&str) -> String); 15] = [
+            ("standard:curly-spacing", fix_curly_braces),
+            ("standard:op-spacing", fix_operators),
+            ("standard:comma-spacing", fix_commas),
+            ("standard:paren-spacing", fix_parens),
+            ("standard:spacing-around-angle-brackets", fix_angle_brackets),
+            ("standard:colon-spacing", fix_colons),
+            ("standard:keyword-spacing", fix_keyword_spacing),
+            ("standard:range-spacing", fix_range_spacing),
+            (
+                "standard:unnecessary-parentheses-before-trailing-lambda",
+                fix_trailing_lambda_parentheses,
+            ),
+            ("legacy:semicolon-spacing-pass", fix_semicolons),
+            ("standard:trailing-comma", fix_single_line_trailing_comma),
+            ("standard:no-consecutive-blank-lines", fix_blank_lines),
+            ("standard:no-blank-line-in-list", fix_blank_line_in_list),
+            ("legacy:brace-between-pass", fix_brace_between),
+            ("legacy:double-space-pass", fix_double_spaces),
+        ];
+        for (owner, transform) in passes {
+            text = safe_transform(owner, &text, |input| masked_transform(input, transform))?;
+        }
+        text = safe_transform(
+            "legacy:class-header-spacing-pass",
+            &text,
+            fix_class_header_spacing,
+        )?;
+        if text == before {
+            break;
+        }
+    }
+
+    text = apply_comment_spacing(&text)?;
+    Ok(text)
+}
+
+fn format_once(
+    source: &str,
+    indent_size: usize,
+    insert_final_newline: bool,
+) -> anyhow::Result<String> {
+    let mut text = apply_spacing_rules(source)?;
+    text = safe_transform("standard:try-catch-finally-spacing", &text, |input| {
+        masked_transform(input, fix_try_catch)
+    })?;
+    text = safe_transform("standard:wrapping", &text, |input| {
+        masked_transform(input, fix_single_line_control_blocks)
+    })?;
+    text = safe_transform("standard:indent", &text, |input| {
+        fix_indentation(input, indent_size)
+    })?;
+    text = safe_transform(
+        "standard:no-trailing-spaces",
+        &text,
+        fix_trailing_ws_protected,
+    )?;
+    safe_transform("standard:final-newline", &text, |input| {
+        let mut output = input.to_string();
+        if insert_final_newline && !output.ends_with('\n') {
+            output.push('\n');
+        }
+        output
+    })
+}
+
 pub fn auto_fix(
     _files: &[PathBuf],
     violations: &[Violation],
@@ -271,14 +475,14 @@ pub fn auto_fix(
             .collect();
 
         let original = std::fs::read_to_string(file_path)?;
-        let mut text = original.clone();
-        text = fix_all_spacing(&text);
-        text = fix_all_wrapping(&text);
-        text = fix_indentation(&text, indent_size);
-        text = fix_trailing_ws_protected(&text);
-        // Issue #45: restore final newline if config requires it
-        if insert_final_newline && !text.ends_with('\n') {
-            text.push('\n');
+        // Unsupported syntax and sentinel collisions are fail-closed for the entire
+        // file, including newline/whitespace normalization.
+        if original.contains(SENTINEL) || parse_clean(&original).is_none() {
+            continue;
+        }
+        let text = format_once(&original, indent_size, insert_final_newline)?;
+        if format_once(&text, indent_size, insert_final_newline)? != text {
+            anyhow::bail!("formatter pipeline is not idempotent for {file_path}");
         }
         if text != original {
             std::fs::write(file_path, text)?;
@@ -287,6 +491,7 @@ pub fn auto_fix(
     Ok(())
 }
 
+#[cfg(test)]
 fn fix_all_spacing(source: &str) -> String {
     let mut parser = KotlinParser::new();
     let initial_tree = parser.parse(source);
@@ -305,7 +510,9 @@ fn fix_all_spacing(source: &str) -> String {
     }
     // Fence off string/char-literal and comment interiors: the text-level fixers
     // below are CST-unaware and would corrupt URLs, KDoc, and `//` inside strings.
-    let (masked, store) = mask_protected(&spread_fixed, &tree);
+    let Some((masked, store)) = mask_protected(&spread_fixed, &tree) else {
+        return source.to_string();
+    };
     let mut text = masked;
     for _ in 0..5 {
         let before = text.clone();
@@ -334,13 +541,16 @@ fn fix_all_spacing(source: &str) -> String {
     fix_comment_spacing(&restored)
 }
 
+#[cfg(test)]
 fn fix_all_wrapping(source: &str) -> String {
     let mut parser = KotlinParser::new();
     let tree = parser.parse(source);
     if tree.root_node().has_error() {
         return source.to_string();
     }
-    let (masked, store) = mask_protected(source, &tree);
+    let Some((masked, store)) = mask_protected(source, &tree) else {
+        return source.to_string();
+    };
     let text = fix_single_line_control_blocks(&fix_try_catch(&masked));
     restore_protected(&text, &store)
 }
@@ -351,7 +561,9 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
     if tree.root_node().has_error() {
         return source.to_string();
     }
-    let (masked, store) = mask_protected(source, &tree);
+    let Some((masked, store)) = mask_protected(source, &tree) else {
+        return source.to_string();
+    };
     let existing_indented_code_lines = masked
         .lines()
         .filter(|line| {
@@ -406,7 +618,9 @@ fn fix_trailing_ws(source: &str) -> String {
 fn fix_trailing_ws_protected(source: &str) -> String {
     let mut parser = KotlinParser::new();
     let tree = parser.parse(source);
-    let (masked, store) = mask_protected(source, &tree);
+    let Some((masked, store)) = mask_protected(source, &tree) else {
+        return source.to_string();
+    };
     restore_protected(&fix_trailing_ws(&masked), &store)
 }
 
@@ -614,22 +828,24 @@ fn fix_colons(source: &str) -> String {
         .join("\n")
 }
 
-fn fix_comment_spacing(source: &str) -> String {
-    let mut parser = KotlinParser::new();
-    let tree = parser.parse(source);
+fn comment_spacing_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<edit::TextEdit> {
     let bytes = source.as_bytes();
-    let mut insertions = Vec::new();
+    let mut edits = Vec::new();
     let mut stack = vec![tree.root_node()];
     while let Some(node) = stack.pop() {
         if node.kind().contains("comment") {
             let start = node.start_byte();
             let text = &bytes[start..node.end_byte()];
             if text.starts_with(b"//")
-                && !text.starts_with(b"// ")
-                && !text.starts_with(b"///")
-                && text.get(2).is_some_and(|byte| *byte != b'\n')
+                && text
+                    .get(2)
+                    .is_some_and(|byte| !byte.is_ascii_whitespace() && *byte != b'/')
             {
-                insertions.push(start + 2);
+                edits.push(edit::TextEdit::new(
+                    "standard:comment-spacing",
+                    start + 2..start + 2,
+                    " ",
+                ));
             }
         }
         for index in (0..node.child_count()).rev() {
@@ -638,12 +854,30 @@ fn fix_comment_spacing(source: &str) -> String {
             }
         }
     }
-    let mut fixed = source.to_string();
-    insertions.sort_unstable_by(|left, right| right.cmp(left));
-    for offset in insertions {
-        fixed.insert(offset, ' ');
+    edits
+}
+
+fn apply_comment_spacing(source: &str) -> anyhow::Result<String> {
+    let Some(tree) = parse_clean(source) else {
+        return Ok(source.to_string());
+    };
+    let edits = comment_spacing_edits(source, &tree);
+    if edits.is_empty() {
+        return Ok(source.to_string());
     }
-    fixed
+    let output = EditSet::new(edits).apply(source)?;
+    let Some(after_tree) = parse_clean(&output) else {
+        anyhow::bail!("standard:comment-spacing produced invalid Kotlin syntax");
+    };
+    if !comment_spacing_edits(&output, &after_tree).is_empty() {
+        anyhow::bail!("standard:comment-spacing is not idempotent");
+    }
+    Ok(output)
+}
+
+#[cfg(test)]
+fn fix_comment_spacing(source: &str) -> String {
+    apply_comment_spacing(source).unwrap_or_else(|_| source.to_string())
 }
 
 fn fix_keyword_spacing(source: &str) -> String {
@@ -953,6 +1187,128 @@ fn fix_string_template(source: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn safety_layer_rejects_invalid_kotlin_output() {
+        let error =
+            safe_transform("unsafe-rule", "val x = 1\n", |_| "fun {".to_string()).unwrap_err();
+        assert!(error.to_string().contains("invalid Kotlin syntax"));
+    }
+
+    #[test]
+    fn safety_layer_rejects_protected_region_changes() {
+        let error = safe_transform("unsafe-rule", "val x = \"safe\"\n", |source| {
+            source.replace("safe", "changed")
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("protected Kotlin region"));
+    }
+
+    #[test]
+    fn safety_layer_rejects_non_idempotent_pass() {
+        let error = safe_transform("toggle-rule", "val x = 1", |source| {
+            if source.ends_with('\n') {
+                source.trim_end_matches('\n').to_string()
+            } else {
+                format!("{source}\n")
+            }
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("not idempotent"));
+    }
+
+    #[test]
+    fn safety_layer_does_not_run_on_parse_errors_or_sentinel_collisions() {
+        let broken = "fun broken(";
+        assert_eq!(
+            safe_transform("rule", broken, |_| panic!("must not transform")).unwrap(),
+            broken
+        );
+        let collision = format!("val x = 1 // {SENTINEL}");
+        assert_eq!(
+            safe_transform("rule", &collision, |_| panic!("must not transform")).unwrap(),
+            collision
+        );
+    }
+
+    #[test]
+    fn formatter_pipeline_is_idempotent() {
+        let source = "fun main(){val x=1}  ";
+        let once = format_once(source, 4, true).unwrap();
+        assert_eq!(format_once(&once, 4, true).unwrap(), once);
+    }
+
+    #[test]
+    fn safety_corpus_preserves_nested_protected_regions_and_operator_meaning() {
+        let source = r####"fun nested(args: Array<String>) {
+    val spread = arrayOf(* args)
+    val unary = -1
+    val binary = unary+2
+    val text = "a+b // text"
+    val raw = """raw * - + // text"""
+    val charValue = '+'
+    val `odd+name` = binary
+    println("$spread $unary $binary $text $raw $charValue ${`odd+name`}")
+}
+"####;
+        let before_tree = parse_clean(source).unwrap();
+        let before = protected_snapshot(source, &before_tree).unwrap().fragments;
+        let output = format_once(source, 4, true).unwrap();
+        let after_tree = parse_clean(&output).unwrap();
+        assert_eq!(
+            protected_snapshot(&output, &after_tree).unwrap().fragments,
+            before
+        );
+        assert!(output.contains("arrayOf(*args)"));
+        assert!(output.contains("val unary = -1"));
+        assert!(output.contains("val binary = unary + 2"));
+        assert!(!output.contains('\u{FFFD}'));
+        assert_eq!(format_once(&output, 4, true).unwrap(), output);
+    }
+
+    #[test]
+    fn safety_layer_protects_every_opaque_kotlin_region() {
+        let cases = [
+            ("val x = \"safe\"\n", "safe", "changed"),
+            ("val x = \"\"\"safe\"\"\"\n", "safe", "changed"),
+            ("val x = 's'\n", "'s'", "'x'"),
+            ("// safe\nval x = 1\n", "safe", "changed"),
+            ("val `safe` = 1\n", "safe", "changed"),
+        ];
+        for (source, old, new) in cases {
+            let error =
+                safe_transform("unsafe-rule", source, |input| input.replace(old, new)).unwrap_err();
+            assert!(
+                error.to_string().contains("protected Kotlin region"),
+                "unexpected result for {source:?}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn generated_edits_never_span_protected_bytes() {
+        let source = "val a=1; val text=\"safe\"; val b=2\n";
+        let transformed = "val a = 1; val text = \"safe\"; val b = 2\n";
+        let before = protected_snapshot(source, &parse_clean(source).unwrap()).unwrap();
+        let after = protected_snapshot(transformed, &parse_clean(transformed).unwrap()).unwrap();
+        let edits = edits_around_protected_regions(
+            "standard:op-spacing",
+            source,
+            transformed,
+            &before,
+            &after,
+        );
+        for edit in &edits {
+            for protected in &before.ranges {
+                assert!(
+                    edit.range.end <= protected.start || edit.range.start >= protected.end,
+                    "edit {:?} spans protected range {protected:?}",
+                    edit.range
+                );
+            }
+        }
+        assert_eq!(EditSet::new(edits).apply(source).unwrap(), transformed);
+    }
 
     #[test]
     fn fix_operator_equals() {
