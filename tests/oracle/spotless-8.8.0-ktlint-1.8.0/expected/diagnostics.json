@@ -177,6 +177,22 @@
   },
   {
     "auto_fixable": true,
+    "column": 39,
+    "file": "src/main/kotlin/rules/final_newline/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 19,
+    "file": "src/main/kotlin/rules/final_newline/Negative.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
     "column": 38,
     "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
     "line": 3,

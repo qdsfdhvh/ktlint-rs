@@ -97,8 +97,7 @@ impl CodeStyle {
         match self {
             Self::AndroidStudio => matches!(
                 rule_id,
-                "standard:final-newline"
-                    | "standard:no-wildcard-imports"
+                "standard:no-wildcard-imports"
                     | "standard:import-ordering"
                     | "standard:trailing-comma"
                     | "standard:no-unused-imports"
@@ -418,7 +417,7 @@ mod tests {
             code_style: CodeStyle::AndroidStudio,
             ..Default::default()
         };
-        assert!(!config.is_rule_enabled("standard:final-newline"));
+        assert!(config.is_rule_enabled("standard:final-newline"));
         assert!(config.is_rule_enabled("standard:curly-spacing"));
     }
 

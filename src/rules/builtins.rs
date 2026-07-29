@@ -56,9 +56,9 @@ impl Rule for FinalNewline {
             vec![Violation {
                 file: String::new(),
                 line: s.lines().count(),
-                col: 0,
+                col: s.lines().next_back().map_or(1, |line| line.chars().count()),
                 rule_id: self.id().into(),
-                message: "File must end with a newline".into(),
+                message: "File must end with a newline (\\n)".into(),
                 auto_fixable: true,
             }]
         }

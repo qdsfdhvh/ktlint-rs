@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **70**
+- Partial/unverified: **69**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -78,7 +78,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:class-naming` | yes | parity-verified | `standard:class-naming` | not-fixable | 6/6 | 7 | 0 |
 | P1 | `standard:class-signature` | yes | partial | `standard:class-signature` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:enum-entry-name-case` | yes | partial | `standard:enum-entry-name-case` | unverified | 6/6 | 7 | 0 |
-| P1 | `standard:final-newline` | yes | partial | `standard:final-newline` | unverified: auto_fix final-newline normalization | 0/6 | 0 | 0 |
+| P1 | `standard:final-newline` | yes | parity-verified | `standard:final-newline` | parity-verified: auto_fix final-newline normalization | 6/6 | 7 | 0 |
 | P1 | `standard:function-literal` | yes | partial | `standard:function-literal` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:import-ordering` | yes | partial | `standard:import-ordering` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:kdoc` | yes | partial | `standard:kdoc` | not-fixable | 0/6 | 0 | 0 |
