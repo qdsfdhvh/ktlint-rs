@@ -222,5 +222,101 @@
     "line": 5,
     "message": "Single whitespace expected after modifier",
     "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 3,
+    "message": "Parameter should start on a newline",
+    "rule": "standard:parameter-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 3,
+    "message": "Missing newline after \"(\"",
+    "rule": "standard:wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 5,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Single whitespace expected before parameter",
+    "rule": "standard:function-signature"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Missing newline before \")\"",
+    "rule": "standard:wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Missing newline before \")\"",
+    "rule": "standard:parameter-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Missing trailing comma before \")\"",
+    "rule": "standard:trailing-comma-on-declaration-site"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 3,
+    "message": "Parameter should start on a newline",
+    "rule": "standard:parameter-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 3,
+    "message": "Missing newline after \"(\"",
+    "rule": "standard:wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 5,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Single whitespace expected before parameter",
+    "rule": "standard:function-signature"
+  },
+  {
+    "auto_fixable": true,
+    "column": 18,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Missing newline before \")\"",
+    "rule": "standard:wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 19,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Missing newline before \")\"",
+    "rule": "standard:parameter-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 19,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Missing trailing comma before \")\"",
+    "rule": "standard:trailing-comma-on-declaration-site"
   }
 ]

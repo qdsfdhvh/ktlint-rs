@@ -38,12 +38,13 @@ impl Rule for FunctionSignatureSpacing {
             if t.starts_with("fun ") && t.contains('(') && !t.contains(')') {
                 let after_open = t.split_once('(').map_or("", |(_, rest)| rest).trim();
                 if !after_open.is_empty() {
+                    let next = l.get(i + 1).copied().unwrap_or("");
                     v.push(Violation {
                         file: String::new(),
-                        line: i + 1,
-                        col: 1,
+                        line: i + 2,
+                        col: next.len() - next.trim_start().len() + 1,
                         rule_id: self.id().into(),
-                        message: "Newline expected after opening parenthesis".into(),
+                        message: "Single whitespace expected before parameter".into(),
                         auto_fixable: true,
                     });
                 }

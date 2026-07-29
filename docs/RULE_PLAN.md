@@ -6,8 +6,8 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **99**
-- Missing: **1**
+- Matched to ktlint-rs registrations: **100**
+- Missing: **0**
 - Partial/unverified: **72**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
@@ -50,7 +50,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:keyword-spacing` | yes | partial | `standard:keyword-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:modifier-list-spacing` | yes | parity-verified | `standard:modifier-list-spacing` | parity-verified: fix_annotation_blank_lines, fix_double_spaces | 6/6 | 7 | 0 |
 | P0 | `standard:nullable-type-spacing` | yes | parity-verified | `standard:nullable-type-spacing` | parity-verified: fix_function_type_reference_spacing | 6/6 | 7 | 0 |
-| P0 | `standard:parameter-list-wrapping` | yes | missing | — | missing | 0/6 | 0 | 0 |
+| P0 | `standard:parameter-list-wrapping` | yes | parity-verified | `standard:parameter-list-wrapping` | parity-verified: fix_parameter_list_wrapping | 6/6 | 8 | 0 |
 | P0 | `standard:parameter-wrapping` | yes | partial | `standard:parameter-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:property-wrapping` | yes | partial | `standard:property-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:range-spacing` | yes | partial | `standard:spacing-around-range-operator` | unverified: fix_range_spacing | 0/6 | 0 | 0 |

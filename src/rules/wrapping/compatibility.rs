@@ -95,6 +95,115 @@ pub(crate) fn context_declaration_on_same_line(line: &str) -> Option<usize> {
     }
 }
 
+/// Wraps multiline function and constructor parameter lists.
+pub struct ParameterListWrapping;
+
+impl Rule for ParameterListWrapping {
+    fn id(&self) -> &'static str {
+        "standard:parameter-list-wrapping"
+    }
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
+    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let lines: Vec<&str> = source.lines().collect();
+        let mut violations = Vec::new();
+        let mut index = 0usize;
+        while index + 1 < lines.len() {
+            let Some(opening) = declaration_parameter_opening(lines[index]) else {
+                index += 1;
+                continue;
+            };
+            if lines[index][opening + 1..].contains(')')
+                || lines[index][opening + 1..].trim().is_empty()
+            {
+                index += 1;
+                continue;
+            }
+            let mut closing_line = index + 1;
+            while closing_line < lines.len() && !lines[closing_line].contains(')') {
+                closing_line += 1;
+            }
+            if closing_line >= lines.len() {
+                break;
+            }
+            let closing = lines[closing_line].find(')').unwrap_or(0);
+            let signature_rule = if lines[index].trim_start().starts_with("class ") {
+                "standard:class-signature"
+            } else {
+                "standard:function-signature"
+            };
+            if signature_rule == "standard:class-signature" {
+                violations.push(Violation {
+                    file: String::new(),
+                    line: index + 1,
+                    col: opening + 2,
+                    rule_id: signature_rule.into(),
+                    message: "Newline expected after opening parenthesis".into(),
+                    auto_fixable: true,
+                });
+            }
+            violations.push(Violation {
+                file: String::new(),
+                line: index + 1,
+                col: opening + 2,
+                rule_id: self.id().into(),
+                message: "Parameter should start on a newline".into(),
+                auto_fixable: true,
+            });
+            violations.push(Violation {
+                file: String::new(),
+                line: index + 1,
+                col: opening + 2,
+                rule_id: "standard:wrapping".into(),
+                message: "Missing newline after \"(\"".into(),
+                auto_fixable: true,
+            });
+            if !lines[closing_line][..closing].trim().is_empty() {
+                violations.push(Violation {
+                    file: String::new(),
+                    line: closing_line + 1,
+                    col: closing,
+                    rule_id: "standard:wrapping".into(),
+                    message: "Missing newline before \")\"".into(),
+                    auto_fixable: true,
+                });
+
+                violations.push(Violation {
+                    file: String::new(),
+                    line: closing_line + 1,
+                    col: closing + 1,
+                    rule_id: self.id().into(),
+                    message: "Missing newline before \")\"".into(),
+                    auto_fixable: true,
+                });
+                violations.push(Violation {
+                    file: String::new(),
+                    line: closing_line + 1,
+                    col: closing + 1,
+                    rule_id: "standard:trailing-comma-on-declaration-site".into(),
+                    message: "Missing trailing comma before \")\"".into(),
+                    auto_fixable: true,
+                });
+            }
+            index = closing_line + 1;
+        }
+        violations
+    }
+}
+
+fn declaration_parameter_opening(line: &str) -> Option<usize> {
+    let trimmed = line.trim_start();
+    (trimmed.starts_with("fun ")
+        || trimmed.starts_with("class ")
+        || trimmed.starts_with("data class ")
+        || trimmed.starts_with("constructor("))
+    .then(|| line.find('('))
+    .flatten()
+}
+
 pub(crate) fn unwrapped_operand_after_operator(line: &str) -> Option<usize> {
     let code = line.trim_end();
     let operators = top_level_wrappable_operators(code);

@@ -61,6 +61,7 @@ FORMATTER_PASSES = {
     "standard:context-receiver-list-wrapping": [
         "fix_context_receiver_list_wrapping"
     ],
+    "standard:parameter-list-wrapping": ["fix_parameter_list_wrapping"],
     "standard:indent": ["fix_indentation"],
     "standard:no-blank-line-before-rbrace": ["fix_blank_lines"],
     "standard:no-blank-line-in-list": ["fix_blank_line_in_list"],

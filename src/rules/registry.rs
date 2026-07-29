@@ -112,6 +112,7 @@ impl Registry {
             Box::new(wrapping::compatibility::ConditionWrapping),
             Box::new(wrapping::compatibility::ExpressionOperandWrapping),
             Box::new(wrapping::compatibility::ContextReceiverListWrapping),
+            Box::new(wrapping::compatibility::ParameterListWrapping),
             Box::new(wrapping::GeneralWrapping),
             Box::new(wrapping::MultilineExpressionWrapping),
             Box::new(wrapping::MultilineIfElse),

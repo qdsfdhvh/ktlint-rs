@@ -402,7 +402,7 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 23] = [
+        let passes: [(&'static str, fn(&str) -> String); 24] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -420,6 +420,10 @@ fn apply_spacing_rules(
             (
                 "standard:context-receiver-list-wrapping",
                 fix_context_receiver_list_wrapping,
+            ),
+            (
+                "standard:parameter-list-wrapping",
+                fix_parameter_list_wrapping,
             ),
             (
                 "standard:function-type-modifier-spacing",
@@ -1027,6 +1031,42 @@ fn fix_expression_operand_wrapping(source: &str) -> String {
         } else {
             output.push_str(line);
         }
+    }
+    output
+}
+
+fn fix_parameter_list_wrapping(source: &str) -> String {
+    let lines: Vec<&str> = source.split_inclusive('\n').collect();
+    let mut output = String::with_capacity(source.len() + 16);
+    let mut index = 0usize;
+    while index < lines.len() {
+        let line = lines[index];
+        let trimmed = line.trim_start();
+        let declaration = trimmed.starts_with("fun ")
+            || trimmed.starts_with("class ")
+            || trimmed.starts_with("data class ")
+            || trimmed.starts_with("constructor(");
+        let opening = declaration.then(|| line.find('(')).flatten();
+        if let Some(opening) = opening {
+            if !line[opening + 1..].contains(')')
+                && !line[opening + 1..].trim().is_empty()
+                && index + 1 < lines.len()
+            {
+                if let Some(closing) = lines[index + 1].find(')') {
+                    let first = line[opening + 1..].trim();
+                    let second = lines[index + 1][..closing].trim().trim_end_matches(',');
+                    output.push_str(&line[..=opening]);
+                    output.push_str(first);
+                    output.push(' ');
+                    output.push_str(second);
+                    output.push_str(&lines[index + 1][closing..]);
+                    index += 2;
+                    continue;
+                }
+            }
+        }
+        output.push_str(line);
+        index += 1;
     }
     output
 }
