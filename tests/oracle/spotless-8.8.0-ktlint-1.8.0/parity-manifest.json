@@ -22,7 +22,7 @@
   },
   "rules": [
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -46,7 +46,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -99,7 +99,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -123,7 +123,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -174,7 +174,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -198,7 +198,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -228,7 +228,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -252,7 +252,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -332,7 +332,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -356,7 +356,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -407,7 +407,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -431,7 +431,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -584,7 +584,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -608,7 +608,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -710,7 +710,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -734,7 +734,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -979,10 +979,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1006,7 +1006,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1213,7 +1213,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1237,7 +1237,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1342,7 +1342,7 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1366,7 +1366,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1523,7 +1523,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1547,10 +1547,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1576,10 +1576,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1603,10 +1603,10 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1630,7 +1630,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1681,7 +1681,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1705,10 +1705,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1732,7 +1732,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1786,7 +1786,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1810,7 +1810,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1840,7 +1840,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1864,10 +1864,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1891,7 +1891,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1973,7 +1973,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1997,7 +1997,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2127,7 +2127,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2151,7 +2151,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2181,7 +2181,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2205,10 +2205,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "alias",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2232,10 +2232,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2259,7 +2259,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2439,7 +2439,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2463,10 +2463,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2490,7 +2490,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2570,7 +2570,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2609,7 +2609,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2639,7 +2639,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2666,7 +2666,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2721,7 +2721,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2745,7 +2745,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2798,7 +2798,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2822,10 +2822,10 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2849,7 +2849,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2902,7 +2902,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2928,7 +2928,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2981,7 +2981,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3005,10 +3005,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3032,10 +3032,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "alias",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3059,10 +3059,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3086,10 +3086,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3113,7 +3113,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3143,7 +3143,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3167,10 +3167,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3196,7 +3196,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3253,7 +3253,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3277,10 +3277,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3304,10 +3304,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3331,10 +3331,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3358,10 +3358,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3385,10 +3385,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3412,10 +3412,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3439,10 +3439,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3466,7 +3466,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3534,9 +3534,9 @@
     "registeredStandardOriented": 116,
     "registeredUniqueAll": 264,
     "statuses": {
-      "disabled-by-kataris": 17,
+      "disabled-by-kataris": 66,
       "parity-verified": 32,
-      "partial": 52
+      "partial": 3
     }
   }
 }
