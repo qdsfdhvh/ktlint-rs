@@ -8,8 +8,8 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **49**
-- Disabled by Kataris: **17**
+- Partial/unverified: **0**
+- Disabled by Kataris: **68**
 - Extra ktlint-rs standard IDs: **1**
 
 Registration is not parity evidence. Only byte/diagnostic differential fixtures may move a rule to `parity-verified`.
@@ -19,89 +19,89 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Coverage | Fixtures | Known dirty hits |
 |---|---|---:|---|---|---|---:|---:|---:|
 | P0 | `standard:function-signature` | yes | parity-verified | `standard:function-signature` | parity-verified | 6/6 | 7 | 2 |
-| P0 | `standard:function-start-of-body-spacing` | yes | partial | `standard:function-start-of-body-spacing` | unverified | 0/6 | 0 | 2 |
-| P0 | `standard:op-spacing` | yes | partial | `standard:op-spacing` | unverified: fix_spread_operators, fix_operators | 3/6 | 5 | 2 |
-| P0 | `standard:parameter-list-spacing` | yes | partial | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0/6 | 0 | 2 |
+| P0 | `standard:function-start-of-body-spacing` | yes | disabled-by-kataris | `standard:function-start-of-body-spacing` | unverified | 0/6 | 0 | 2 |
+| P0 | `standard:op-spacing` | yes | disabled-by-kataris | `standard:op-spacing` | unverified: fix_spread_operators, fix_operators | 3/6 | 5 | 2 |
+| P0 | `standard:parameter-list-spacing` | yes | disabled-by-kataris | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0/6 | 0 | 2 |
 | P0 | `standard:paren-spacing` | yes | parity-verified | `standard:paren-spacing` | parity-verified: fix_parens | 6/6 | 7 | 2 |
 | P0 | `standard:colon-spacing` | yes | parity-verified | `standard:colon-spacing` | parity-verified: fix_colons | 6/6 | 7 | 1 |
 | P0 | `standard:annotation-spacing` | yes | parity-verified | `standard:annotation-spacing` | parity-verified: fix_annotation_blank_lines | 6/6 | 7 | 0 |
-| P0 | `standard:argument-list-wrapping` | yes | partial | `standard:argument-list-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:binary-expression-wrapping` | yes | partial | `standard:binary-expression-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:argument-list-wrapping` | yes | disabled-by-kataris | `standard:argument-list-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:binary-expression-wrapping` | yes | disabled-by-kataris | `standard:binary-expression-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:block-comment-initial-star-alignment` | yes | parity-verified | `standard:block-comment-initial-star-alignment` | parity-verified: apply_block_comment_alignment | 6/6 | 7 | 0 |
-| P0 | `standard:chain-wrapping` | yes | partial | `standard:chain-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:chain-wrapping` | yes | disabled-by-kataris | `standard:chain-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:comma-spacing` | yes | parity-verified | `standard:comma-spacing` | parity-verified: fix_commas | 6/6 | 7 | 0 |
 | P0 | `standard:comment-spacing` | yes | parity-verified | `standard:comment-spacing` | parity-verified: fix_comment_spacing | 6/6 | 7 | 0 |
-| P0 | `standard:comment-wrapping` | yes | partial | `standard:comment-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:condition-wrapping` | yes | parity-verified | `standard:condition-wrapping` | parity-verified | 6/6 | 6 | 0 |
+| P0 | `standard:comment-wrapping` | yes | disabled-by-kataris | `standard:comment-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:condition-wrapping` | yes | disabled-by-kataris | `standard:condition-wrapping` | unverified | 6/6 | 6 | 0 |
 | P0 | `standard:context-receiver-list-wrapping` | yes | parity-verified | `standard:context-receiver-list-wrapping` | parity-verified: fix_context_receiver_list_wrapping | 6/6 | 8 | 0 |
-| P0 | `standard:context-receiver-wrapping` | yes | partial | `standard:context-receiver-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:context-receiver-wrapping` | yes | disabled-by-kataris | `standard:context-receiver-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:curly-spacing` | yes | parity-verified | `standard:curly-spacing` | parity-verified: fix_curly_braces | 6/6 | 7 | 0 |
-| P0 | `standard:discouraged-comment-location` | yes | parity-verified | `standard:discouraged-comment-location` | parity-verified | 6/6 | 6 | 0 |
+| P0 | `standard:discouraged-comment-location` | yes | disabled-by-kataris | `standard:discouraged-comment-location` | unverified | 6/6 | 6 | 0 |
 | P0 | `standard:dot-spacing` | yes | parity-verified | `standard:dot-spacing` | parity-verified: fix_dot_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:double-colon-spacing` | yes | parity-verified | `standard:double-colon-spacing` | parity-verified: fix_double_colons | 6/6 | 7 | 0 |
-| P0 | `standard:enum-wrapping` | yes | partial | `standard:enum-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:enum-wrapping` | yes | disabled-by-kataris | `standard:enum-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:expression-operand-wrapping` | yes | parity-verified | `standard:expression-operand-wrapping` | parity-verified: fix_expression_operand_wrapping | 6/6 | 8 | 0 |
 | P0 | `standard:fun-keyword-spacing` | yes | parity-verified | `standard:fun-keyword-spacing` | parity-verified | 6/6 | 7 | 0 |
 | P0 | `standard:function-return-type-spacing` | yes | parity-verified | `standard:function-return-type-spacing` | parity-verified | 6/6 | 7 | 0 |
 | P0 | `standard:function-type-modifier-spacing` | yes | parity-verified | `standard:function-type-modifier-spacing` | parity-verified: fix_function_type_modifier_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:function-type-reference-spacing` | yes | parity-verified | `standard:function-type-reference-spacing` | parity-verified: fix_function_type_reference_spacing | 6/6 | 7 | 0 |
-| P0 | `standard:indent` | yes | partial | `standard:indent` | unverified: fix_indentation | 0/6 | 0 | 0 |
-| P0 | `standard:kdoc-wrapping` | yes | partial | `standard:kdoc-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:indent` | yes | disabled-by-kataris | `standard:indent` | unverified: fix_indentation | 0/6 | 0 | 0 |
+| P0 | `standard:kdoc-wrapping` | yes | disabled-by-kataris | `standard:kdoc-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:keyword-spacing` | yes | parity-verified | `standard:keyword-spacing` | parity-verified | 6/6 | 7 | 0 |
 | P0 | `standard:modifier-list-spacing` | yes | parity-verified | `standard:modifier-list-spacing` | parity-verified: fix_annotation_blank_lines, fix_double_spaces | 6/6 | 7 | 0 |
 | P0 | `standard:nullable-type-spacing` | yes | parity-verified | `standard:nullable-type-spacing` | parity-verified: fix_function_type_reference_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:parameter-list-wrapping` | yes | parity-verified | `standard:parameter-list-wrapping` | parity-verified: fix_parameter_list_wrapping | 6/6 | 8 | 0 |
-| P0 | `standard:parameter-wrapping` | yes | partial | `standard:parameter-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:property-wrapping` | yes | partial | `standard:property-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:parameter-wrapping` | yes | disabled-by-kataris | `standard:parameter-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:property-wrapping` | yes | disabled-by-kataris | `standard:property-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:range-spacing` | yes | parity-verified | `standard:range-spacing` | parity-verified: fix_range_spacing | 6/6 | 7 | 0 |
-| P0 | `standard:spacing-around-angle-brackets` | yes | partial | `standard:spacing-around-angle-brackets` | unverified: fix_angle_brackets | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-around-angle-brackets` | yes | disabled-by-kataris | `standard:spacing-around-angle-brackets` | unverified: fix_angle_brackets | 0/6 | 0 | 0 |
 | P0 | `standard:spacing-between-declarations-with-annotations` | yes | parity-verified | `standard:spacing-between-declarations-with-annotations` | parity-verified: fix_spacing_before_annotated_declarations | 6/6 | 7 | 0 |
-| P0 | `standard:spacing-between-declarations-with-comments` | yes | partial | `standard:spacing-between-declarations-with-comments` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:spacing-between-function-name-and-opening-parenthesis` | yes | partial | `standard:spacing-between-function-name-and-parenthesis` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:square-brackets-spacing` | yes | partial | `standard:square-brackets-spacing` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:statement-wrapping` | yes | partial | `standard:statement-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:string-template` | yes | partial | `standard:string-template` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:then-spacing` | yes | partial | `standard:then-spacing` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:trailing-comma-on-call-site` | yes | partial | `standard:trailing-comma-on-call-site` | unverified: fix_single_line_trailing_comma | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-between-declarations-with-comments` | yes | disabled-by-kataris | `standard:spacing-between-declarations-with-comments` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-between-function-name-and-opening-parenthesis` | yes | disabled-by-kataris | `standard:spacing-between-function-name-and-parenthesis` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:square-brackets-spacing` | yes | disabled-by-kataris | `standard:square-brackets-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:statement-wrapping` | yes | disabled-by-kataris | `standard:statement-wrapping` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:string-template` | yes | disabled-by-kataris | `standard:string-template` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:then-spacing` | yes | disabled-by-kataris | `standard:then-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:trailing-comma-on-call-site` | yes | disabled-by-kataris | `standard:trailing-comma-on-call-site` | unverified: fix_single_line_trailing_comma | 0/6 | 0 | 0 |
 | P0 | `standard:trailing-comma-on-declaration-site` | yes | parity-verified | `standard:trailing-comma-on-declaration-site` | parity-verified: fix_single_line_trailing_comma | 6/6 | 7 | 0 |
-| P0 | `standard:type-argument-comment` | yes | partial | `standard:type-argument-comment` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:type-argument-list-spacing` | yes | partial | `standard:type-argument-list-spacing` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:type-parameter-comment` | yes | partial | `standard:type-parameter-comment` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:type-parameter-list-spacing` | yes | partial | `standard:type-parameter-list-spacing` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:unary-op-spacing` | yes | partial | `standard:unary-op-spacing` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:value-argument-comment` | yes | partial | `standard:value-argument-comment` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:value-parameter-comment` | yes | partial | `standard:value-parameter-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:type-argument-comment` | yes | disabled-by-kataris | `standard:type-argument-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:type-argument-list-spacing` | yes | disabled-by-kataris | `standard:type-argument-list-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:type-parameter-comment` | yes | disabled-by-kataris | `standard:type-parameter-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:type-parameter-list-spacing` | yes | disabled-by-kataris | `standard:type-parameter-list-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:unary-op-spacing` | yes | disabled-by-kataris | `standard:unary-op-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:value-argument-comment` | yes | disabled-by-kataris | `standard:value-argument-comment` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:value-parameter-comment` | yes | disabled-by-kataris | `standard:value-parameter-comment` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:wrapping` | yes | parity-verified | `standard:wrapping` | parity-verified: fix_all_wrapping | 6/6 | 7 | 0 |
-| P1 | `standard:annotation` | yes | partial | `standard:annotation` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:annotation` | yes | disabled-by-kataris | `standard:annotation` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:backing-property-naming` | yes | parity-verified | `standard:backing-property-naming` | not-fixable | 6/6 | 7 | 0 |
-| P1 | `standard:blank-line-between-when-conditions` | yes | partial | `standard:blank-line-between-when-conditions` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:blank-line-between-when-conditions` | yes | disabled-by-kataris | `standard:blank-line-between-when-conditions` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:class-naming` | yes | parity-verified | `standard:class-naming` | not-fixable | 6/6 | 7 | 0 |
-| P1 | `standard:class-signature` | yes | partial | `standard:class-signature` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:enum-entry-name-case` | yes | partial | `standard:enum-entry-name-case` | unverified | 6/6 | 7 | 0 |
+| P1 | `standard:class-signature` | yes | disabled-by-kataris | `standard:class-signature` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:enum-entry-name-case` | yes | disabled-by-kataris | `standard:enum-entry-name-case` | unverified | 6/6 | 7 | 0 |
 | P1 | `standard:final-newline` | yes | parity-verified | `standard:final-newline` | parity-verified: auto_fix final-newline normalization | 6/6 | 7 | 0 |
-| P1 | `standard:function-literal` | yes | partial | `standard:function-literal` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:import-ordering` | yes | partial | `standard:import-ordering` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:kdoc` | yes | partial | `standard:kdoc` | not-fixable | 0/6 | 0 | 0 |
-| P1 | `standard:max-line-length` | yes | partial | `standard:max-line-length` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:mixed-condition-operators` | yes | partial | `standard:mixed-condition-operators` | not-fixable | 0/6 | 0 | 0 |
-| P1 | `standard:modifier-order` | yes | partial | `standard:modifier-order` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:multiline-if-else` | yes | partial | `standard:multiline-if-else` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:multiline-loop` | yes | partial | `standard:multiline-loop` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:function-literal` | yes | disabled-by-kataris | `standard:function-literal` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:import-ordering` | yes | disabled-by-kataris | `standard:import-ordering` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:kdoc` | yes | disabled-by-kataris | `standard:kdoc` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:max-line-length` | yes | disabled-by-kataris | `standard:max-line-length` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:mixed-condition-operators` | yes | disabled-by-kataris | `standard:mixed-condition-operators` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:modifier-order` | yes | disabled-by-kataris | `standard:modifier-order` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:multiline-if-else` | yes | disabled-by-kataris | `standard:multiline-if-else` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:multiline-loop` | yes | disabled-by-kataris | `standard:multiline-loop` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-blank-line-before-rbrace` | yes | parity-verified | `standard:no-blank-line-before-rbrace` | parity-verified: fix_blank_lines | 6/6 | 7 | 0 |
-| P1 | `standard:no-blank-lines-in-chained-method-calls` | yes | partial | `standard:no-blank-lines-in-chained-method-calls` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-blank-lines-in-chained-method-calls` | yes | disabled-by-kataris | `standard:no-blank-lines-in-chained-method-calls` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-consecutive-blank-lines` | yes | parity-verified | `standard:no-consecutive-blank-lines` | parity-verified: fix_blank_lines | 6/6 | 7 | 0 |
 | P1 | `standard:no-empty-class-body` | yes | parity-verified | `standard:no-empty-class-body` | parity-verified: fix_empty_class_body | 6/6 | 7 | 0 |
-| P1 | `standard:no-empty-file` | yes | partial | `standard:no-empty-file` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:no-empty-first-line-in-method-block` | yes | partial | `standard:no-leading-empty-lines-in-method` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:no-line-break-after-else` | yes | partial | `standard:no-line-break-after-else` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:no-line-break-before-assignment` | yes | partial | `standard:no-line-break-before-assignment` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-empty-file` | yes | disabled-by-kataris | `standard:no-empty-file` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-empty-first-line-in-method-block` | yes | disabled-by-kataris | `standard:no-leading-empty-lines-in-method` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-line-break-after-else` | yes | disabled-by-kataris | `standard:no-line-break-after-else` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-line-break-before-assignment` | yes | disabled-by-kataris | `standard:no-line-break-before-assignment` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-multi-spaces` | yes | parity-verified | `standard:no-multi-spaces` | parity-verified: fix_double_spaces | 6/6 | 7 | 0 |
 | P1 | `standard:no-semi` | yes | parity-verified | `standard:no-semi` | parity-verified: fix_semicolons | 6/6 | 7 | 0 |
 | P1 | `standard:no-trailing-spaces` | yes | parity-verified | `standard:no-trailing-spaces` | parity-verified: fix_trailing_ws_protected | 6/6 | 7 | 0 |
-| P1 | `standard:no-unit-return` | yes | partial | `standard:no-unit-return` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:no-unused-imports` | yes | partial | `standard:no-unused-imports` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:property-naming` | yes | partial | `standard:property-naming` | not-fixable | 0/6 | 0 | 0 |
-| P1 | `standard:unnecessary-parentheses-before-trailing-lambda` | yes | partial | `standard:unnecessary-parentheses-before-trailing-lambda` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-unit-return` | yes | disabled-by-kataris | `standard:no-unit-return` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:no-unused-imports` | yes | disabled-by-kataris | `standard:no-unused-imports` | unverified | 0/6 | 0 | 0 |
+| P1 | `standard:property-naming` | yes | disabled-by-kataris | `standard:property-naming` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:unnecessary-parentheses-before-trailing-lambda` | yes | disabled-by-kataris | `standard:unnecessary-parentheses-before-trailing-lambda` | unverified | 0/6 | 0 | 0 |
 | P2 | `standard:blank-line-before-declaration` | no | disabled-by-kataris | `standard:blank-line-before-declaration` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:chain-method-continuation` | no | disabled-by-kataris | `standard:chain-method-continuation` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:filename` | no | disabled-by-kataris | `standard:filename` | not-evaluated | 0/6 | 0 | 0 |

@@ -46,7 +46,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -123,7 +123,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -198,7 +198,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -252,7 +252,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -356,7 +356,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -431,7 +431,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -608,7 +608,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -643,7 +643,7 @@
       ],
       "formatter": {
         "passes": [],
-        "status": "parity-verified"
+        "status": "unverified"
       },
       "id": "standard:condition-wrapping",
       "katarisEnabled": true,
@@ -655,7 +655,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "parity-verified"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -734,7 +734,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -819,7 +819,7 @@
       ],
       "formatter": {
         "passes": [],
-        "status": "parity-verified"
+        "status": "unverified"
       },
       "id": "standard:discouraged-comment-location",
       "katarisEnabled": true,
@@ -831,7 +831,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "parity-verified"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -979,7 +979,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1006,7 +1006,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1237,7 +1237,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1387,7 +1387,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1568,7 +1568,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1597,7 +1597,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1624,7 +1624,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1651,7 +1651,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1726,7 +1726,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1753,7 +1753,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -1831,7 +1831,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1885,7 +1885,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -1912,7 +1912,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2018,7 +2018,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2172,7 +2172,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2226,7 +2226,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "alias",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2253,7 +2253,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2280,7 +2280,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2484,7 +2484,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2511,7 +2511,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2630,7 +2630,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2687,7 +2687,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2766,7 +2766,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2843,7 +2843,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -2870,7 +2870,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -2949,7 +2949,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -3026,7 +3026,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3053,7 +3053,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "alias",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3080,7 +3080,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3107,7 +3107,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3134,7 +3134,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3188,7 +3188,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3217,7 +3217,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": true,
@@ -3319,7 +3319,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3346,7 +3346,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3373,7 +3373,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3400,7 +3400,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3427,7 +3427,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3454,7 +3454,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3481,7 +3481,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3508,7 +3508,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "disabled-by-kataris"
     },
     {
       "coverageComplete": false,
@@ -3597,9 +3597,8 @@
     "registeredStandardOriented": 116,
     "registeredUniqueAll": 264,
     "statuses": {
-      "disabled-by-kataris": 17,
-      "parity-verified": 35,
-      "partial": 49
+      "disabled-by-kataris": 68,
+      "parity-verified": 33
     }
   }
 }

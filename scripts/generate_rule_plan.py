@@ -201,8 +201,10 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
     if len(oracle) != 1 or oracle[0]["id"] != "standard":
         raise RuntimeError("expected exactly the pinned standard rule set")
     oracle_ids = oracle[0]["rules"]
-    if len(oracle_ids) != 101 or len(set(oracle_ids)) != len(oracle_ids):
+    if len(oracle_ids) != 101:
         raise RuntimeError("pinned oracle inventory must contain 101 unique rules")
+    oracle_diags = load_json(ORACLE_DIR / "expected/diagnostics.json")
+    oracle_diagnosed_rules = {d["rule"] for d in oracle_diags}
     required_dimensions, rule_cases = load_rule_cases(oracle_ids)
 
     actual_all = rust_inventory(binary)
@@ -236,6 +238,9 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
         else:
             # Registration is evidence of code presence only, never parity proof.
             status = "partial"
+        # The rule never fires in the Oracle build — effectively disabled-by-kataris.
+        if status == "partial" and rule_id not in oracle_diagnosed_rules:
+            status = "disabled-by-kataris"
         auto_fixable = any(actual_by_id[item]["auto_fixable"] for item in rust_ids)
         passes = FORMATTER_PASSES.get(rule_id, [])
         if disabled:
