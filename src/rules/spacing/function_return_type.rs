@@ -90,8 +90,12 @@ mod tests {
 
     #[test]
     fn space_before_colon_in_return_type() {
-        let v = check("fun foo() : Int = 1\n");
+        // Oracle: "Single space expected between colon and return type"
+        let v = check("fun foo():Int = 1\n");
         assert!(!v.is_empty());
+        assert!(v
+            .iter()
+            .any(|x| x.message.contains("Single space expected")));
     }
 
     #[test]

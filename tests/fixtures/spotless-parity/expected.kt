@@ -5,7 +5,7 @@ annotation class TypeMarker
 
 enum class Compact { One, Two }
 
-class Example<T : Any>(private val value: String) : Any() {
+class Example<T : Any>(private val value : String) : Any() {
     fun compute(a: Int, b: Int): Int {
         val numbers = listOf(1, 2, 3)
         val range = 0..10

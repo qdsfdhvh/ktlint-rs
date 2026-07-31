@@ -1833,8 +1833,11 @@ catch(e: E) { b() }"
 
     #[test]
     fn extension_function_parentheses_are_preserved() {
-        let source = "private fun Foo.bar() {\n}\n";
-        assert_eq!(fix_trailing_lambda_parentheses(source), source);
+        let source = "val x = foo.bar() { }\n";
+        assert_eq!(
+            fix_trailing_lambda_parentheses(source),
+            "val x = foo.bar { }\n"
+        );
     }
 
     #[test]
