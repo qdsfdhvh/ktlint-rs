@@ -402,7 +402,7 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 26] = [
+        let passes: [(&'static str, fn(&str) -> String); 27] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -441,6 +441,7 @@ fn apply_spacing_rules(
             ("standard:paren-spacing", fix_parens),
             ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
+            ("standard:fun-keyword-spacing", fix_keyword_spacing),
             ("standard:keyword-spacing", fix_keyword_spacing),
             ("standard:range-spacing", fix_range_spacing),
             (
@@ -1325,7 +1326,7 @@ fn fix_comment_spacing(source: &str) -> String {
 }
 
 fn fix_keyword_spacing(source: &str) -> String {
-    ["if", "for", "while", "when", "catch"]
+    ["if", "for", "while", "when", "catch", "fun"]
         .into_iter()
         .fold(source.to_string(), |text, keyword| {
             text.replace(&format!("{keyword}("), &format!("{keyword} ("))

@@ -168,19 +168,28 @@ impl Rule for FunKeywordSpacingRule {
     fn id(&self) -> &'static str {
         "standard:fun-keyword-spacing"
     }
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
             let t = l.trim();
-            if t.starts_with("fun") && (t.starts_with("fun(") || t.contains("fun  ")) {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Missing space after \"fun\" keyword".into(),
-                    auto_fixable: true,
-                });
+            if let Some(pos) = t.find("fun") {
+                let after_fun = &t[pos + 3..];
+                if after_fun.starts_with("  ") {
+                    // Double space or space-before-non-paren
+                    let col = l.find("fun").unwrap_or(0) + 4;
+                    v.push(Violation {
+                        file: String::new(),
+                        line: i + 1,
+                        col,
+                        rule_id: self.id().into(),
+                        message: "Single space expected after the fun keyword".into(),
+                        auto_fixable: true,
+                    });
+                }
             }
         }
         v
