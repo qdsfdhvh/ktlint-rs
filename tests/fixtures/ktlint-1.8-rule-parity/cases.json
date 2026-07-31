@@ -781,6 +781,31 @@
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_return_type_spacing/Interaction.kt"
         ]
       }
+    },
+    "standard:no-consecutive-blank-lines": {
+      "category": "structure",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt"
+        ]
+      }
     }
   }
 }

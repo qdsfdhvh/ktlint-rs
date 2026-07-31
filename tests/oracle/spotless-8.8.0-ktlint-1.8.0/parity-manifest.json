@@ -1979,21 +1979,42 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt"
+      ],
       "formatter": {
         "passes": [
           "fix_blank_lines"
         ],
-        "status": "unverified"
+        "status": "parity-verified"
       },
       "id": "standard:no-consecutive-blank-lines",
       "katarisEnabled": true,
@@ -2005,7 +2026,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": false,
@@ -3472,8 +3493,8 @@
     "registeredUniqueAll": 264,
     "statuses": {
       "disabled-by-kataris": 17,
-      "parity-verified": 29,
-      "partial": 55
+      "parity-verified": 30,
+      "partial": 54
     }
   }
 }

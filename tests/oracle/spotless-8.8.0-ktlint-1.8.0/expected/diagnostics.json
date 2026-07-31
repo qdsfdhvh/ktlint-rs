@@ -481,6 +481,30 @@
   },
   {
     "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt",
+    "line": 3,
+    "message": "Needless blank line(s)",
+    "rule": "standard:no-consecutive-blank-lines"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt",
+    "line": 6,
+    "message": "Needless blank line(s)",
+    "rule": "standard:no-consecutive-blank-lines"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt",
+    "line": 3,
+    "message": "Needless blank line(s)",
+    "rule": "standard:no-consecutive-blank-lines"
+  },
+  {
+    "auto_fixable": true,
     "column": 18,
     "file": "src/main/kotlin/rules/no_empty_class_body/Interaction.kt",
     "line": 3,

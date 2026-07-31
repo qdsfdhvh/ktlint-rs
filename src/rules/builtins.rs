@@ -70,6 +70,10 @@ impl Rule for NoConsecutiveBlankLines {
     fn id(&self) -> &'static str {
         "standard:no-consecutive-blank-lines"
     }
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     fn check(&self, _: &Tree, s: &str) -> Vec<Violation> {
         let mut v = vec![];
         let mut b = 0;
@@ -80,7 +84,7 @@ impl Rule for NoConsecutiveBlankLines {
                     v.push(Violation {
                         file: String::new(),
                         line: i + 1,
-                        col: 0,
+                        col: 1,
                         rule_id: self.id().into(),
                         message: "Needless blank line(s)".into(),
                         auto_fixable: true,
