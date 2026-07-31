@@ -345,6 +345,46 @@
   },
   {
     "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Single space expected between colon and return type",
+    "rule": "standard:function-return-type-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 15,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/Negative.kt",
+    "line": 3,
+    "message": "Single space expected between colon and return type",
+    "rule": "standard:function-return-type-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/config/Disabled.kt",
+    "line": 3,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
     "column": 38,
     "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
     "line": 3,

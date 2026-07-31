@@ -402,7 +402,7 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 28] = [
+        let passes: [(&'static str, fn(&str) -> String); 29] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -442,6 +442,7 @@ fn apply_spacing_rules(
             ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
             ("standard:fun-keyword-spacing", fix_keyword_spacing),
+            ("standard:function-return-type-spacing", fix_colons),
             ("standard:dot-spacing", fix_dot_spacing),
             ("standard:keyword-spacing", fix_keyword_spacing),
             ("standard:range-spacing", fix_range_spacing),
@@ -1353,11 +1354,11 @@ fn fix_trailing_lambda_parentheses(source: &str) -> String {
     source
         .split('\n')
         .map(|line| {
-            if !line.contains("fun ")
-                && !line.contains("class ")
-                && !line.contains("interface ")
-                && !line.contains("object ")
-                && line.contains('.')
+            if !line.contains("fun ") && !line.contains("class ")
+                || line.contains("fun ")
+                    && !line.contains("interface ")
+                    && !line.contains("object ")
+                    && line.contains('.')
             {
                 line.replace("() {", " {")
             } else {
