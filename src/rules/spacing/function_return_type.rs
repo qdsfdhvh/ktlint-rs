@@ -9,6 +9,10 @@ impl Rule for FunctionReturnTypeSpacing {
         "standard:function-return-type-spacing"
     }
 
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
@@ -47,29 +51,17 @@ impl FunctionReturnTypeSpacing {
                 if saw_parens && kind == ":" {
                     let pos = child.start_position();
                     let start_byte = child.start_byte();
-
-                    // In return type context, no space before `:`
-                    if start_byte > 0 && bytes[start_byte - 1] == b' ' {
-                        violations.push(Violation {
-                            file: String::new(),
-                            line: pos.row + 1,
-                            col: pos.column,
-                            rule_id: self.id().to_string(),
-                            message: "Unexpected space before \":\" in return type".to_string(),
-                            auto_fixable: true,
-                        });
-                    }
-
-                    // Should have space after
+                    // Oracle: "Single space expected between colon and return type"
                     let end_byte = child.end_byte();
                     if end_byte < bytes.len() && bytes[end_byte] != b' ' && bytes[end_byte] != b'\n'
                     {
                         violations.push(Violation {
                             file: String::new(),
                             line: pos.row + 1,
-                            col: pos.column + 2,
+                            col: pos.column + 1,
                             rule_id: self.id().to_string(),
-                            message: "Missing space after \":\" in return type".to_string(),
+                            message: "Single space expected between colon and return type"
+                                .to_string(),
                             auto_fixable: true,
                         });
                     }
@@ -98,8 +90,12 @@ mod tests {
 
     #[test]
     fn space_before_colon_in_return_type() {
-        let v = check("fun foo() : Int = 1\n");
+        // Oracle: "Single space expected between colon and return type"
+        let v = check("fun foo():Int = 1\n");
         assert!(!v.is_empty());
+        assert!(v
+            .iter()
+            .any(|x| x.message.contains("Single space expected")));
     }
 
     #[test]

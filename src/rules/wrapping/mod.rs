@@ -1,4 +1,5 @@
 pub mod chain_wrapping;
+pub mod compatibility;
 pub mod general;
 pub mod multiline_expression;
 pub mod multiline_if_else;

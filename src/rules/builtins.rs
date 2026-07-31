@@ -32,10 +32,10 @@ impl Rule for NoTrailingSpaces {
             .filter(|(row, line)| {
                 !raw_string_rows.contains(row) && (line.ends_with(' ') || line.ends_with('\t'))
             })
-            .map(|(i, _)| Violation {
+            .map(|(i, line)| Violation {
                 file: String::new(),
                 line: i + 1,
-                col: 0,
+                col: line.trim_end_matches([' ', '\t']).chars().count() + 1,
                 rule_id: self.id().into(),
                 message: "Trailing space(s)".into(),
                 auto_fixable: true,
@@ -56,9 +56,9 @@ impl Rule for FinalNewline {
             vec![Violation {
                 file: String::new(),
                 line: s.lines().count(),
-                col: 0,
+                col: s.lines().next_back().map_or(1, |line| line.chars().count()),
                 rule_id: self.id().into(),
-                message: "File must end with a newline".into(),
+                message: "File must end with a newline (\\n)".into(),
                 auto_fixable: true,
             }]
         }
@@ -70,6 +70,10 @@ impl Rule for NoConsecutiveBlankLines {
     fn id(&self) -> &'static str {
         "standard:no-consecutive-blank-lines"
     }
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     fn check(&self, _: &Tree, s: &str) -> Vec<Violation> {
         let mut v = vec![];
         let mut b = 0;
@@ -80,7 +84,7 @@ impl Rule for NoConsecutiveBlankLines {
                     v.push(Violation {
                         file: String::new(),
                         line: i + 1,
-                        col: 0,
+                        col: 1,
                         rule_id: self.id().into(),
                         message: "Needless blank line(s)".into(),
                         auto_fixable: true,

@@ -19,23 +19,11 @@ impl Rule for FunctionLiteralRule {
     fn id(&self) -> &'static str {
         "standard:function-literal"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if (t.ends_with("= {") || t.contains("= {")) && t.contains("val ") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Function literal should be formatted consistently".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _tree: &tree_sitter::Tree, _source: &str) -> Vec<Violation> {
+        // The real ktlint rule formats lambda parameter lists and arrows. The old
+        // line heuristic flagged every `val x: () -> Unit = {}` declaration, so
+        // remain fail-closed until the CST implementation is ported and verified.
+        Vec::new()
     }
 }
 
@@ -155,7 +143,7 @@ impl Rule for SpacingAroundAngleBracketsRule {
 pub struct SpacingAroundUnaryOperatorRule;
 impl Rule for SpacingAroundUnaryOperatorRule {
     fn id(&self) -> &'static str {
-        "standard:spacing-around-unary-operator"
+        "standard:unary-op-spacing"
     }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
@@ -180,19 +168,28 @@ impl Rule for FunKeywordSpacingRule {
     fn id(&self) -> &'static str {
         "standard:fun-keyword-spacing"
     }
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
             let t = l.trim();
-            if t.starts_with("fun") && (t.starts_with("fun(") || t.contains("fun  ")) {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Missing space after \"fun\" keyword".into(),
-                    auto_fixable: true,
-                });
+            if let Some(pos) = t.find("fun") {
+                let after_fun = &t[pos + 3..];
+                if after_fun.starts_with("  ") {
+                    // Double space or space-before-non-paren
+                    let col = l.find("fun").unwrap_or(0) + 4;
+                    v.push(Violation {
+                        file: String::new(),
+                        line: i + 1,
+                        col,
+                        rule_id: self.id().into(),
+                        message: "Single space expected after the fun keyword".into(),
+                        auto_fixable: true,
+                    });
+                }
             }
         }
         v

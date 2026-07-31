@@ -9,6 +9,10 @@ impl Rule for CommentSpacing {
         "standard:comment-spacing"
     }
 
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         self.walk(tree.root_node(), source, &mut violations);
@@ -47,9 +51,9 @@ impl CommentSpacing {
                 violations.push(Violation {
                     file: String::new(),
                     line: pos.row + 1,
-                    col: pos.column + 3,
+                    col: pos.column + 1,
                     rule_id: self.id().to_string(),
-                    message: "Missing space after \"//\"".to_string(),
+                    message: "Missing space after //".to_string(),
                     auto_fixable: true,
                 });
             }
@@ -72,9 +76,9 @@ impl CommentSpacing {
                 violations.push(Violation {
                     file: String::new(),
                     line: pos.row + 1,
-                    col: pos.column + 3,
+                    col: pos.column + 1,
                     rule_id: self.id().to_string(),
-                    message: "Missing space after \"/*\"".to_string(),
+                    message: "Missing space after /*".to_string(),
                     auto_fixable: true,
                 });
             }

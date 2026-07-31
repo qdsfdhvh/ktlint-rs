@@ -1,0 +1,936 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "spotlessVersion": "8.8.0",
+    "ktlintVersion": "1.8.0"
+  },
+  "requiredDimensions": [
+    "positive",
+    "negative",
+    "autofix",
+    "idempotence",
+    "config",
+    "interaction"
+  ],
+  "rules": {
+    "standard:annotation-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/annotation_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:modifier-list-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/modifier_list_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/modifier_list_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/annotation_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:function-type-modifier-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:function-type-reference-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:nullable-type-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_type_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_type_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:block-comment-initial-star-alignment": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/block_comment_alignment/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/block_comment_alignment/Interaction.kt"
+        ]
+      }
+    },
+    "standard:spacing-between-declarations-with-annotations": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/declaration_annotation_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/declaration_annotation_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:condition-wrapping": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ],
+        "negative": [
+          "src/rules/wrapping/compatibility.rs::condition_wrapping_is_a_noop_in_ktlint_1_8"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/condition_wrapping/Noop.kt"
+        ]
+      }
+    },
+    "standard:expression-operand-wrapping": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/expression_operand_wrapping/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/expression_operand_wrapping/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/expression_operand_wrapping/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/expression_operand_wrapping/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/expression_operand_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/expression_operand_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/expression_operand_wrapping/Interaction.kt"
+        ]
+      }
+    },
+    "standard:discouraged-comment-location": {
+      "category": "edge-syntax",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ],
+        "negative": [
+          "src/rules/naming/enum_entry_name_case.rs::discouraged_comment_location_is_a_noop_in_ktlint_1_8"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/discouraged_comment_location/Noop.kt"
+        ]
+      }
+    },
+    "standard:enum-entry-name-case": {
+      "category": "naming",
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/Positive.kt"
+        ],
+        "negative": [
+          "src/rules/naming/enum_entry_name_case.rs::rejects_lowercase_mixed_underscore_and_leading_underscore"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/enum_entry_name_case/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/enum_entry_name_case/Interaction.kt"
+        ]
+      }
+    },
+    "standard:op-spacing": {
+      "category": "spacing",
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/oracle/SpreadOperator.kt"
+        ],
+        "negative": [],
+        "autofix": [],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [],
+        "interaction": [
+          "src/formatter/mod.rs::safety_corpus_preserves_nested_protected_regions_and_operator_meaning"
+        ]
+      }
+    },
+    "standard:context-receiver-list-wrapping": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/context_receiver_list_wrapping/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/context_receiver_list_wrapping/Interaction.kt"
+        ]
+      }
+    },
+    "standard:parameter-list-wrapping": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+        ]
+      }
+    },
+    "standard:backing-property-naming": {
+      "category": "naming",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/backing_property_naming/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/backing_property_naming/nonfixable/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/backing_property_naming/nonfixable/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/backing_property_naming/nonfixable/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/backing_property_naming/nonfixable/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/backing_property_naming/nonfixable/Interaction.kt"
+        ]
+      }
+    },
+    "standard:class-naming": {
+      "category": "naming",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/class_naming/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/class_naming/nonfixable/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/class_naming/nonfixable/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/class_naming/nonfixable/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/class_naming/nonfixable/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/class_naming/nonfixable/Interaction.kt"
+        ]
+      }
+    },
+    "standard:final-newline": {
+      "category": "structure",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/final_newline/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/final_newline/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/final_newline/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/final_newline/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/final_newline/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/final_newline/Interaction.kt"
+        ]
+      }
+    },
+    "standard:no-empty-class-body": {
+      "category": "structure",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_empty_class_body/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_empty_class_body/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_empty_class_body/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_empty_class_body/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_empty_class_body/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_empty_class_body/Interaction.kt"
+        ]
+      }
+    },
+    "standard:no-trailing-spaces": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_trailing_spaces/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_trailing_spaces/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_trailing_spaces/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_trailing_spaces/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_trailing_spaces/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_trailing_spaces/Interaction.kt"
+        ]
+      }
+    },
+    "standard:no-semi": {
+      "category": "structure",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_semi/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_semi/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_semi/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_semi/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_semi/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_semi/Interaction.kt"
+        ]
+      }
+    },
+    "standard:colon-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/colon_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/colon_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/colon_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/colon_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/colon_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/colon_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:comma-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comma_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comma_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/comma_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comma_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comma_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comma_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:double-colon-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/double_colon_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/double_colon_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:curly-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/curly_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/curly_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/curly_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/curly_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/curly_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/curly_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:range-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/range_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/range_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/range_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/range_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/range_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/range_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:paren-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/paren_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/paren_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:comment-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comment_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comment_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/comment_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comment_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comment_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/comment_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:keyword-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/keyword_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:fun-keyword-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/fun_keyword_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/fun_keyword_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/fun_keyword_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/fun_keyword_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/fun_keyword_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/fun_keyword_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:dot-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/dot_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:function-return-type-spacing": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_return_type_spacing/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_return_type_spacing/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/function_return_type_spacing/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_return_type_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_return_type_spacing/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/function_return_type_spacing/Interaction.kt"
+        ]
+      }
+    },
+    "standard:no-consecutive-blank-lines": {
+      "category": "structure",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt"
+        ]
+      }
+    },
+    "standard:no-blank-line-before-rbrace": {
+      "category": "structure",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_blank_line_before_rbrace/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/Interaction.kt"
+        ]
+      }
+    },
+    "standard:no-multi-spaces": {
+      "category": "spacing",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_multi_spaces/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_multi_spaces/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_multi_spaces/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_multi_spaces/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_multi_spaces/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_multi_spaces/Interaction.kt"
+        ]
+      }
+    },
+    "standard:function-signature": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+        ]
+      }
+    },
+    "standard:trailing-comma-on-declaration-site": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+        ]
+      }
+    },
+    "standard:wrapping": {
+      "category": "wrapping",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+        ]
+      }
+    }
+  }
+}

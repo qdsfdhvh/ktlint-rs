@@ -1,0 +1,5 @@
+root = false
+
+[*.kt]
+ktlint_standard_parameter-list-wrapping = enabled
+ktlint_standard_indent = disabled

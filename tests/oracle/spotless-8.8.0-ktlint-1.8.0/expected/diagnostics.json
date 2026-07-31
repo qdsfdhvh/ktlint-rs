@@ -1,2 +1,754 @@
 [
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/annotation_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Annotations should occur immediately before the annotated construct",
+    "rule": "standard:annotation-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/annotation_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Single newline expected after annotation",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 10,
+    "file": "src/main/kotlin/rules/annotation_spacing/Negative.kt",
+    "line": 3,
+    "message": "Annotations should occur immediately before the annotated construct",
+    "rule": "standard:annotation-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 10,
+    "file": "src/main/kotlin/rules/annotation_spacing/Negative.kt",
+    "line": 3,
+    "message": "Single newline expected after annotation",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": false,
+    "column": 17,
+    "file": "src/main/kotlin/rules/backing_property_naming/nonfixable/Interaction.kt",
+    "line": 4,
+    "message": "Backing property is only allowed when a matching property or function exists",
+    "rule": "standard:backing-property-naming"
+  },
+  {
+    "auto_fixable": false,
+    "column": 9,
+    "file": "src/main/kotlin/rules/backing_property_naming/nonfixable/Negative.kt",
+    "line": 4,
+    "message": "Backing property not allowed when 'private' modifier is missing",
+    "rule": "standard:backing-property-naming"
+  },
+  {
+    "auto_fixable": true,
+    "column": 12,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Interaction.kt",
+    "line": 5,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
+    "column": 4,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Interaction.kt",
+    "line": 6,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
+    "column": 10,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Interaction.kt",
+    "line": 7,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
+    "column": 8,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Negative.kt",
+    "line": 4,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": true,
+    "column": 6,
+    "file": "src/main/kotlin/rules/block_comment_alignment/Negative.kt",
+    "line": 5,
+    "message": "Initial star should align with start of block comment",
+    "rule": "standard:block-comment-initial-star-alignment"
+  },
+  {
+    "auto_fixable": false,
+    "column": 8,
+    "file": "src/main/kotlin/rules/class_naming/nonfixable/Interaction.kt",
+    "line": 3,
+    "message": "Class or object name should start with an uppercase letter and use camel case",
+    "rule": "standard:class-naming"
+  },
+  {
+    "auto_fixable": false,
+    "column": 7,
+    "file": "src/main/kotlin/rules/class_naming/nonfixable/Negative.kt",
+    "line": 3,
+    "message": "Class or object name should start with an uppercase letter and use camel case",
+    "rule": "standard:class-naming"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/colon_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/colon_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/colon_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing before \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 15,
+    "file": "src/main/kotlin/rules/colon_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 28,
+    "file": "src/main/kotlin/rules/comma_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Missing spacing after \",\"",
+    "rule": "standard:comma-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 29,
+    "file": "src/main/kotlin/rules/comma_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 25,
+    "file": "src/main/kotlin/rules/comma_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing spacing after \",\"",
+    "rule": "standard:comma-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/comment_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Missing space after //",
+    "rule": "standard:comment-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/comment_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing space after //",
+    "rule": "standard:comment-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Interaction.kt",
+    "line": 3,
+    "message": "Single newline expected after context receiver list",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 25,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Interaction.kt",
+    "line": 3,
+    "message": "Expected a newline after the context parameter",
+    "rule": "standard:context-receiver-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Negative.kt",
+    "line": 3,
+    "message": "Single newline expected after context receiver list",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Negative.kt",
+    "line": 3,
+    "message": "Expected a newline after the context parameter",
+    "rule": "standard:context-receiver-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/context_receiver_list_wrapping/config/Disabled.kt",
+    "line": 3,
+    "message": "Single newline expected after context receiver list",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 22,
+    "file": "src/main/kotlin/rules/curly_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Missing spacing before \"{\"",
+    "rule": "standard:curly-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 29,
+    "file": "src/main/kotlin/rules/curly_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 19,
+    "file": "src/main/kotlin/rules/curly_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing spacing before \"{\"",
+    "rule": "standard:curly-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/declaration_annotation_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Declarations and declarations with annotations should have an empty space between.",
+    "rule": "standard:spacing-between-declarations-with-annotations"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/declaration_annotation_spacing/Negative.kt",
+    "line": 4,
+    "message": "Declarations and declarations with annotations should have an empty space between.",
+    "rule": "standard:spacing-between-declarations-with-annotations"
+  },
+  {
+    "auto_fixable": true,
+    "column": 29,
+    "file": "src/main/kotlin/rules/dot_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Unexpected spacing before \".\"",
+    "rule": "standard:dot-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 28,
+    "file": "src/main/kotlin/rules/dot_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing before \".\"",
+    "rule": "standard:dot-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 25,
+    "file": "src/main/kotlin/rules/double_colon_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Unexpected spacing before \"::\"",
+    "rule": "standard:double-colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 32,
+    "file": "src/main/kotlin/rules/double_colon_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/double_colon_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing around \"::\"",
+    "rule": "standard:double-colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/expression_operand_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Newline expected before operand in multiline expression",
+    "rule": "standard:expression-operand-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/expression_operand_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Newline expected before operand in multiline expression",
+    "rule": "standard:expression-operand-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 39,
+    "file": "src/main/kotlin/rules/final_newline/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 19,
+    "file": "src/main/kotlin/rules/final_newline/Negative.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 8,
+    "file": "src/main/kotlin/rules/fun_keyword_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Single space expected after the fun keyword",
+    "rule": "standard:fun-keyword-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 4,
+    "file": "src/main/kotlin/rules/fun_keyword_spacing/Negative.kt",
+    "line": 3,
+    "message": "Single space expected after the fun keyword",
+    "rule": "standard:fun-keyword-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Single space expected between colon and return type",
+    "rule": "standard:function-return-type-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 15,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/Negative.kt",
+    "line": 3,
+    "message": "Single space expected between colon and return type",
+    "rule": "standard:function-return-type-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/function_return_type_spacing/config/Disabled.kt",
+    "line": 3,
+    "message": "Missing spacing after \":\"",
+    "rule": "standard:colon-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 38,
+    "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Expected a single space between the modifier list and the function type",
+    "rule": "standard:function-type-modifier-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Unexpected whitespace",
+    "rule": "standard:function-type-reference-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/function_type_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Unexpected whitespace",
+    "rule": "standard:nullable-type-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 22,
+    "file": "src/main/kotlin/rules/function_type_spacing/Negative.kt",
+    "line": 3,
+    "message": "Expected a single space between the modifier list and the function type",
+    "rule": "standard:function-type-modifier-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/function_type_spacing/Negative.kt",
+    "line": 4,
+    "message": "Unexpected whitespace",
+    "rule": "standard:function-type-reference-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 11,
+    "file": "src/main/kotlin/rules/function_type_spacing/Negative.kt",
+    "line": 4,
+    "message": "Unexpected whitespace",
+    "rule": "standard:nullable-type-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 27,
+    "file": "src/main/kotlin/rules/keyword_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Missing spacing after \"if\"",
+    "rule": "standard:keyword-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 7,
+    "file": "src/main/kotlin/rules/keyword_spacing/Negative.kt",
+    "line": 4,
+    "message": "Missing spacing after \"if\"",
+    "rule": "standard:keyword-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 9,
+    "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
+    "line": 3,
+    "message": "Single whitespace expected after modifier",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
+    "line": 5,
+    "message": "Single whitespace expected after modifier",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
+    "line": 5,
+    "message": "Single whitespace expected after modifier",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 33,
+    "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
+    "line": 5,
+    "message": "Single whitespace expected after modifier",
+    "rule": "standard:modifier-list-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_blank_line_before_rbrace/Interaction.kt",
+    "line": 5,
+    "message": "Unexpected blank line(s) before \"}\"",
+    "rule": "standard:no-blank-line-before-rbrace"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_blank_line_before_rbrace/Negative.kt",
+    "line": 5,
+    "message": "Unexpected blank line(s) before \"}\"",
+    "rule": "standard:no-blank-line-before-rbrace"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt",
+    "line": 3,
+    "message": "Needless blank line(s)",
+    "rule": "standard:no-consecutive-blank-lines"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt",
+    "line": 6,
+    "message": "Needless blank line(s)",
+    "rule": "standard:no-consecutive-blank-lines"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_consecutive_blank_lines/Negative.kt",
+    "line": 3,
+    "message": "Needless blank line(s)",
+    "rule": "standard:no-consecutive-blank-lines"
+  },
+  {
+    "auto_fixable": true,
+    "column": 18,
+    "file": "src/main/kotlin/rules/no_empty_class_body/Interaction.kt",
+    "line": 3,
+    "message": "Unnecessary block (\"{}\")",
+    "rule": "standard:no-empty-class-body"
+  },
+  {
+    "auto_fixable": true,
+    "column": 13,
+    "file": "src/main/kotlin/rules/no_empty_class_body/Negative.kt",
+    "line": 3,
+    "message": "Unnecessary block (\"{}\")",
+    "rule": "standard:no-empty-class-body"
+  },
+  {
+    "auto_fixable": true,
+    "column": 5,
+    "file": "src/main/kotlin/rules/no_multi_spaces/Interaction.kt",
+    "line": 3,
+    "message": "Unnecessary long whitespace",
+    "rule": "standard:no-multi-spaces"
+  },
+  {
+    "auto_fixable": true,
+    "column": 18,
+    "file": "src/main/kotlin/rules/no_multi_spaces/Negative.kt",
+    "line": 3,
+    "message": "Unnecessary long whitespace",
+    "rule": "standard:no-multi-spaces"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/no_semi/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/no_semi/Interaction.kt",
+    "line": 3,
+    "message": "Unnecessary semicolon",
+    "rule": "standard:no-semi"
+  },
+  {
+    "auto_fixable": true,
+    "column": 20,
+    "file": "src/main/kotlin/rules/no_semi/Negative.kt",
+    "line": 3,
+    "message": "Unnecessary semicolon",
+    "rule": "standard:no-semi"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/no_trailing_spaces/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/no_trailing_spaces/Interaction.kt",
+    "line": 3,
+    "message": "Trailing space(s)",
+    "rule": "standard:no-trailing-spaces"
+  },
+  {
+    "auto_fixable": true,
+    "column": 20,
+    "file": "src/main/kotlin/rules/no_trailing_spaces/Negative.kt",
+    "line": 3,
+    "message": "Trailing space(s)",
+    "rule": "standard:no-trailing-spaces"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 3,
+    "message": "Parameter should start on a newline",
+    "rule": "standard:parameter-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 3,
+    "message": "Missing newline after \"(\"",
+    "rule": "standard:wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 5,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Single whitespace expected before parameter",
+    "rule": "standard:function-signature"
+  },
+  {
+    "auto_fixable": true,
+    "column": 16,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Missing newline before \")\"",
+    "rule": "standard:wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Missing newline before \")\"",
+    "rule": "standard:parameter-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt",
+    "line": 4,
+    "message": "Missing trailing comma before \")\"",
+    "rule": "standard:trailing-comma-on-declaration-site"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 3,
+    "message": "Parameter should start on a newline",
+    "rule": "standard:parameter-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 14,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 3,
+    "message": "Missing newline after \"(\"",
+    "rule": "standard:wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 5,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Single whitespace expected before parameter",
+    "rule": "standard:function-signature"
+  },
+  {
+    "auto_fixable": true,
+    "column": 18,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Missing newline before \")\"",
+    "rule": "standard:wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 19,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Missing newline before \")\"",
+    "rule": "standard:parameter-list-wrapping"
+  },
+  {
+    "auto_fixable": true,
+    "column": 19,
+    "file": "src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+    "line": 4,
+    "message": "Missing trailing comma before \")\"",
+    "rule": "standard:trailing-comma-on-declaration-site"
+  },
+  {
+    "auto_fixable": true,
+    "column": 20,
+    "file": "src/main/kotlin/rules/paren_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Unexpected spacing after \"(\"",
+    "rule": "standard:paren-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 26,
+    "file": "src/main/kotlin/rules/paren_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 17,
+    "file": "src/main/kotlin/rules/paren_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing after \"(\"",
+    "rule": "standard:paren-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 23,
+    "file": "src/main/kotlin/rules/paren_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing before \")\"",
+    "rule": "standard:paren-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 20,
+    "file": "src/main/kotlin/rules/range_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Unexpected spacing before \"..\"",
+    "rule": "standard:range-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 24,
+    "file": "src/main/kotlin/rules/range_spacing/Interaction.kt",
+    "line": 3,
+    "message": "File must end with a newline (\\n)",
+    "rule": "standard:final-newline"
+  },
+  {
+    "auto_fixable": true,
+    "column": 18,
+    "file": "src/main/kotlin/rules/range_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing around \"..\"",
+    "rule": "standard:range-spacing"
+  }
 ]

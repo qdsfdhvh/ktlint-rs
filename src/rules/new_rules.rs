@@ -12,19 +12,37 @@ use crate::rules::{Rule, Violation};
 pub struct SpacingAroundDot;
 impl Rule for SpacingAroundDot {
     fn id(&self) -> &'static str {
-        "standard:spacing-around-dot"
+        "standard:dot-spacing"
+    }
+
+    fn auto_fixable(&self) -> bool {
+        true
     }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
-            if l.trim().contains(" .") || l.contains(". ") {
-                if !l.contains("\"") && !l.contains("..") {
+            if l.contains("\"") || l.contains("..") {
+                continue;
+            }
+            if let Some(pos) = l.find(" .") {
+                v.push(Violation {
+                    file: String::new(),
+                    line: i + 1,
+                    col: pos + 1,
+                    rule_id: self.id().into(),
+                    message: "Unexpected spacing before \".\"".into(),
+                    auto_fixable: true,
+                });
+            }
+            if let Some(pos) = l.find(". ") {
+                let next = &l[pos + 2..];
+                if !next.starts_with(' ') && !next.starts_with("..") {
                     v.push(Violation {
                         file: String::new(),
                         line: i + 1,
-                        col: 1,
+                        col: pos + 1,
                         rule_id: self.id().into(),
-                        message: "Unexpected space around \".\"".into(),
+                        message: "Unexpected spacing after \".\"".into(),
                         auto_fixable: true,
                     });
                 }
@@ -37,7 +55,7 @@ impl Rule for SpacingAroundDot {
 pub struct SpacingAroundSquareBrackets;
 impl Rule for SpacingAroundSquareBrackets {
     fn id(&self) -> &'static str {
-        "standard:spacing-around-square-brackets"
+        "standard:square-brackets-spacing"
     }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
@@ -166,20 +184,63 @@ impl Rule for NullableTypeSpacing {
     fn id(&self) -> &'static str {
         "standard:nullable-type-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains(" ?") && l.contains('?') && !l.contains("\"") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "No space before \"?\" in nullable type".into(),
-                    auto_fixable: true,
-                });
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "nullable_type" {
+                let text = &source[node.byte_range()];
+                if let Some(question) = text.rfind('?') {
+                    let mut whitespace = question;
+                    while whitespace > 0 && text.as_bytes()[whitespace - 1].is_ascii_whitespace() {
+                        whitespace -= 1;
+                    }
+                    if whitespace < question {
+                        let offset = node.start_byte() + whitespace;
+                        let before = &source[..offset];
+                        let line = before.bytes().filter(|byte| *byte == b'\n').count() + 1;
+                        let line_start = before.rfind('\n').map_or(0, |index| index + 1);
+                        violations.push(Violation {
+                            file: String::new(),
+                            line,
+                            col: source[line_start..offset].chars().count() + 1,
+                            rule_id: self.id().into(),
+                            message: "Unexpected whitespace".into(),
+                            auto_fixable: true,
+                        });
+                    }
+                }
+            }
+            for index in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(index) {
+                    stack.push(child);
+                }
             }
         }
-        v
+        violations
+    }
+}
+
+#[cfg(test)]
+mod nullable_type_spacing_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    #[test]
+    fn reports_whitespace_before_nullable_marker_with_ktlint_message() {
+        let source = "fun String ?.normalized() = trim()\n";
+        let tree = KotlinParser::new().parse(source);
+        let violations = NullableTypeSpacing.check(&tree, source);
+        assert_eq!(violations.len(), 1);
+        assert_eq!((violations[0].line, violations[0].col), (1, 11));
+        assert_eq!(violations[0].message, "Unexpected whitespace");
+        assert!(violations[0].auto_fixable);
+    }
+
+    #[test]
+    fn accepts_nullable_type_without_whitespace() {
+        let source = "fun String?.normalized() = trim()\n";
+        let tree = KotlinParser::new().parse(source);
+        assert!(NullableTypeSpacing.check(&tree, source).is_empty());
     }
 }

@@ -1,4 +1,4 @@
-//! standard:class-naming — class/enum/object names must be PascalCase.
+//! `standard:class-naming` parity with ktlint 1.8.
 
 use crate::rules::{Rule, Violation};
 
@@ -14,79 +14,93 @@ impl Rule for ClassNaming {
     }
 
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let junit_file = source.lines().any(|line| {
+            line.trim_start()
+                .starts_with("import org.junit.jupiter.api")
+        });
         let mut violations = Vec::new();
-
-        for (i, line) in source.lines().enumerate() {
-            let trimmed = line.trim();
-
-            // Check class declarations
-            if let Some(name) = extract_name_after_keyword(trimmed, "class ") {
-                if !is_pascal_case(&name) && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: trimmed.find("class ").unwrap_or(0) + 7,
-                        rule_id: self.id().to_string(),
-                        message: format!("Class name \"{}\" should be PascalCase", name),
-                        auto_fixable: false,
-                    });
-                }
+        for (line_index, line) in source.lines().enumerate() {
+            let declaration = ["class ", "interface ", "object "]
+                .into_iter()
+                .filter_map(|keyword| line.find(keyword).map(|start| (start, keyword)))
+                .min_by_key(|(start, _)| *start);
+            let Some((keyword_start, keyword)) = declaration else {
+                continue;
+            };
+            let name_start = keyword_start + keyword.len();
+            let Some((name, display_name)) = declaration_name(&line[name_start..]) else {
+                continue;
+            };
+            if valid_name(name)
+                || (display_name.starts_with('`')
+                    && display_name.ends_with('`')
+                    && (junit_file || is_keyword(name)))
+            {
+                continue;
             }
-
-            // Enum declarations
-            if let Some(name) = extract_name_after_keyword(trimmed, "enum ") {
-                // Skip 'enum class Foo' — the 'class' keyword is not an enum name
-                if name == "class" || name == "interface" {
-                    continue;
-                }
-                if !is_pascal_case(&name) {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: trimmed.find("enum ").unwrap_or(0) + 6,
-                        rule_id: self.id().to_string(),
-                        message: format!("Enum name \"{}\" should be PascalCase", name),
-                        auto_fixable: false,
-                    });
-                }
-            }
-
-            // Object declarations
-            if let Some(name) = extract_name_after_keyword(trimmed, "object ") {
-                if !is_pascal_case(&name) {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: trimmed.find("object ").unwrap_or(0) + 8,
-                        rule_id: self.id().to_string(),
-                        message: format!("Object name \"{}\" should be PascalCase", name),
-                        auto_fixable: false,
-                    });
-                }
-            }
+            violations.push(Violation {
+                file: String::new(),
+                line: line_index + 1,
+                col: name_start + 1,
+                rule_id: self.id().to_string(),
+                message:
+                    "Class or object name should start with an uppercase letter and use camel case"
+                        .to_string(),
+                auto_fixable: false,
+            });
         }
-
         violations
     }
 }
 
-fn extract_name_after_keyword(line: &str, keyword: &str) -> Option<String> {
-    let rest = line.strip_prefix(keyword)?;
-    let rest = rest.trim_start();
-    // Take the first token (name)
-    let name = rest
-        .chars()
-        .take_while(|c| c.is_alphanumeric() || *c == '_')
-        .collect::<String>();
-    if name.is_empty() {
-        None
-    } else {
-        Some(name)
+fn declaration_name(input: &str) -> Option<(&str, &str)> {
+    let input = input.trim_start();
+    if input.starts_with('`') {
+        let end = input[1..].find('`')? + 2;
+        return Some((&input[1..end - 1], &input[..end]));
     }
+    let end = input
+        .find(|character: char| !(character == '_' || character.is_alphanumeric()))
+        .unwrap_or(input.len());
+    (end > 0).then_some((&input[..end], &input[..end]))
 }
 
-fn is_pascal_case(s: &str) -> bool {
-    s.chars().next().map_or(false, |c| c.is_uppercase())
+fn valid_name(name: &str) -> bool {
+    let mut characters = name.chars();
+    characters.next().is_some_and(char::is_uppercase) && characters.all(char::is_alphanumeric)
+}
+
+fn is_keyword(name: &str) -> bool {
+    matches!(
+        name,
+        "as" | "break"
+            | "class"
+            | "continue"
+            | "do"
+            | "else"
+            | "false"
+            | "for"
+            | "fun"
+            | "if"
+            | "in"
+            | "interface"
+            | "is"
+            | "null"
+            | "object"
+            | "package"
+            | "return"
+            | "super"
+            | "this"
+            | "throw"
+            | "true"
+            | "try"
+            | "typealias"
+            | "typeof"
+            | "val"
+            | "var"
+            | "when"
+            | "while"
+    )
 }
 
 #[cfg(test)]
@@ -96,24 +110,29 @@ mod tests {
 
     fn check(source: &str) -> Vec<Violation> {
         let mut parser = KotlinParser::new();
-        let tree = parser.parse(source);
-        ClassNaming.check(&tree, source)
+        ClassNaming.check(&parser.parse(source), source)
     }
 
     #[test]
-    fn pascal_case_class() {
-        assert!(check("class MyViewModel\n").is_empty());
+    fn accepts_pascal_case_class() {
+        assert!(check("class MyViewModel1\n").is_empty());
     }
 
     #[test]
-    fn snake_case_class() {
-        let v = check("class my_view_model\n");
-        assert!(!v.is_empty());
-        assert_eq!(v[0].rule_id, "standard:class-naming");
+    fn reports_class_at_identifier() {
+        let violations = check("class my_view_model\n");
+        assert_eq!(violations.len(), 1);
+        assert_eq!((violations[0].line, violations[0].col), (1, 7));
+        assert_eq!(
+            violations[0].message,
+            "Class or object name should start with an uppercase letter and use camel case"
+        );
     }
 
     #[test]
-    fn pascal_case_enum() {
-        assert!(check("enum Color { RED, GREEN }\n").is_empty());
+    fn reports_object_at_identifier() {
+        let violations = check("object invalid_name\n");
+        assert_eq!(violations.len(), 1);
+        assert_eq!(violations[0].col, 8);
     }
 }

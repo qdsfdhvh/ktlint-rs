@@ -1,18 +1,23 @@
-//! standard:no-semicolons — unnecessary semicolons
+//! `standard:no-semi` parity with ktlint 1.8.
+
 use crate::rules::{Rule, Violation};
+
 pub struct NoSemicolons;
+
 impl Rule for NoSemicolons {
     fn id(&self) -> &'static str {
-        "standard:no-semicolons"
+        "standard:no-semi"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
+    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let mut in_block_comment = false;
-
-        for (i, line) in s.lines().enumerate() {
+        for (line_index, line) in source.lines().enumerate() {
             let trimmed = line.trim();
-
-            // Track block comment state
             if trimmed.starts_with("/*") {
                 in_block_comment = true;
             }
@@ -22,24 +27,20 @@ impl Rule for NoSemicolons {
                 }
                 continue;
             }
-
-            // Skip line comments and block comment continuation lines (common * prefix)
             if trimmed.starts_with("//") || trimmed.starts_with("* ") || trimmed == "*" {
                 continue;
             }
-
             if trimmed.ends_with(';') && trimmed != ";" {
                 violations.push(Violation {
                     file: String::new(),
-                    line: i + 1,
-                    col: 1,
+                    line: line_index + 1,
+                    col: line.rfind(';').unwrap_or(0) + 1,
                     rule_id: self.id().into(),
                     message: "Unnecessary semicolon".into(),
                     auto_fixable: true,
                 });
             }
         }
-
         violations
     }
 }

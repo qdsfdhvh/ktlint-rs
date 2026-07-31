@@ -8,6 +8,10 @@ impl Rule for NoMultiSpaces {
         "standard:no-multi-spaces"
     }
 
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         // Collect string and comment byte spans to mask them
@@ -31,7 +35,7 @@ impl Rule for NoMultiSpaces {
                         line: i + 1,
                         col: 1,
                         rule_id: self.id().to_string(),
-                        message: "Multiple consecutive spaces".to_string(),
+                        message: "Unnecessary long whitespace".to_string(),
                         auto_fixable: true,
                     });
                 }

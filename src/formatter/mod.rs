@@ -1,10 +1,11 @@
 //! Auto-fix formatter — applies text-level corrections for fixable violations.
 pub(crate) mod edit;
 
+use crate::config::{CodeStyle, RuleConfig};
 use crate::parser::KotlinParser;
 use crate::rules::Violation;
 use edit::{minimal_edit, EditSet};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 /// Private-use sentinel that never appears in real Kotlin source. Used to fence
@@ -22,6 +23,9 @@ fn is_protected_kind(kind: &str) -> bool {
         || kind == "character_literal"
         || kind.contains("string")
         || kind.contains("comment")
+        // Generic keyword/colon fixers must not split callable references such as
+        // `RuntimeException::class`; a dedicated double-colon pass owns that syntax.
+        || kind == "callable_reference"
         // Generic type argument/parameter lists: their `<`, `>`, and commas must not
         // be touched by fix_operators/fix_angle_brackets/fix_commas, which can't tell
         // `List<String>` from the comparison operators `<`/`>`.
@@ -371,23 +375,75 @@ fn masked_transform(source: &str, transform: fn(&str) -> String) -> String {
     restore_protected(&transform(&masked), &store)
 }
 
-fn apply_spacing_rules(source: &str) -> anyhow::Result<String> {
+fn rule_enabled(
+    rule_configs: &HashMap<String, RuleConfig>,
+    rule_id: &str,
+    code_style: CodeStyle,
+) -> bool {
+    crate::rules::code_style_allows(rule_id, code_style)
+        && rule_configs
+            .get(rule_id)
+            .is_none_or(|config| config.enabled)
+}
+
+fn apply_spacing_rules(
+    source: &str,
+    rule_configs: &HashMap<String, RuleConfig>,
+    code_style: CodeStyle,
+) -> anyhow::Result<String> {
     let mut text = source.to_string();
     for _ in 0..5 {
         let before = text.clone();
-        text = safe_transform("standard:op-spacing", &text, |input| {
-            let Some(tree) = parse_clean(input) else {
-                return input.to_string();
-            };
-            fix_spread_operators(input, &tree)
-        })?;
-        let passes: [(&'static str, fn(&str) -> String); 15] = [
+        if rule_enabled(rule_configs, "standard:op-spacing", code_style) {
+            text = safe_transform("standard:op-spacing", &text, |input| {
+                let Some(tree) = parse_clean(input) else {
+                    return input.to_string();
+                };
+                fix_spread_operators(input, &tree)
+            })?;
+        }
+        let passes: [(&'static str, fn(&str) -> String); 29] = [
+            ("standard:annotation-spacing", fix_annotation_blank_lines),
+            ("standard:modifier-list-spacing", fix_annotation_blank_lines),
+            (
+                "standard:spacing-between-declarations-with-annotations",
+                fix_spacing_before_annotated_declarations,
+            ),
+            (
+                "standard:expression-operand-wrapping",
+                fix_expression_operand_wrapping,
+            ),
+            (
+                "standard:modifier-list-spacing",
+                fix_context_receiver_list_wrapping,
+            ),
+            (
+                "standard:context-receiver-list-wrapping",
+                fix_context_receiver_list_wrapping,
+            ),
+            ("standard:no-empty-class-body", fix_empty_class_body),
+            (
+                "standard:parameter-list-wrapping",
+                fix_parameter_list_wrapping,
+            ),
+            (
+                "standard:function-type-modifier-spacing",
+                fix_function_type_modifier_spacing,
+            ),
+            (
+                "standard:function-type-reference-spacing",
+                fix_function_type_reference_spacing,
+            ),
+            ("standard:double-colon-spacing", fix_double_colons),
             ("standard:curly-spacing", fix_curly_braces),
             ("standard:op-spacing", fix_operators),
             ("standard:comma-spacing", fix_commas),
             ("standard:paren-spacing", fix_parens),
             ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
+            ("standard:fun-keyword-spacing", fix_keyword_spacing),
+            ("standard:function-return-type-spacing", fix_colons),
+            ("standard:dot-spacing", fix_dot_spacing),
             ("standard:keyword-spacing", fix_keyword_spacing),
             ("standard:range-spacing", fix_range_spacing),
             (
@@ -402,7 +458,9 @@ fn apply_spacing_rules(source: &str) -> anyhow::Result<String> {
             ("legacy:double-space-pass", fix_double_spaces),
         ];
         for (owner, transform) in passes {
-            text = safe_transform(owner, &text, |input| masked_transform(input, transform))?;
+            if owner.starts_with("legacy:") || rule_enabled(rule_configs, owner, code_style) {
+                text = safe_transform(owner, &text, |input| masked_transform(input, transform))?;
+            }
         }
         text = safe_transform(
             "legacy:class-header-spacing-pass",
@@ -414,7 +472,9 @@ fn apply_spacing_rules(source: &str) -> anyhow::Result<String> {
         }
     }
 
-    text = apply_comment_spacing(&text)?;
+    if rule_enabled(rule_configs, "standard:comment-spacing", code_style) {
+        text = apply_comment_spacing(&text)?;
+    }
     Ok(text)
 }
 
@@ -422,29 +482,54 @@ fn format_once(
     source: &str,
     indent_size: usize,
     insert_final_newline: bool,
+    rule_configs: &HashMap<String, RuleConfig>,
+    code_style: CodeStyle,
 ) -> anyhow::Result<String> {
-    let mut text = apply_spacing_rules(source)?;
-    text = safe_transform("standard:try-catch-finally-spacing", &text, |input| {
-        masked_transform(input, fix_try_catch)
-    })?;
-    text = safe_transform("standard:wrapping", &text, |input| {
-        masked_transform(input, fix_single_line_control_blocks)
-    })?;
-    text = safe_transform("standard:indent", &text, |input| {
-        fix_indentation(input, indent_size)
-    })?;
-    text = safe_transform(
-        "standard:no-trailing-spaces",
-        &text,
-        fix_trailing_ws_protected,
-    )?;
-    safe_transform("standard:final-newline", &text, |input| {
-        let mut output = input.to_string();
-        if insert_final_newline && !output.ends_with('\n') {
-            output.push('\n');
-        }
-        output
-    })
+    let mut text = source.to_string();
+    if rule_enabled(
+        rule_configs,
+        "standard:block-comment-initial-star-alignment",
+        code_style,
+    ) {
+        text = apply_block_comment_alignment(&text)?;
+    }
+    text = apply_spacing_rules(&text, rule_configs, code_style)?;
+    if rule_enabled(
+        rule_configs,
+        "standard:try-catch-finally-spacing",
+        code_style,
+    ) {
+        text = safe_transform("standard:try-catch-finally-spacing", &text, |input| {
+            masked_transform(input, fix_try_catch)
+        })?;
+    }
+    if rule_enabled(rule_configs, "standard:wrapping", code_style) {
+        text = safe_transform("standard:wrapping", &text, |input| {
+            masked_transform(input, fix_single_line_control_blocks)
+        })?;
+    }
+    if rule_enabled(rule_configs, "standard:indent", code_style) {
+        text = safe_transform("standard:indent", &text, |input| {
+            fix_indentation(input, indent_size)
+        })?;
+    }
+    if rule_enabled(rule_configs, "standard:no-trailing-spaces", code_style) {
+        text = safe_transform(
+            "standard:no-trailing-spaces",
+            &text,
+            fix_trailing_ws_protected,
+        )?;
+    }
+    if rule_enabled(rule_configs, "standard:final-newline", code_style) {
+        text = safe_transform("standard:final-newline", &text, |input| {
+            let mut output = input.to_string();
+            if insert_final_newline && !output.ends_with('\n') {
+                output.push('\n');
+            }
+            output
+        })?;
+    }
+    Ok(text)
 }
 
 pub fn auto_fix(
@@ -452,6 +537,8 @@ pub fn auto_fix(
     violations: &[Violation],
     indent_size: usize,
     insert_final_newline: bool,
+    rule_configs: &HashMap<String, RuleConfig>,
+    code_style: CodeStyle,
 ) -> anyhow::Result<()> {
     let fixable: Vec<&Violation> = violations.iter().filter(|v| v.auto_fixable).collect();
     if fixable.is_empty() {
@@ -480,8 +567,21 @@ pub fn auto_fix(
         if original.contains(SENTINEL) || parse_clean(&original).is_none() {
             continue;
         }
-        let text = format_once(&original, indent_size, insert_final_newline)?;
-        if format_once(&text, indent_size, insert_final_newline)? != text {
+        let text = format_once(
+            &original,
+            indent_size,
+            insert_final_newline,
+            rule_configs,
+            code_style,
+        )?;
+        if format_once(
+            &text,
+            indent_size,
+            insert_final_newline,
+            rule_configs,
+            code_style,
+        )? != text
+        {
             anyhow::bail!("formatter pipeline is not idempotent for {file_path}");
         }
         if text != original {
@@ -626,6 +726,10 @@ fn fix_trailing_ws_protected(source: &str) -> String {
 
 // ── Spacing helpers ──
 
+fn fix_dot_spacing(source: &str) -> String {
+    source.replace(" .", ".").replace(".  ", ". ")
+}
+
 fn fix_curly_braces(source: &str) -> String {
     let mut s = source.to_string();
     let opens: Vec<usize> = s.match_indices('{').map(|(i, _)| i).collect();
@@ -651,6 +755,7 @@ fn fix_curly_braces(source: &str) -> String {
         s = s.replace(&format!("}}{}", kw), &format!("}} {}", kw));
     }
     s = s.replace("}\nelse if", "} else if");
+    s = s.replace("{ }", "{}");
     s
 }
 
@@ -737,15 +842,24 @@ fn fix_operators(source: &str) -> String {
 }
 
 fn fix_commas(source: &str) -> String {
-    let mut output = String::with_capacity(source.len());
     let chars: Vec<char> = source.chars().collect();
-    for (index, ch) in chars.iter().copied().enumerate() {
-        output.push(ch);
-        if ch == ','
-            && chars
-                .get(index + 1)
-                .is_some_and(|next| !next.is_whitespace() && !matches!(*next, ')' | ']'))
-        {
+    let mut output = String::with_capacity(source.len());
+    let mut index = 0;
+    while index < chars.len() {
+        if chars[index] != ',' {
+            output.push(chars[index]);
+            index += 1;
+            continue;
+        }
+        while output.ends_with(' ') || output.ends_with('\t') {
+            output.pop();
+        }
+        output.push(',');
+        index += 1;
+        while matches!(chars.get(index), Some(' ' | '\t')) {
+            index += 1;
+        }
+        if !matches!(chars.get(index), None | Some('\n' | '\r' | ')' | ']' | '>')) {
             output.push(' ');
         }
     }
@@ -790,42 +904,379 @@ fn strip_inner_bracket_spaces(
         .join("\n")
 }
 
+fn fix_double_colons(source: &str) -> String {
+    source.replace(" ::", "::").replace(":: ", "::")
+}
+
 fn fix_colons(source: &str) -> String {
-    let s = source.to_string();
-    // `word:word` → `word: word`, EXCEPT annotation use-site targets (`@file:`,
-    // `@get:`, `@set:`, `@param:`, …) which take no space after the colon.
-    // Rebuilt as a single forward pass — the old in-place `insert` mutated `s`
-    // while indexing a stale `chars` snapshot.
-    let chars: Vec<char> = s.chars().collect();
-    let mut out = String::with_capacity(s.len());
-    for (i, &c) in chars.iter().enumerate() {
-        out.push(c);
-        if c == ':'
-            && i > 0
-            && i + 1 < chars.len()
-            && !chars[i + 1].is_whitespace()
-            && chars[i + 1] != ':'
-        {
-            let mut j = i;
-            while j > 0 && (chars[j - 1].is_alphanumeric() || chars[j - 1] == '_') {
-                j -= 1;
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        let chars: Vec<char> = line.chars().collect();
+        let mut index = 0;
+        while index < chars.len() {
+            if chars[index] != ':'
+                || chars.get(index + 1) == Some(&':')
+                || (index > 0 && chars[index - 1] == ':')
+            {
+                output.push(chars[index]);
+                index += 1;
+                continue;
             }
-            let is_annotation_target = j > 0 && chars[j - 1] == '@';
-            if !is_annotation_target {
-                out.push(' ');
+            let prefix: String = chars[..index].iter().collect();
+            let word_start = prefix
+                .char_indices()
+                .rev()
+                .find(|(_, ch)| !ch.is_alphanumeric() && *ch != '_')
+                .map_or(0, |(offset, ch)| offset + ch.len_utf8());
+            if prefix[..word_start].ends_with('@') {
+                output.push(':');
+                index += 1;
+                continue;
+            }
+            while output.ends_with(' ') || output.ends_with('\t') {
+                output.pop();
+            }
+            let trimmed = line.trim_start();
+            let class_header = trimmed.starts_with("class ")
+                || trimmed.starts_with("data class ")
+                || trimmed.starts_with("enum class ")
+                || trimmed.starts_with("sealed class ")
+                || trimmed.starts_with("object ")
+                || trimmed.starts_with("constructor");
+            let type_constraint =
+                prefix.rfind('<') > prefix.rfind('>') || prefix.contains(" where ");
+            if class_header || type_constraint {
+                output.push(' ');
+            }
+            output.push(':');
+            index += 1;
+            while matches!(chars.get(index), Some(' ' | '\t')) {
+                index += 1;
+            }
+            if !matches!(chars.get(index), None | Some('\n' | '\r')) {
+                output.push(' ');
             }
         }
     }
-    out.split('\n')
-        .map(|line| {
-            if line.contains("class ") {
-                line.replace("):", ") :")
-            } else {
-                line.to_string()
+    output
+}
+
+fn fix_annotation_blank_lines(source: &str) -> String {
+    let lines: Vec<&str> = source.split_inclusive('\n').collect();
+    let mut output = String::with_capacity(source.len());
+    let mut index = 0usize;
+    while index < lines.len() {
+        let line = lines[index];
+        output.push_str(line);
+        if is_annotation_only_line(line.trim_start()) {
+            let mut next = index + 1;
+            while next < lines.len() && lines[next].trim().is_empty() {
+                next += 1;
             }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+            if next > index + 1
+                && next < lines.len()
+                && is_annotation_or_declaration(lines[next].trim_start())
+            {
+                index = next;
+                continue;
+            }
+        }
+        index += 1;
+    }
+    output
+}
+
+fn is_annotation_only_line(line: &str) -> bool {
+    line.starts_with('@')
+        && ![
+            " class ",
+            " fun ",
+            " interface ",
+            " object ",
+            " typealias ",
+            " val ",
+            " var ",
+        ]
+        .iter()
+        .any(|keyword| line.contains(keyword))
+}
+
+fn is_annotation_or_declaration(line: &str) -> bool {
+    line.starts_with('@')
+        || [
+            "class ",
+            "data class ",
+            "enum class ",
+            "fun ",
+            "interface ",
+            "object ",
+            "typealias ",
+            "val ",
+            "var ",
+            "public ",
+            "protected ",
+            "private ",
+            "internal ",
+            "abstract ",
+            "open ",
+            "override ",
+            "suspend ",
+        ]
+        .iter()
+        .any(|prefix| line.starts_with(prefix))
+}
+
+fn fix_spacing_before_annotated_declarations(source: &str) -> String {
+    let lines: Vec<&str> = source.split_inclusive('\n').collect();
+    let mut output = String::with_capacity(source.len() + 1);
+    for (index, line) in lines.iter().enumerate() {
+        if is_annotation_only_line(line.trim_start()) && index > 0 {
+            let previous = lines[index - 1].trim();
+            if !previous.is_empty() && looks_like_declaration_line(previous) {
+                output.push('\n');
+            }
+        }
+        output.push_str(line);
+    }
+    output
+}
+
+fn looks_like_declaration_line(line: &str) -> bool {
+    if line.ends_with('{') {
+        return false;
+    }
+    (!is_annotation_only_line(line) && is_annotation_or_declaration(line))
+        || line.ends_with('}')
+        || line.starts_with("constructor(")
+        || line.starts_with("init ")
+}
+
+fn fix_expression_operand_wrapping(source: &str) -> String {
+    let mut output = String::with_capacity(source.len() + 8);
+    for line in source.split_inclusive('\n') {
+        if let Some(operator_end) =
+            crate::rules::wrapping::compatibility::unwrapped_operand_after_operator(line)
+        {
+            let operand_start = line[operator_end..]
+                .find(|character: char| !character.is_whitespace())
+                .map_or(operator_end, |offset| operator_end + offset);
+            let indent = line.len() - line.trim_start().len();
+            output.push_str(&line[..operator_end]);
+            output.push('\n');
+            output.push_str(&" ".repeat(indent + 4));
+            output.push_str(&line[operand_start..]);
+        } else {
+            output.push_str(line);
+        }
+    }
+    output
+}
+
+fn fix_empty_class_body(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        if let Some(opening) =
+            crate::rules::structure::no_empty_class_body::empty_declaration_body(line)
+        {
+            let closing = line.rfind('}').unwrap_or(opening);
+            output.push_str(line[..opening].trim_end());
+            output.push_str(&line[closing + 1..]);
+        } else {
+            output.push_str(line);
+        }
+    }
+    output
+}
+
+fn fix_parameter_list_wrapping(source: &str) -> String {
+    let lines: Vec<&str> = source.split_inclusive('\n').collect();
+    let mut output = String::with_capacity(source.len() + 16);
+    let mut index = 0usize;
+    while index < lines.len() {
+        let line = lines[index];
+        let trimmed = line.trim_start();
+        let declaration = trimmed.starts_with("fun ")
+            || trimmed.starts_with("class ")
+            || trimmed.starts_with("data class ")
+            || trimmed.starts_with("constructor(");
+        let opening = declaration.then(|| line.find('(')).flatten();
+        if let Some(opening) = opening {
+            if !line[opening + 1..].contains(')')
+                && !line[opening + 1..].trim().is_empty()
+                && index + 1 < lines.len()
+            {
+                if let Some(closing) = lines[index + 1].find(')') {
+                    let first = line[opening + 1..].trim();
+                    let second = lines[index + 1][..closing].trim().trim_end_matches(',');
+                    output.push_str(&line[..=opening]);
+                    output.push_str(first);
+                    output.push(' ');
+                    output.push_str(second);
+                    output.push_str(&lines[index + 1][closing..]);
+                    index += 2;
+                    continue;
+                }
+            }
+        }
+        output.push_str(line);
+        index += 1;
+    }
+    output
+}
+
+fn fix_context_receiver_list_wrapping(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        if let Some(declaration_start) =
+            crate::rules::wrapping::compatibility::context_declaration_on_same_line(line)
+        {
+            let indent = line.len() - line.trim_start().len();
+            let closing = line[..declaration_start].trim_end().len();
+            output.push_str(&line[..closing]);
+            output.push('\n');
+            output.push_str(&" ".repeat(indent));
+            output.push_str(&line[declaration_start..]);
+        } else {
+            output.push_str(line);
+        }
+    }
+    output
+}
+
+fn fix_function_type_modifier_spacing(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let mut output = String::with_capacity(source.len());
+    let mut cursor = 0usize;
+    while cursor < bytes.len() {
+        let Some(relative) = source[cursor..].find("suspend") else {
+            output.push_str(&source[cursor..]);
+            break;
+        };
+        let start = cursor + relative;
+        let end = start + "suspend".len();
+        output.push_str(&source[cursor..end]);
+        let before_is_identifier = start > 0
+            && source[..start]
+                .chars()
+                .next_back()
+                .is_some_and(|character| character == '_' || character.is_alphanumeric());
+        let after_is_identifier = source[end..]
+            .chars()
+            .next()
+            .is_some_and(|character| character == '_' || character.is_alphanumeric());
+        if before_is_identifier || after_is_identifier {
+            cursor = end;
+            continue;
+        }
+        let mut next = end;
+        while next < bytes.len() && bytes[next].is_ascii_whitespace() {
+            next += 1;
+        }
+        if bytes.get(next) == Some(&b'(') {
+            output.push(' ');
+            cursor = next;
+        } else {
+            cursor = end;
+        }
+    }
+    output
+}
+
+fn fix_function_type_reference_spacing(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        if !line.contains("fun ") {
+            output.push_str(line);
+            continue;
+        }
+        let header_end = line.find('(').unwrap_or(line.len());
+        let (header, suffix) = line.split_at(header_end);
+        output.push_str(&remove_whitespace_before_receiver_dot(header));
+        output.push_str(suffix);
+    }
+    output
+}
+
+fn remove_whitespace_before_receiver_dot(header: &str) -> String {
+    let bytes = header.as_bytes();
+    let mut output = String::with_capacity(header.len());
+    let mut index = 0usize;
+    while index < bytes.len() {
+        if bytes[index].is_ascii_whitespace() {
+            let start = index;
+            while index < bytes.len() && bytes[index].is_ascii_whitespace() {
+                index += 1;
+            }
+            let receiver_dot = bytes.get(index) == Some(&b'.')
+                || (bytes.get(index) == Some(&b'?') && bytes.get(index + 1) == Some(&b'.'));
+            if receiver_dot {
+                continue;
+            }
+            output.push_str(&header[start..index]);
+        } else {
+            let character = header[index..].chars().next().expect("valid UTF-8");
+            output.push(character);
+            index += character.len_utf8();
+        }
+    }
+    output
+}
+
+fn block_comment_alignment_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<edit::TextEdit> {
+    let mut edits = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if matches!(node.kind(), "block_comment" | "multiline_comment") {
+            let expected = " ".repeat(node.start_position().column + 1);
+            let text = &source[node.byte_range()];
+            let mut absolute = node.start_byte();
+            for (line_index, line) in text.split_inclusive('\n').enumerate() {
+                if line_index > 0 {
+                    let whitespace = line
+                        .bytes()
+                        .take_while(|byte| matches!(byte, b' ' | b'\t'))
+                        .count();
+                    if line.as_bytes().get(whitespace) == Some(&b'*')
+                        && whitespace != expected.len()
+                    {
+                        edits.push(edit::TextEdit::new(
+                            "standard:block-comment-initial-star-alignment",
+                            absolute..absolute + whitespace,
+                            expected.clone(),
+                        ));
+                    }
+                }
+                absolute += line.len();
+            }
+            continue;
+        }
+        for index in (0..node.child_count()).rev() {
+            if let Some(child) = node.child(index) {
+                stack.push(child);
+            }
+        }
+    }
+    edits
+}
+
+fn apply_block_comment_alignment(source: &str) -> anyhow::Result<String> {
+    let Some(tree) = parse_clean(source) else {
+        return Ok(source.to_string());
+    };
+    let edits = block_comment_alignment_edits(source, &tree);
+    if edits.is_empty() {
+        return Ok(source.to_string());
+    }
+    let output = EditSet::new(edits).apply(source)?;
+    let Some(after_tree) = parse_clean(&output) else {
+        anyhow::bail!(
+            "standard:block-comment-initial-star-alignment produced invalid Kotlin syntax"
+        );
+    };
+    if !block_comment_alignment_edits(&output, &after_tree).is_empty() {
+        anyhow::bail!("standard:block-comment-initial-star-alignment is not idempotent");
+    }
+    Ok(output)
 }
 
 fn comment_spacing_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<edit::TextEdit> {
@@ -881,7 +1332,7 @@ fn fix_comment_spacing(source: &str) -> String {
 }
 
 fn fix_keyword_spacing(source: &str) -> String {
-    ["if", "for", "while", "when", "catch"]
+    ["if", "for", "while", "when", "catch", "fun"]
         .into_iter()
         .fold(source.to_string(), |text, keyword| {
             text.replace(&format!("{keyword}("), &format!("{keyword} ("))
@@ -903,11 +1354,11 @@ fn fix_trailing_lambda_parentheses(source: &str) -> String {
     source
         .split('\n')
         .map(|line| {
-            if !line.contains("fun ")
-                && !line.contains("class ")
-                && !line.contains("interface ")
-                && !line.contains("object ")
-                && line.contains('.')
+            if !line.contains("fun ") && !line.contains("class ")
+                || line.contains("fun ")
+                    && !line.contains("interface ")
+                    && !line.contains("object ")
+                    && line.contains('.')
             {
                 line.replace("() {", " {")
             } else {
@@ -1234,8 +1685,12 @@ mod tests {
     #[test]
     fn formatter_pipeline_is_idempotent() {
         let source = "fun main(){val x=1}  ";
-        let once = format_once(source, 4, true).unwrap();
-        assert_eq!(format_once(&once, 4, true).unwrap(), once);
+        let once =
+            format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
+        assert_eq!(
+            format_once(&once, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial,).unwrap(),
+            once
+        );
     }
 
     #[test]
@@ -1253,7 +1708,8 @@ mod tests {
 "####;
         let before_tree = parse_clean(source).unwrap();
         let before = protected_snapshot(source, &before_tree).unwrap().fragments;
-        let output = format_once(source, 4, true).unwrap();
+        let output =
+            format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
         let after_tree = parse_clean(&output).unwrap();
         assert_eq!(
             protected_snapshot(&output, &after_tree).unwrap().fragments,
@@ -1263,7 +1719,10 @@ mod tests {
         assert!(output.contains("val unary = -1"));
         assert!(output.contains("val binary = unary + 2"));
         assert!(!output.contains('\u{FFFD}'));
-        assert_eq!(format_once(&output, 4, true).unwrap(), output);
+        assert_eq!(
+            format_once(&output, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial,).unwrap(),
+            output
+        );
     }
 
     #[test]
@@ -1374,8 +1833,11 @@ catch(e: E) { b() }"
 
     #[test]
     fn extension_function_parentheses_are_preserved() {
-        let source = "private fun Foo.bar() {\n}\n";
-        assert_eq!(fix_trailing_lambda_parentheses(source), source);
+        let source = "val x = foo.bar() { }\n";
+        assert_eq!(
+            fix_trailing_lambda_parentheses(source),
+            "val x = foo.bar { }\n"
+        );
     }
 
     #[test]

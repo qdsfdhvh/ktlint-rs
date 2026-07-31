@@ -1,0 +1,5 @@
+root = false
+
+[*.kt]
+ktlint_standard_annotation-spacing = disabled
+ktlint_standard_modifier-list-spacing = disabled

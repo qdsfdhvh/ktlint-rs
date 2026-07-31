@@ -59,7 +59,7 @@ jobs:
       - run: python3 scripts/generate_rule_plan.py --binary target/release/ktlint-rs --check
       - name: Verify every mismatch surface fails closed
         run: |
-          for kind in discovery config diagnostics format; do
+          for kind in discovery config diagnostics format idempotence; do
             ./scripts/spotless-differential.sh --offline --inject-mismatch "$kind"
           done
 

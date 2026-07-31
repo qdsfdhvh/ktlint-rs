@@ -5,6 +5,10 @@ impl Rule for NoBlankLineBeforeRbrace {
     fn id(&self) -> &'static str {
         "standard:no-blank-line-before-rbrace"
     }
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
@@ -19,7 +23,7 @@ impl Rule for NoBlankLineBeforeRbrace {
                     line: i + 1,
                     col: 1,
                     rule_id: self.id().into(),
-                    message: "Blank line(s) before \"}\"".into(),
+                    message: "Unexpected blank line(s) before \"}\"".into(),
                     auto_fixable: true,
                 });
             }

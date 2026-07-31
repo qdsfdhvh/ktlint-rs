@@ -38,12 +38,13 @@ impl Rule for FunctionSignatureSpacing {
             if t.starts_with("fun ") && t.contains('(') && !t.contains(')') {
                 let after_open = t.split_once('(').map_or("", |(_, rest)| rest).trim();
                 if !after_open.is_empty() {
+                    let next = l.get(i + 1).copied().unwrap_or("");
                     v.push(Violation {
                         file: String::new(),
-                        line: i + 1,
-                        col: 1,
+                        line: i + 2,
+                        col: next.len() - next.trim_start().len() + 1,
                         rule_id: self.id().into(),
-                        message: "Newline expected after opening parenthesis".into(),
+                        message: "Single whitespace expected before parameter".into(),
                         auto_fixable: true,
                     });
                 }
@@ -112,6 +113,9 @@ impl Rule for KeywordSpacing {
     fn id(&self) -> &'static str {
         "standard:keyword-spacing"
     }
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let bytes = s.as_bytes();
         let mut violations = Vec::new();
@@ -126,9 +130,9 @@ impl Rule for KeywordSpacing {
                 violations.push(Violation {
                     file: String::new(),
                     line: pos.row + 1,
-                    col: pos.column + 1,
+                    col: pos.column + 3,
                     rule_id: self.id().into(),
-                    message: "Missing space after keyword".into(),
+                    message: format!("Missing spacing after \"{}\"", node.kind()).into(),
                     auto_fixable: true,
                 });
             }

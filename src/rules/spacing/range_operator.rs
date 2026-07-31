@@ -1,11 +1,16 @@
-//! standard:spacing-around-range-operator — spaces around .. operator.
+//! `standard:range-spacing` parity with ktlint 1.8.
+
 use crate::rules::{Rule, Violation};
 
 pub struct RangeOperatorSpacing;
 
 impl Rule for RangeOperatorSpacing {
     fn id(&self) -> &'static str {
-        "standard:spacing-around-range-operator"
+        "standard:range-spacing"
+    }
+
+    fn auto_fixable(&self) -> bool {
+        true
     }
 
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
@@ -16,26 +21,30 @@ impl Rule for RangeOperatorSpacing {
             if node.kind() == ".." {
                 let offset = node.start_byte();
                 let pos = node.start_position();
-                if offset > 0 && bytes[offset - 1] == b' ' {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: pos.row + 1,
-                        col: pos.column + 1,
-                        rule_id: self.id().into(),
-                        message: "Unexpected space before \"..\"".into(),
-                        auto_fixable: true,
-                    });
-                }
-                if node.end_byte() < bytes.len() && bytes[node.end_byte()] == b' ' {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: pos.row + 1,
-                        col: pos.column + 3,
-                        rule_id: self.id().into(),
-                        message: "Unexpected space after \"..\"".into(),
-                        auto_fixable: true,
-                    });
-                }
+                let before = offset > 0 && bytes[offset - 1].is_ascii_whitespace();
+                let after =
+                    node.end_byte() < bytes.len() && bytes[node.end_byte()].is_ascii_whitespace();
+                let (column, message) = match (before, after) {
+                    (true, true) => (pos.column + 1, "Unexpected spacing around \"..\""),
+                    (true, false) => (pos.column, "Unexpected spacing before \"..\""),
+                    (false, true) => (pos.column + 3, "Unexpected spacing after \"..\""),
+                    (false, false) => {
+                        for index in (0..node.child_count()).rev() {
+                            if let Some(child) = node.child(index) {
+                                stack.push(child);
+                            }
+                        }
+                        continue;
+                    }
+                };
+                violations.push(Violation {
+                    file: String::new(),
+                    line: pos.row + 1,
+                    col: column,
+                    rule_id: self.id().into(),
+                    message: message.into(),
+                    auto_fixable: true,
+                });
             }
             for index in (0..node.child_count()).rev() {
                 if let Some(child) = node.child(index) {
@@ -51,19 +60,21 @@ impl Rule for RangeOperatorSpacing {
 mod tests {
     use super::*;
     use crate::parser::KotlinParser;
-    fn check(s: &str) -> Vec<Violation> {
-        let mut p = KotlinParser::new();
-        let t = p.parse(s);
-        RangeOperatorSpacing.check(&t, s)
+
+    fn check(source: &str) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        RangeOperatorSpacing.check(&parser.parse(source), source)
     }
+
     #[test]
-    fn range_ok() {
-        assert!(check("for (i in 1..10)\n").is_empty());
+    fn accepts_compact_range() {
+        assert!(check("val range = 1..10\n").is_empty());
     }
+
     #[test]
-    fn space_before_range() {
-        let v = check("for (i in 1 ..10)\n");
-        assert!(!v.is_empty());
-        assert!(v.iter().any(|x| x.message.contains("before")));
+    fn groups_spacing_around_range() {
+        let violations = check("val range = 1 .. 10\n");
+        assert_eq!(violations.len(), 1);
+        assert_eq!(violations[0].message, "Unexpected spacing around \"..\"");
     }
 }

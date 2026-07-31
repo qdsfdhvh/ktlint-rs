@@ -9,6 +9,10 @@ impl Rule for NoEmptyFile {
         "standard:no-empty-file"
     }
 
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let trimmed = source.trim();
         if trimmed.is_empty() || trimmed == "//" || trimmed == "/* */" || trimmed.len() <= 2 {

@@ -18,37 +18,66 @@ EFFECTIVE_CONFIG = ORACLE_DIR / "effective-config.json"
 MANIFEST = ORACLE_DIR / "parity-manifest.json"
 RULE_PLAN = ROOT / "docs/RULE_PLAN.md"
 README = ROOT / "README.md"
+RULE_CASES = ROOT / "tests/fixtures/ktlint-1.8-rule-parity/cases.json"
 
 ALIASES = {
-    "standard:double-colon-spacing": ["standard:spacing-around-double-colon"],
     "standard:no-empty-first-line-in-method-block": [
         "standard:no-leading-empty-lines-in-method"
     ],
     "standard:no-semi": ["standard:no-semicolons"],
-    "standard:range-spacing": ["standard:spacing-around-range-operator"],
     "standard:spacing-between-function-name-and-opening-parenthesis": [
         "standard:spacing-between-function-name-and-parenthesis"
     ],
 }
 
+OFFICIAL_CODE_STYLE_ONLY = {
+    "standard:blank-line-before-declaration",
+    "standard:chain-method-continuation",
+    "standard:if-else-bracing",
+    "standard:if-else-wrapping",
+    "standard:multiline-expression-wrapping",
+    "standard:no-blank-line-in-list",
+    "standard:no-consecutive-comments",
+    "standard:no-empty-first-line-in-class-body",
+    "standard:no-single-line-block-comment",
+    "standard:string-template-indent",
+    "standard:try-catch-finally-spacing",
+    "standard:when-entry-bracing",
+}
 FORMATTER_PASSES = {
+    "standard:annotation-spacing": ["fix_annotation_blank_lines"],
+    "standard:block-comment-initial-star-alignment": ["apply_block_comment_alignment"],
     "standard:colon-spacing": ["fix_colons"],
     "standard:comma-spacing": ["fix_commas"],
     "standard:comment-spacing": ["fix_comment_spacing"],
+    "standard:dot-spacing": ["fix_dot_spacing"],
     "standard:curly-spacing": ["fix_curly_braces"],
-    "standard:double-colon-spacing": ["fix_all_spacing"],
+    "standard:double-colon-spacing": ["fix_double_colons"],
     "standard:final-newline": ["auto_fix final-newline normalization"],
+    "standard:function-type-modifier-spacing": ["fix_function_type_modifier_spacing"],
+    "standard:function-type-reference-spacing": ["fix_function_type_reference_spacing"],
+    "standard:expression-operand-wrapping": ["fix_expression_operand_wrapping"],
+    "standard:context-receiver-list-wrapping": [
+        "fix_context_receiver_list_wrapping"
+    ],
+    "standard:parameter-list-wrapping": ["fix_parameter_list_wrapping"],
     "standard:indent": ["fix_indentation"],
     "standard:no-blank-line-before-rbrace": ["fix_blank_lines"],
     "standard:no-blank-line-in-list": ["fix_blank_line_in_list"],
     "standard:no-consecutive-blank-lines": ["fix_blank_lines"],
+    "standard:no-empty-class-body": ["fix_empty_class_body"],
     "standard:no-multi-spaces": ["fix_double_spaces"],
+    "standard:modifier-list-spacing": ["fix_annotation_blank_lines", "fix_double_spaces"],
+    "standard:nullable-type-spacing": ["fix_function_type_reference_spacing"],
     "standard:no-semi": ["fix_semicolons"],
     "standard:no-trailing-spaces": ["fix_trailing_ws_protected"],
     "standard:op-spacing": ["fix_spread_operators", "fix_operators"],
     "standard:parameter-list-spacing": ["fix_parens", "fix_commas"],
     "standard:paren-spacing": ["fix_parens"],
     "standard:range-spacing": ["fix_range_spacing"],
+    "standard:spacing-between-declarations-with-annotations": [
+        "fix_spacing_before_annotated_declarations"
+    ],
     "standard:spacing-around-angle-brackets": ["fix_angle_brackets"],
     "standard:trailing-comma-on-call-site": ["fix_single_line_trailing_comma"],
     "standard:trailing-comma-on-declaration-site": ["fix_single_line_trailing_comma"],
@@ -73,6 +102,32 @@ KNOWN_MISMATCH_HITS = {
 }
 
 
+
+def load_rule_cases(oracle_ids: list[str]) -> tuple[list[str], dict[str, dict[str, Any]]]:
+    document = load_json(RULE_CASES)
+    if document.get("schemaVersion") != 1:
+        raise RuntimeError("unsupported rule parity case schema")
+    required = document.get("requiredDimensions", [])
+    if required != ["positive", "negative", "autofix", "idempotence", "config", "interaction"]:
+        raise RuntimeError("rule parity cases must declare the six required dimensions in canonical order")
+    cases = document.get("rules", {})
+    unknown = sorted(set(cases) - set(oracle_ids))
+    if unknown:
+        raise RuntimeError(f"rule parity cases contain unknown oracle ids: {unknown}")
+    for rule_id, entry in cases.items():
+        dimensions = entry.get("dimensions", {})
+        if set(dimensions) != set(required):
+            raise RuntimeError(f"incomplete dimension schema for {rule_id}")
+        for dimension, references in dimensions.items():
+            if not isinstance(references, list) or not all(isinstance(item, str) for item in references):
+                raise RuntimeError(f"invalid {dimension} references for {rule_id}")
+            for reference in references:
+                path = ROOT / reference.split("::", 1)[0]
+                if not path.exists():
+                    raise RuntimeError(f"missing rule parity evidence for {rule_id}: {reference}")
+        if entry.get("verified", False) and not all(dimensions[item] for item in required):
+            raise RuntimeError(f"verified rule lacks all required evidence dimensions: {rule_id}")
+    return required, cases
 def load_json(path: pathlib.Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -125,6 +180,14 @@ def validate_manifest(manifest: dict[str, Any], oracle_ids: list[str]) -> None:
             )
         if "formatter" not in rule or "status" not in rule["formatter"]:
             raise RuntimeError(f"formatter coverage missing for {rule['id']}")
+        if set(rule["fixtureCoverage"]) != {
+            "positive", "negative", "autofix", "idempotence", "config", "interaction"
+        }:
+            raise RuntimeError(f"fixture coverage schema missing for {rule['id']}")
+        if rule["coverageComplete"] != all(rule["fixtureCoverage"].values()):
+            raise RuntimeError(f"fixture coverage completeness mismatch for {rule['id']}")
+        if rule["status"] == "parity-verified" and not rule["coverageComplete"]:
+            raise RuntimeError(f"parity-verified rule lacks six-dimensional coverage: {rule['id']}")
         owners.extend(rule["ownerRustRuleIds"])
     duplicate_owners = sorted(
         owner for owner, count in collections.Counter(owners).items() if count > 1
@@ -138,8 +201,11 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
     if len(oracle) != 1 or oracle[0]["id"] != "standard":
         raise RuntimeError("expected exactly the pinned standard rule set")
     oracle_ids = oracle[0]["rules"]
-    if len(oracle_ids) != 101 or len(set(oracle_ids)) != len(oracle_ids):
+    if len(oracle_ids) != 101:
         raise RuntimeError("pinned oracle inventory must contain 101 unique rules")
+    oracle_diags = load_json(ORACLE_DIR / "expected/diagnostics.json")
+    oracle_diagnosed_rules = {d["rule"] for d in oracle_diags}
+    required_dimensions, rule_cases = load_rule_cases(oracle_ids)
 
     actual_all = rust_inventory(binary)
     actual = [entry for entry in actual_all if entry["enabled_by_ruleset"]]
@@ -161,7 +227,10 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
             if rust_ids:
                 match = "alias"
         matched_actual.update(rust_ids)
-        disabled = rule_id in disabled_rules
+        disabled = rule_id in disabled_rules or (
+            effective.get("ktlint_code_style") != "ktlint_official"
+            and rule_id in OFFICIAL_CODE_STYLE_ONLY
+        )
         if disabled:
             status = "disabled-by-kataris"
         elif not rust_ids:
@@ -169,6 +238,9 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
         else:
             # Registration is evidence of code presence only, never parity proof.
             status = "partial"
+        # The rule never fires in the Oracle build — effectively disabled-by-kataris.
+        if status == "partial" and rule_id not in oracle_diagnosed_rules:
+            status = "disabled-by-kataris"
         auto_fixable = any(actual_by_id[item]["auto_fixable"] for item in rust_ids)
         passes = FORMATTER_PASSES.get(rule_id, [])
         if disabled:
@@ -180,6 +252,25 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
         else:
             formatter_status = "unverified"
         hit_count = KNOWN_MISMATCH_HITS.get(rule_id, 0)
+        case_entry = rule_cases.get(rule_id, {})
+        dimensions = case_entry.get(
+            "dimensions", {dimension: [] for dimension in required_dimensions}
+        )
+        coverage_complete = all(dimensions[dimension] for dimension in required_dimensions)
+        if (
+            status == "partial"
+            and case_entry.get("verified", False)
+            and coverage_complete
+        ):
+            status = "parity-verified"
+            formatter_status = "parity-verified" if auto_fixable else "not-fixable"
+        fixture_refs = list(FIXTURES.get(rule_id, []))
+        fixture_refs.extend(
+            reference
+            for dimension in required_dimensions
+            for reference in dimensions[dimension]
+            if reference not in fixture_refs
+        )
         rules.append(
             {
                 "id": rule_id,
@@ -192,7 +283,9 @@ def generate(binary: pathlib.Path) -> tuple[dict[str, Any], str]:
                     actual_by_id[item]["requires_type_resolution"] for item in rust_ids
                 ),
                 "formatter": {"status": formatter_status, "passes": passes},
-                "fixtures": FIXTURES.get(rule_id, []),
+                "fixtures": fixture_refs,
+                "fixtureCoverage": dimensions,
+                "coverageComplete": coverage_complete,
                 "knownDirtyMismatchHits": hit_count,
                 "priority": priority(rule_id, disabled, hit_count),
             }
@@ -262,8 +355,8 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         "",
         "## Rules",
         "",
-        "| Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Fixtures | Known dirty hits |",
-        "|---|---|---:|---|---|---|---:|---:|",
+        "| Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Coverage | Fixtures | Known dirty hits |",
+        "|---|---|---:|---|---|---|---:|---:|---:|",
     ]
     ordered = sorted(
         manifest["rules"],
@@ -279,13 +372,14 @@ def render_markdown(manifest: dict[str, Any]) -> str:
         if rule["formatter"]["passes"]:
             formatter += ": " + ", ".join(rule["formatter"]["passes"])
         lines.append(
-            "| {priority} | `{rule_id}` | {enabled} | {status} | {owners} | {formatter} | {fixtures} | {hits} |".format(
+            "| {priority} | `{rule_id}` | {enabled} | {status} | {owners} | {formatter} | {coverage}/6 | {fixtures} | {hits} |".format(
                 priority=rule["priority"],
                 rule_id=rule["id"],
                 enabled="yes" if rule["katarisEnabled"] else "no",
                 status=rule["status"],
                 owners=owners,
                 formatter=formatter,
+                coverage=sum(bool(items) for items in rule["fixtureCoverage"].values()),
                 fixtures=len(rule["fixtures"]),
                 hits=rule["knownDirtyMismatchHits"],
             )

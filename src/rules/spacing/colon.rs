@@ -15,6 +15,10 @@ impl Rule for ColonSpacing {
         "standard:colon-spacing"
     }
 
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
@@ -169,9 +173,9 @@ impl ColonSpacing {
                 violations.push(Violation {
                     file: String::new(),
                     line: pos.row + 1,
-                    col: pos.column,
+                    col: pos.column + 1,
                     rule_id: self.id().to_string(),
-                    message: "Missing space before \":\"".to_string(),
+                    message: "Missing spacing before \":\"".to_string(),
                     auto_fixable: true,
                 });
             }
@@ -179,9 +183,9 @@ impl ColonSpacing {
             violations.push(Violation {
                 file: String::new(),
                 line: pos.row + 1,
-                col: pos.column,
+                col: pos.column + 1,
                 rule_id: self.id().to_string(),
-                message: "Unexpected space before \":\" in type annotation".to_string(),
+                message: "Unexpected spacing before \":\"".to_string(),
                 auto_fixable: true,
             });
         }
@@ -192,7 +196,7 @@ impl ColonSpacing {
                 line: pos.row + 1,
                 col: pos.column + 2,
                 rule_id: self.id().to_string(),
-                message: "Missing space after \":\"".to_string(),
+                message: "Missing spacing after \":\"".to_string(),
                 auto_fixable: true,
             });
         }
@@ -219,7 +223,9 @@ mod tests {
     fn space_before_type_annotation_colon() {
         let v = check("val x : Int = 1\n");
         assert!(!v.is_empty());
-        assert!(v.iter().any(|x| x.message.contains("type annotation")));
+        assert!(v
+            .iter()
+            .any(|x| x.message == "Unexpected spacing before \":\""));
     }
 
     #[test]

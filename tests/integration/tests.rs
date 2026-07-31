@@ -511,7 +511,7 @@ mod integration_tests {
                 "--ruleset",
                 "ktlint",
                 "--include",
-                "**/src/**/*.kt",
+                "src/**/*.kt",
                 "--exclude",
                 "**/generated/**",
                 "--print-files",
@@ -521,7 +521,14 @@ mod integration_tests {
             .expect("ktlint-rs failed");
         assert!(output.status.success());
         let files: Vec<String> = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(files, ["src/main/kotlin/oracle/SpreadOperator.kt"]);
+        assert!(!files.is_empty());
+        assert!(files
+            .iter()
+            .all(|file| file.starts_with("src/") && file.ends_with(".kt")));
+        assert!(files.iter().all(|file| !file.contains("/generated/")));
+        assert!(files.contains(&"src/main/kotlin/oracle/SpreadOperator.kt".to_string()));
+        assert!(files
+            .contains(&"src/main/kotlin/rules/parameter_list_wrapping/Negative.kt".to_string()));
     }
 
     #[test]

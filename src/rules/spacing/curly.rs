@@ -15,6 +15,10 @@ impl Rule for CurlySpacing {
         "standard:curly-spacing"
     }
 
+    fn auto_fixable(&self) -> bool {
+        true
+    }
+
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
@@ -62,7 +66,7 @@ impl CurlySpacing {
                     line: pos.row + 1,
                     col: pos.column + 1,
                     rule_id: self.id().to_string(),
-                    message: "Missing space before \"{\"".to_string(),
+                    message: "Missing spacing before \"{\"".to_string(),
                     auto_fixable: true,
                 });
             } else if start_byte >= 2 && bytes[start_byte - 2] == b' ' {

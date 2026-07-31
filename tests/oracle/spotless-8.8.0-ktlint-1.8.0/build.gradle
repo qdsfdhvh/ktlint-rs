@@ -22,7 +22,9 @@ dependencies {
 spotless {
     kotlin {
         target 'src/**/*.kt'
-        targetExclude '**/generated/**'
+        // Non-autocorrectable dirty fixtures are linted by OracleDiagnostics but
+        // excluded from Apply because Spotless intentionally aborts on them.
+        targetExclude '**/generated/**', '**/rules/**/nonfixable/**'
         ktlint '1.8.0'
     }
 }
