@@ -834,19 +834,42 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/dot_spacing/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/dot_spacing/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/dot_spacing/Interaction.kt"
+      ],
       "formatter": {
-        "passes": [],
-        "status": "unverified"
+        "passes": [
+          "fix_dot_spacing"
+        ],
+        "status": "parity-verified"
       },
       "id": "standard:dot-spacing",
       "katarisEnabled": true,
@@ -858,7 +881,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": true,
@@ -3428,8 +3451,8 @@
     "registeredUniqueAll": 264,
     "statuses": {
       "disabled-by-kataris": 17,
-      "parity-verified": 27,
-      "partial": 57
+      "parity-verified": 28,
+      "partial": 56
     }
   }
 }

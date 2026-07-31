@@ -1,0 +1,4 @@
+root = false
+
+[*.kt]
+ktlint_standard_dot-spacing = disabled

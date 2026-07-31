@@ -50,6 +50,7 @@ FORMATTER_PASSES = {
     "standard:colon-spacing": ["fix_colons"],
     "standard:comma-spacing": ["fix_commas"],
     "standard:comment-spacing": ["fix_comment_spacing"],
+    "standard:dot-spacing": ["fix_dot_spacing"],
     "standard:curly-spacing": ["fix_curly_braces"],
     "standard:double-colon-spacing": ["fix_double_colons"],
     "standard:final-newline": ["auto_fix final-newline normalization"],

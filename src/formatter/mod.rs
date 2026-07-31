@@ -402,7 +402,7 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 27] = [
+        let passes: [(&'static str, fn(&str) -> String); 28] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -442,6 +442,7 @@ fn apply_spacing_rules(
             ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
             ("standard:fun-keyword-spacing", fix_keyword_spacing),
+            ("standard:dot-spacing", fix_dot_spacing),
             ("standard:keyword-spacing", fix_keyword_spacing),
             ("standard:range-spacing", fix_range_spacing),
             (
@@ -723,6 +724,10 @@ fn fix_trailing_ws_protected(source: &str) -> String {
 }
 
 // ── Spacing helpers ──
+
+fn fix_dot_spacing(source: &str) -> String {
+    source.replace(" .", ".").replace(".  ", ". ")
+}
 
 fn fix_curly_braces(source: &str) -> String {
     let mut s = source.to_string();

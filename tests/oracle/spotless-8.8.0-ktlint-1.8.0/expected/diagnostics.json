@@ -257,6 +257,22 @@
   },
   {
     "auto_fixable": true,
+    "column": 29,
+    "file": "src/main/kotlin/rules/dot_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Unexpected spacing before \".\"",
+    "rule": "standard:dot-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 28,
+    "file": "src/main/kotlin/rules/dot_spacing/Negative.kt",
+    "line": 3,
+    "message": "Unexpected spacing before \".\"",
+    "rule": "standard:dot-spacing"
+  },
+  {
+    "auto_fixable": true,
     "column": 25,
     "file": "src/main/kotlin/rules/double_colon_spacing/Interaction.kt",
     "line": 3,

@@ -14,17 +14,35 @@ impl Rule for SpacingAroundDot {
     fn id(&self) -> &'static str {
         "standard:dot-spacing"
     }
+
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
-            if l.trim().contains(" .") || l.contains(". ") {
-                if !l.contains("\"") && !l.contains("..") {
+            if l.contains("\"") || l.contains("..") {
+                continue;
+            }
+            if let Some(pos) = l.find(" .") {
+                v.push(Violation {
+                    file: String::new(),
+                    line: i + 1,
+                    col: pos + 1,
+                    rule_id: self.id().into(),
+                    message: "Unexpected spacing before \".\"".into(),
+                    auto_fixable: true,
+                });
+            }
+            if let Some(pos) = l.find(". ") {
+                let next = &l[pos + 2..];
+                if !next.starts_with(' ') && !next.starts_with("..") {
                     v.push(Violation {
                         file: String::new(),
                         line: i + 1,
-                        col: 1,
+                        col: pos + 1,
                         rule_id: self.id().into(),
-                        message: "Unexpected space around \".\"".into(),
+                        message: "Unexpected spacing after \".\"".into(),
                         auto_fixable: true,
                     });
                 }
