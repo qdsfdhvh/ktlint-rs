@@ -361,6 +361,22 @@
   },
   {
     "auto_fixable": true,
+    "column": 27,
+    "file": "src/main/kotlin/rules/keyword_spacing/Interaction.kt",
+    "line": 4,
+    "message": "Missing spacing after \"if\"",
+    "rule": "standard:keyword-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 7,
+    "file": "src/main/kotlin/rules/keyword_spacing/Negative.kt",
+    "line": 4,
+    "message": "Missing spacing after \"if\"",
+    "rule": "standard:keyword-spacing"
+  },
+  {
+    "auto_fixable": true,
     "column": 9,
     "file": "src/main/kotlin/rules/modifier_list_spacing/Negative.kt",
     "line": 3,

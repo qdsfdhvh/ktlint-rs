@@ -113,6 +113,9 @@ impl Rule for KeywordSpacing {
     fn id(&self) -> &'static str {
         "standard:keyword-spacing"
     }
+    fn auto_fixable(&self) -> bool {
+        true
+    }
     fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let bytes = s.as_bytes();
         let mut violations = Vec::new();
@@ -127,9 +130,9 @@ impl Rule for KeywordSpacing {
                 violations.push(Violation {
                     file: String::new(),
                     line: pos.row + 1,
-                    col: pos.column + 1,
+                    col: pos.column + 3,
                     rule_id: self.id().into(),
-                    message: "Missing space after keyword".into(),
+                    message: format!("Missing spacing after \"{}\"", node.kind()).into(),
                     auto_fixable: true,
                 });
             }

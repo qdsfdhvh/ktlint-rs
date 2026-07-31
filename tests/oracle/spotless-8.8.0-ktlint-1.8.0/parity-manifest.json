@@ -1568,19 +1568,40 @@
       "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/keyword_spacing/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/keyword_spacing/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/keyword_spacing/Interaction.kt"
+      ],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "parity-verified"
       },
       "id": "standard:keyword-spacing",
       "katarisEnabled": true,
@@ -1592,7 +1613,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": false,
@@ -3386,8 +3407,8 @@
     "registeredUniqueAll": 264,
     "statuses": {
       "disabled-by-kataris": 17,
-      "parity-verified": 25,
-      "partial": 59
+      "parity-verified": 26,
+      "partial": 58
     }
   }
 }

@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **59**
+- Partial/unverified: **58**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -47,7 +47,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:function-type-reference-spacing` | yes | parity-verified | `standard:function-type-reference-spacing` | parity-verified: fix_function_type_reference_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:indent` | yes | partial | `standard:indent` | unverified: fix_indentation | 0/6 | 0 | 0 |
 | P0 | `standard:kdoc-wrapping` | yes | partial | `standard:kdoc-wrapping` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:keyword-spacing` | yes | partial | `standard:keyword-spacing` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:keyword-spacing` | yes | parity-verified | `standard:keyword-spacing` | parity-verified | 6/6 | 7 | 0 |
 | P0 | `standard:modifier-list-spacing` | yes | parity-verified | `standard:modifier-list-spacing` | parity-verified: fix_annotation_blank_lines, fix_double_spaces | 6/6 | 7 | 0 |
 | P0 | `standard:nullable-type-spacing` | yes | parity-verified | `standard:nullable-type-spacing` | parity-verified: fix_function_type_reference_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:parameter-list-wrapping` | yes | parity-verified | `standard:parameter-list-wrapping` | parity-verified: fix_parameter_list_wrapping | 6/6 | 8 | 0 |
