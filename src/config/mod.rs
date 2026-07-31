@@ -107,7 +107,6 @@ impl CodeStyle {
                     | "standard:no-consecutive-comments"
                     | "standard:blank-line-between-when-conditions"
                     | "standard:when-entry-bracing"
-                    | "standard:no-blank-line-before-rbrace"
             ),
             Self::IntelliJIdea => matches!(
                 rule_id,

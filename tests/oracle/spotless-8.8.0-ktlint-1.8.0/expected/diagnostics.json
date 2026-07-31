@@ -482,6 +482,22 @@
   {
     "auto_fixable": true,
     "column": 1,
+    "file": "src/main/kotlin/rules/no_blank_line_before_rbrace/Interaction.kt",
+    "line": 5,
+    "message": "Unexpected blank line(s) before \"}\"",
+    "rule": "standard:no-blank-line-before-rbrace"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/no_blank_line_before_rbrace/Negative.kt",
+    "line": 5,
+    "message": "Unexpected blank line(s) before \"}\"",
+    "rule": "standard:no-blank-line-before-rbrace"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
     "file": "src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt",
     "line": 3,
     "message": "Needless blank line(s)",

@@ -806,6 +806,31 @@
           "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_consecutive_blank_lines/Interaction.kt"
         ]
       }
+    },
+    "standard:no-blank-line-before-rbrace": {
+      "category": "structure",
+      "verified": true,
+      "dimensions": {
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/Positive.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/Negative.kt"
+        ],
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/no_blank_line_before_rbrace/Negative.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/config/Disabled.kt"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/no_blank_line_before_rbrace/Interaction.kt"
+        ]
+      }
     }
   }
 }
