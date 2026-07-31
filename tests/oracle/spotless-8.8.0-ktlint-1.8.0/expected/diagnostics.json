@@ -161,6 +161,22 @@
   },
   {
     "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/comment_spacing/Interaction.kt",
+    "line": 3,
+    "message": "Missing space after //",
+    "rule": "standard:comment-spacing"
+  },
+  {
+    "auto_fixable": true,
+    "column": 1,
+    "file": "src/main/kotlin/rules/comment_spacing/Negative.kt",
+    "line": 3,
+    "message": "Missing space after //",
+    "rule": "standard:comment-spacing"
+  },
+  {
+    "auto_fixable": true,
     "column": 24,
     "file": "src/main/kotlin/rules/context_receiver_list_wrapping/Interaction.kt",
     "line": 3,

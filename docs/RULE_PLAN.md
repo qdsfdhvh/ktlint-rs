@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **60**
+- Partial/unverified: **59**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -30,7 +30,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:block-comment-initial-star-alignment` | yes | parity-verified | `standard:block-comment-initial-star-alignment` | parity-verified: apply_block_comment_alignment | 6/6 | 7 | 0 |
 | P0 | `standard:chain-wrapping` | yes | partial | `standard:chain-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:comma-spacing` | yes | parity-verified | `standard:comma-spacing` | parity-verified: fix_commas | 6/6 | 7 | 0 |
-| P0 | `standard:comment-spacing` | yes | partial | `standard:comment-spacing` | unverified: fix_comment_spacing | 0/6 | 0 | 0 |
+| P0 | `standard:comment-spacing` | yes | parity-verified | `standard:comment-spacing` | parity-verified: fix_comment_spacing | 6/6 | 7 | 0 |
 | P0 | `standard:comment-wrapping` | yes | partial | `standard:comment-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:condition-wrapping` | yes | parity-verified | `standard:condition-wrapping` | parity-verified | 6/6 | 6 | 0 |
 | P0 | `standard:context-receiver-list-wrapping` | yes | parity-verified | `standard:context-receiver-list-wrapping` | parity-verified: fix_context_receiver_list_wrapping | 6/6 | 8 | 0 |
