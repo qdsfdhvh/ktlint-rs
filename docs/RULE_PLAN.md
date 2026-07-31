@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **52**
+- Partial/unverified: **49**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -18,7 +18,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 
 | Priority | Oracle rule | Kataris | Status | Rust owner(s) | Formatter | Coverage | Fixtures | Known dirty hits |
 |---|---|---:|---|---|---|---:|---:|---:|
-| P0 | `standard:function-signature` | yes | partial | `standard:function-signature` | unverified | 0/6 | 0 | 2 |
+| P0 | `standard:function-signature` | yes | parity-verified | `standard:function-signature` | parity-verified | 6/6 | 7 | 2 |
 | P0 | `standard:function-start-of-body-spacing` | yes | partial | `standard:function-start-of-body-spacing` | unverified | 0/6 | 0 | 2 |
 | P0 | `standard:op-spacing` | yes | partial | `standard:op-spacing` | unverified: fix_spread_operators, fix_operators | 3/6 | 5 | 2 |
 | P0 | `standard:parameter-list-spacing` | yes | partial | `standard:parameter-list-spacing` | unverified: fix_parens, fix_commas | 0/6 | 0 | 2 |
@@ -63,7 +63,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:string-template` | yes | partial | `standard:string-template` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:then-spacing` | yes | partial | `standard:then-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:trailing-comma-on-call-site` | yes | partial | `standard:trailing-comma-on-call-site` | unverified: fix_single_line_trailing_comma | 0/6 | 0 | 0 |
-| P0 | `standard:trailing-comma-on-declaration-site` | yes | partial | `standard:trailing-comma-on-declaration-site` | unverified: fix_single_line_trailing_comma | 0/6 | 0 | 0 |
+| P0 | `standard:trailing-comma-on-declaration-site` | yes | parity-verified | `standard:trailing-comma-on-declaration-site` | parity-verified: fix_single_line_trailing_comma | 6/6 | 7 | 0 |
 | P0 | `standard:type-argument-comment` | yes | partial | `standard:type-argument-comment` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:type-argument-list-spacing` | yes | partial | `standard:type-argument-list-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:type-parameter-comment` | yes | partial | `standard:type-parameter-comment` | unverified | 0/6 | 0 | 0 |
@@ -71,7 +71,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:unary-op-spacing` | yes | partial | `standard:unary-op-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:value-argument-comment` | yes | partial | `standard:value-argument-comment` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:value-parameter-comment` | yes | partial | `standard:value-parameter-comment` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:wrapping` | yes | partial | `standard:wrapping` | unverified: fix_all_wrapping | 0/6 | 0 | 0 |
+| P0 | `standard:wrapping` | yes | parity-verified | `standard:wrapping` | parity-verified: fix_all_wrapping | 6/6 | 7 | 0 |
 | P1 | `standard:annotation` | yes | partial | `standard:annotation` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:backing-property-naming` | yes | parity-verified | `standard:backing-property-naming` | not-fixable | 6/6 | 7 | 0 |
 | P1 | `standard:blank-line-between-when-conditions` | yes | partial | `standard:blank-line-between-when-conditions` | unverified | 0/6 | 0 | 0 |

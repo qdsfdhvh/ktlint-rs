@@ -22,7 +22,7 @@
   },
   "rules": [
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -46,7 +46,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -99,7 +99,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -123,7 +123,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -174,7 +174,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -198,7 +198,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -228,7 +228,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -252,7 +252,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -332,7 +332,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -356,7 +356,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -407,7 +407,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -431,7 +431,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -584,7 +584,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -608,7 +608,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -710,7 +710,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -734,7 +734,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -979,10 +979,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1006,7 +1006,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -1213,7 +1213,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1237,7 +1237,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -1315,19 +1315,40 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+      ],
       "formatter": {
         "passes": [],
-        "status": "unverified"
+        "status": "parity-verified"
       },
       "id": "standard:function-signature",
       "katarisEnabled": true,
@@ -1339,10 +1360,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1366,7 +1387,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -1523,7 +1544,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1547,10 +1568,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1576,10 +1597,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1603,10 +1624,10 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1630,7 +1651,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -1681,7 +1702,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1705,10 +1726,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1732,7 +1753,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -1786,7 +1807,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1810,7 +1831,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -1840,7 +1861,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1864,10 +1885,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1891,7 +1912,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -1973,7 +1994,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -1997,7 +2018,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -2127,7 +2148,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2151,7 +2172,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -2181,7 +2202,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2205,10 +2226,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "alias",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2232,10 +2253,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2259,7 +2280,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -2439,7 +2460,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2463,10 +2484,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2490,7 +2511,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -2570,7 +2591,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2609,7 +2630,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -2639,7 +2660,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2666,7 +2687,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -2721,7 +2742,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2745,7 +2766,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -2798,7 +2819,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2822,10 +2843,10 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2849,7 +2870,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -2902,7 +2923,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -2928,7 +2949,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": true,
@@ -2981,7 +3002,7 @@
       "status": "parity-verified"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3005,10 +3026,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3032,10 +3053,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "alias",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3059,10 +3080,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3086,10 +3107,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3113,7 +3134,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -3143,7 +3164,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3167,10 +3188,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3196,24 +3217,45 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+      ],
       "formatter": {
         "passes": [
           "fix_single_line_trailing_comma"
         ],
-        "status": "unverified"
+        "status": "parity-verified"
       },
       "id": "standard:trailing-comma-on-declaration-site",
       "katarisEnabled": true,
@@ -3225,7 +3267,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "parity-verified"
     },
     {
       "coverageComplete": false,
@@ -3253,7 +3295,7 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3277,10 +3319,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3304,10 +3346,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3331,10 +3373,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3358,10 +3400,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3385,10 +3427,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3412,10 +3454,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3439,10 +3481,10 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
-      "coverageComplete": true,
+      "coverageComplete": false,
       "fixtureCoverage": {
         "autofix": [],
         "config": [],
@@ -3466,7 +3508,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "partial"
     },
     {
       "coverageComplete": false,
@@ -3496,21 +3538,42 @@
       "status": "disabled-by-kataris"
     },
     {
-      "coverageComplete": false,
+      "coverageComplete": true,
       "fixtureCoverage": {
-        "autofix": [],
-        "config": [],
-        "idempotence": [],
-        "interaction": [],
-        "negative": [],
-        "positive": []
+        "autofix": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "config": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt"
+        ],
+        "idempotence": [
+          "scripts/spotless-differential.sh"
+        ],
+        "interaction": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+        ],
+        "negative": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt"
+        ],
+        "positive": [
+          "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt"
+        ]
       },
-      "fixtures": [],
+      "fixtures": [
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Positive.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/expected/formatted/src/main/kotlin/rules/parameter_list_wrapping/Negative.kt",
+        "scripts/spotless-differential.sh",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/.editorconfig",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/config/Disabled.kt",
+        "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/rules/parameter_list_wrapping/Interaction.kt"
+      ],
       "formatter": {
         "passes": [
           "fix_all_wrapping"
         ],
-        "status": "unverified"
+        "status": "parity-verified"
       },
       "id": "standard:wrapping",
       "katarisEnabled": true,
@@ -3522,7 +3585,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "partial"
+      "status": "parity-verified"
     }
   ],
   "schemaVersion": 1,
@@ -3534,9 +3597,9 @@
     "registeredStandardOriented": 116,
     "registeredUniqueAll": 264,
     "statuses": {
-      "disabled-by-kataris": 66,
-      "parity-verified": 32,
-      "partial": 3
+      "disabled-by-kataris": 17,
+      "parity-verified": 35,
+      "partial": 49
     }
   }
 }
