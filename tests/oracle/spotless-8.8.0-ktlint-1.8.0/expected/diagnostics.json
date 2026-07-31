@@ -537,6 +537,22 @@
   },
   {
     "auto_fixable": true,
+    "column": 5,
+    "file": "src/main/kotlin/rules/no_multi_spaces/Interaction.kt",
+    "line": 3,
+    "message": "Unnecessary long whitespace",
+    "rule": "standard:no-multi-spaces"
+  },
+  {
+    "auto_fixable": true,
+    "column": 18,
+    "file": "src/main/kotlin/rules/no_multi_spaces/Negative.kt",
+    "line": 3,
+    "message": "Unnecessary long whitespace",
+    "rule": "standard:no-multi-spaces"
+  },
+  {
+    "auto_fixable": true,
     "column": 23,
     "file": "src/main/kotlin/rules/no_semi/Interaction.kt",
     "line": 3,

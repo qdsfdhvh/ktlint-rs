@@ -8,7 +8,7 @@
 - Oracle rules: **101**
 - Matched to ktlint-rs registrations: **100**
 - Missing: **0**
-- Partial/unverified: **53**
+- Partial/unverified: **52**
 - Disabled by Kataris: **17**
 - Extra ktlint-rs standard IDs: **1**
 
@@ -95,7 +95,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:no-empty-first-line-in-method-block` | yes | partial | `standard:no-leading-empty-lines-in-method` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-line-break-after-else` | yes | partial | `standard:no-line-break-after-else` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:no-line-break-before-assignment` | yes | partial | `standard:no-line-break-before-assignment` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:no-multi-spaces` | yes | partial | `standard:no-multi-spaces` | unverified: fix_double_spaces | 0/6 | 0 | 0 |
+| P1 | `standard:no-multi-spaces` | yes | parity-verified | `standard:no-multi-spaces` | parity-verified: fix_double_spaces | 6/6 | 7 | 0 |
 | P1 | `standard:no-semi` | yes | parity-verified | `standard:no-semi` | parity-verified: fix_semicolons | 6/6 | 7 | 0 |
 | P1 | `standard:no-trailing-spaces` | yes | parity-verified | `standard:no-trailing-spaces` | parity-verified: fix_trailing_ws_protected | 6/6 | 7 | 0 |
 | P1 | `standard:no-unit-return` | yes | partial | `standard:no-unit-return` | unverified | 0/6 | 0 | 0 |
