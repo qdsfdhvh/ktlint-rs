@@ -1,3 +1,5 @@
+# Synthetic Android Studio style reference configuration for the Spotless oracle.
+# Semantically equivalent to the pinned reference profile.
 root = true
 
 [*]

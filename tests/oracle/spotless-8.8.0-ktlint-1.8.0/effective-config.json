@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "source": "pinned-copy-of-kataris-root-editorconfig",
-  "sourceSha256": "90666631f9bda979b316727e7ab236e72352746dda0349ffed999a3cb21345e9",
+  "source": "synthetic-android-studio-reference-editorconfig",
+  "sourceSha256": "7c4a547debe33897152a4a906e6b5c86f62bf1781eaed42c05528e22b13e2a71",
   "kotlin": {
     "ktlint_code_style": "android_studio",
     "ktlint_function_naming_ignore_when_annotated_with": "Composable",

@@ -474,7 +474,7 @@ mod tests {
     }
 
     #[test]
-    fn loads_all_kataris_intellij_properties() {
+    fn loads_all_reference_intellij_properties() {
         let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(
             "tests/oracle/spotless-8.8.0-ktlint-1.8.0/src/main/kotlin/oracle/SpreadOperator.kt",
         );

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Differential harness for Kataris Spotless 8.8.0 + ktlint 1.8.0.
+# Differential harness for Spotless 8.8.0 + ktlint 1.8.0.
 # Usage:
 #   GRADLE=/path/to/gradlew KTLINT_RS=./target/release/ktlint-rs \
 #     ./scripts/spotless-differential.sh [--offline] [--expect-mismatch] [--inject-mismatch KIND] [--artifacts DIR]

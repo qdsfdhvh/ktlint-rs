@@ -532,7 +532,7 @@ mod integration_tests {
     }
 
     #[test]
-    fn parity_print_effective_config_includes_kataris_properties() {
+    fn parity_print_effective_config_includes_reference_properties() {
         ensure_built();
         let output = Command::new(ktlint_bin())
             .current_dir(oracle_dir())

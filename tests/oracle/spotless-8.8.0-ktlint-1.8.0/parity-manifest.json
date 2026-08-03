@@ -15,7 +15,7 @@
       "check-only",
       "fixable",
       "parity-verified",
-      "disabled-by-kataris"
+      "disabled-by-oracle"
     ],
     "parityVerifiedRequiresDifferentialFixtures": true,
     "registrationAloneNeverMeansParity": true
@@ -37,8 +37,8 @@
         "status": "unverified"
       },
       "id": "standard:annotation",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:annotation"
       ],
@@ -46,7 +46,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -87,8 +87,8 @@
         "status": "parity-verified"
       },
       "id": "standard:annotation-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:annotation-spacing"
       ],
@@ -114,8 +114,8 @@
         "status": "unverified"
       },
       "id": "standard:argument-list-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:argument-list-wrapping"
       ],
@@ -123,7 +123,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -162,8 +162,8 @@
         "status": "not-fixable"
       },
       "id": "standard:backing-property-naming",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:backing-property-naming"
       ],
@@ -189,8 +189,8 @@
         "status": "unverified"
       },
       "id": "standard:binary-expression-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:binary-expression-wrapping"
       ],
@@ -198,7 +198,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -216,8 +216,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:blank-line-before-declaration",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:blank-line-before-declaration"
       ],
@@ -225,7 +225,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -243,8 +243,8 @@
         "status": "unverified"
       },
       "id": "standard:blank-line-between-when-conditions",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:blank-line-between-when-conditions"
       ],
@@ -252,7 +252,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -293,8 +293,8 @@
         "status": "parity-verified"
       },
       "id": "standard:block-comment-initial-star-alignment",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:block-comment-initial-star-alignment"
       ],
@@ -320,8 +320,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:chain-method-continuation",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:chain-method-continuation"
       ],
@@ -329,7 +329,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -347,8 +347,8 @@
         "status": "unverified"
       },
       "id": "standard:chain-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:chain-wrapping"
       ],
@@ -356,7 +356,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -395,8 +395,8 @@
         "status": "not-fixable"
       },
       "id": "standard:class-naming",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:class-naming"
       ],
@@ -422,8 +422,8 @@
         "status": "unverified"
       },
       "id": "standard:class-signature",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:class-signature"
       ],
@@ -431,7 +431,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -472,8 +472,8 @@
         "status": "parity-verified"
       },
       "id": "standard:colon-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 1,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:colon-spacing"
       ],
@@ -522,8 +522,8 @@
         "status": "parity-verified"
       },
       "id": "standard:comma-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:comma-spacing"
       ],
@@ -572,8 +572,8 @@
         "status": "parity-verified"
       },
       "id": "standard:comment-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:comment-spacing"
       ],
@@ -599,8 +599,8 @@
         "status": "unverified"
       },
       "id": "standard:comment-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:comment-wrapping"
       ],
@@ -608,7 +608,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -646,8 +646,8 @@
         "status": "unverified"
       },
       "id": "standard:condition-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:condition-wrapping"
       ],
@@ -655,7 +655,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -698,8 +698,8 @@
         "status": "parity-verified"
       },
       "id": "standard:context-receiver-list-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:context-receiver-list-wrapping"
       ],
@@ -725,8 +725,8 @@
         "status": "unverified"
       },
       "id": "standard:context-receiver-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:context-receiver-wrapping"
       ],
@@ -734,7 +734,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -775,8 +775,8 @@
         "status": "parity-verified"
       },
       "id": "standard:curly-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:curly-spacing"
       ],
@@ -822,8 +822,8 @@
         "status": "unverified"
       },
       "id": "standard:discouraged-comment-location",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:discouraged-comment-location"
       ],
@@ -831,7 +831,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -872,8 +872,8 @@
         "status": "parity-verified"
       },
       "id": "standard:dot-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:dot-spacing"
       ],
@@ -922,8 +922,8 @@
         "status": "parity-verified"
       },
       "id": "standard:double-colon-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:double-colon-spacing"
       ],
@@ -970,8 +970,8 @@
         "status": "unverified"
       },
       "id": "standard:enum-entry-name-case",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:enum-entry-name-case"
       ],
@@ -979,7 +979,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -997,8 +997,8 @@
         "status": "unverified"
       },
       "id": "standard:enum-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:enum-wrapping"
       ],
@@ -1006,7 +1006,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -1049,8 +1049,8 @@
         "status": "parity-verified"
       },
       "id": "standard:expression-operand-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:expression-operand-wrapping"
       ],
@@ -1076,8 +1076,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:filename",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:filename"
       ],
@@ -1085,7 +1085,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -1126,8 +1126,8 @@
         "status": "parity-verified"
       },
       "id": "standard:final-newline",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:final-newline"
       ],
@@ -1174,8 +1174,8 @@
         "status": "parity-verified"
       },
       "id": "standard:fun-keyword-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:fun-keyword-spacing"
       ],
@@ -1201,8 +1201,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:function-expression-body",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:function-expression-body"
       ],
@@ -1210,7 +1210,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1228,8 +1228,8 @@
         "status": "unverified"
       },
       "id": "standard:function-literal",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:function-literal"
       ],
@@ -1237,7 +1237,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1255,8 +1255,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:function-naming",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:function-naming"
       ],
@@ -1264,7 +1264,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -1303,8 +1303,8 @@
         "status": "parity-verified"
       },
       "id": "standard:function-return-type-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:function-return-type-spacing"
       ],
@@ -1351,8 +1351,8 @@
         "status": "parity-verified"
       },
       "id": "standard:function-signature",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 2,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:function-signature"
       ],
@@ -1378,8 +1378,8 @@
         "status": "unverified"
       },
       "id": "standard:function-start-of-body-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 2,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:function-start-of-body-spacing"
       ],
@@ -1387,7 +1387,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -1428,8 +1428,8 @@
         "status": "parity-verified"
       },
       "id": "standard:function-type-modifier-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:function-type-modifier-spacing"
       ],
@@ -1478,8 +1478,8 @@
         "status": "parity-verified"
       },
       "id": "standard:function-type-reference-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:function-type-reference-spacing"
       ],
@@ -1505,8 +1505,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:if-else-bracing",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:if-else-bracing"
       ],
@@ -1514,7 +1514,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1532,8 +1532,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:if-else-wrapping",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:if-else-wrapping"
       ],
@@ -1541,7 +1541,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1559,8 +1559,8 @@
         "status": "unverified"
       },
       "id": "standard:import-ordering",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:import-ordering"
       ],
@@ -1568,7 +1568,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1588,8 +1588,8 @@
         "status": "unverified"
       },
       "id": "standard:indent",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:indent"
       ],
@@ -1597,7 +1597,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1615,8 +1615,8 @@
         "status": "not-fixable"
       },
       "id": "standard:kdoc",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:kdoc"
       ],
@@ -1624,7 +1624,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1642,8 +1642,8 @@
         "status": "unverified"
       },
       "id": "standard:kdoc-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:kdoc-wrapping"
       ],
@@ -1651,7 +1651,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -1690,8 +1690,8 @@
         "status": "parity-verified"
       },
       "id": "standard:keyword-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:keyword-spacing"
       ],
@@ -1717,8 +1717,8 @@
         "status": "unverified"
       },
       "id": "standard:max-line-length",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:max-line-length"
       ],
@@ -1726,7 +1726,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1744,8 +1744,8 @@
         "status": "not-fixable"
       },
       "id": "standard:mixed-condition-operators",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:mixed-condition-operators"
       ],
@@ -1753,7 +1753,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -1795,8 +1795,8 @@
         "status": "parity-verified"
       },
       "id": "standard:modifier-list-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:modifier-list-spacing"
       ],
@@ -1822,8 +1822,8 @@
         "status": "unverified"
       },
       "id": "standard:modifier-order",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:modifier-order"
       ],
@@ -1831,7 +1831,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1849,8 +1849,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:multiline-expression-wrapping",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:multiline-expression-wrapping"
       ],
@@ -1858,7 +1858,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1876,8 +1876,8 @@
         "status": "unverified"
       },
       "id": "standard:multiline-if-else",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:multiline-if-else"
       ],
@@ -1885,7 +1885,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -1903,8 +1903,8 @@
         "status": "unverified"
       },
       "id": "standard:multiline-loop",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:multiline-loop"
       ],
@@ -1912,7 +1912,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -1953,8 +1953,8 @@
         "status": "parity-verified"
       },
       "id": "standard:no-blank-line-before-rbrace",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-blank-line-before-rbrace"
       ],
@@ -1982,8 +1982,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:no-blank-line-in-list",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:no-blank-line-in-list"
       ],
@@ -1991,7 +1991,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2009,8 +2009,8 @@
         "status": "unverified"
       },
       "id": "standard:no-blank-lines-in-chained-method-calls",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-blank-lines-in-chained-method-calls"
       ],
@@ -2018,7 +2018,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2059,8 +2059,8 @@
         "status": "parity-verified"
       },
       "id": "standard:no-consecutive-blank-lines",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-consecutive-blank-lines"
       ],
@@ -2086,8 +2086,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:no-consecutive-comments",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:no-consecutive-comments"
       ],
@@ -2095,7 +2095,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2136,8 +2136,8 @@
         "status": "parity-verified"
       },
       "id": "standard:no-empty-class-body",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-empty-class-body"
       ],
@@ -2163,8 +2163,8 @@
         "status": "unverified"
       },
       "id": "standard:no-empty-file",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-empty-file"
       ],
@@ -2172,7 +2172,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2190,8 +2190,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:no-empty-first-line-in-class-body",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:no-empty-first-line-in-class-body"
       ],
@@ -2199,7 +2199,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2217,8 +2217,8 @@
         "status": "unverified"
       },
       "id": "standard:no-empty-first-line-in-method-block",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-leading-empty-lines-in-method"
       ],
@@ -2226,7 +2226,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "alias",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2244,8 +2244,8 @@
         "status": "unverified"
       },
       "id": "standard:no-line-break-after-else",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-line-break-after-else"
       ],
@@ -2253,7 +2253,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2271,8 +2271,8 @@
         "status": "unverified"
       },
       "id": "standard:no-line-break-before-assignment",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-line-break-before-assignment"
       ],
@@ -2280,7 +2280,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2321,8 +2321,8 @@
         "status": "parity-verified"
       },
       "id": "standard:no-multi-spaces",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-multi-spaces"
       ],
@@ -2371,8 +2371,8 @@
         "status": "parity-verified"
       },
       "id": "standard:no-semi",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-semi"
       ],
@@ -2398,8 +2398,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:no-single-line-block-comment",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:no-single-line-block-comment"
       ],
@@ -2407,7 +2407,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2448,8 +2448,8 @@
         "status": "parity-verified"
       },
       "id": "standard:no-trailing-spaces",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-trailing-spaces"
       ],
@@ -2475,8 +2475,8 @@
         "status": "unverified"
       },
       "id": "standard:no-unit-return",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-unit-return"
       ],
@@ -2484,7 +2484,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2502,8 +2502,8 @@
         "status": "unverified"
       },
       "id": "standard:no-unused-imports",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:no-unused-imports"
       ],
@@ -2511,7 +2511,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2529,8 +2529,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:no-wildcard-imports",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:no-wildcard-imports"
       ],
@@ -2538,7 +2538,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2579,8 +2579,8 @@
         "status": "parity-verified"
       },
       "id": "standard:nullable-type-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:nullable-type-spacing"
       ],
@@ -2621,8 +2621,8 @@
         "status": "unverified"
       },
       "id": "standard:op-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 2,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:op-spacing"
       ],
@@ -2630,7 +2630,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2648,8 +2648,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:package-name",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:package-name"
       ],
@@ -2657,7 +2657,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2678,8 +2678,8 @@
         "status": "unverified"
       },
       "id": "standard:parameter-list-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 2,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:parameter-list-spacing"
       ],
@@ -2687,7 +2687,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2730,8 +2730,8 @@
         "status": "parity-verified"
       },
       "id": "standard:parameter-list-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:parameter-list-wrapping"
       ],
@@ -2757,8 +2757,8 @@
         "status": "unverified"
       },
       "id": "standard:parameter-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:parameter-wrapping"
       ],
@@ -2766,7 +2766,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2807,8 +2807,8 @@
         "status": "parity-verified"
       },
       "id": "standard:paren-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 2,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:paren-spacing"
       ],
@@ -2834,8 +2834,8 @@
         "status": "not-fixable"
       },
       "id": "standard:property-naming",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:property-naming"
       ],
@@ -2843,7 +2843,7 @@
       "registeredAutoFixable": false,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -2861,8 +2861,8 @@
         "status": "unverified"
       },
       "id": "standard:property-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:property-wrapping"
       ],
@@ -2870,7 +2870,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2911,8 +2911,8 @@
         "status": "parity-verified"
       },
       "id": "standard:range-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:range-spacing"
       ],
@@ -2940,8 +2940,8 @@
         "status": "unverified"
       },
       "id": "standard:spacing-around-angle-brackets",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:spacing-around-angle-brackets"
       ],
@@ -2949,7 +2949,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -2990,8 +2990,8 @@
         "status": "parity-verified"
       },
       "id": "standard:spacing-between-declarations-with-annotations",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:spacing-between-declarations-with-annotations"
       ],
@@ -3017,8 +3017,8 @@
         "status": "unverified"
       },
       "id": "standard:spacing-between-declarations-with-comments",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:spacing-between-declarations-with-comments"
       ],
@@ -3026,7 +3026,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3044,8 +3044,8 @@
         "status": "unverified"
       },
       "id": "standard:spacing-between-function-name-and-opening-parenthesis",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:spacing-between-function-name-and-parenthesis"
       ],
@@ -3053,7 +3053,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "alias",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3071,8 +3071,8 @@
         "status": "unverified"
       },
       "id": "standard:square-brackets-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:square-brackets-spacing"
       ],
@@ -3080,7 +3080,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3098,8 +3098,8 @@
         "status": "unverified"
       },
       "id": "standard:statement-wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:statement-wrapping"
       ],
@@ -3107,7 +3107,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3125,8 +3125,8 @@
         "status": "unverified"
       },
       "id": "standard:string-template",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:string-template"
       ],
@@ -3134,7 +3134,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3152,8 +3152,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:string-template-indent",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:string-template-indent"
       ],
@@ -3161,7 +3161,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3179,8 +3179,8 @@
         "status": "unverified"
       },
       "id": "standard:then-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:then-spacing"
       ],
@@ -3188,7 +3188,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3208,8 +3208,8 @@
         "status": "unverified"
       },
       "id": "standard:trailing-comma-on-call-site",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:trailing-comma-on-call-site"
       ],
@@ -3217,7 +3217,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -3258,8 +3258,8 @@
         "status": "parity-verified"
       },
       "id": "standard:trailing-comma-on-declaration-site",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:trailing-comma-on-declaration-site"
       ],
@@ -3285,14 +3285,14 @@
         "status": "not-evaluated"
       },
       "id": "standard:try-catch-finally-spacing",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [],
       "priority": "P2",
       "registeredAutoFixable": false,
       "registrationMatch": "missing",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3310,8 +3310,8 @@
         "status": "unverified"
       },
       "id": "standard:type-argument-comment",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:type-argument-comment"
       ],
@@ -3319,7 +3319,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3337,8 +3337,8 @@
         "status": "unverified"
       },
       "id": "standard:type-argument-list-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:type-argument-list-spacing"
       ],
@@ -3346,7 +3346,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3364,8 +3364,8 @@
         "status": "unverified"
       },
       "id": "standard:type-parameter-comment",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:type-parameter-comment"
       ],
@@ -3373,7 +3373,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3391,8 +3391,8 @@
         "status": "unverified"
       },
       "id": "standard:type-parameter-list-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:type-parameter-list-spacing"
       ],
@@ -3400,7 +3400,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3418,8 +3418,8 @@
         "status": "unverified"
       },
       "id": "standard:unary-op-spacing",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:unary-op-spacing"
       ],
@@ -3427,7 +3427,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3445,8 +3445,8 @@
         "status": "unverified"
       },
       "id": "standard:unnecessary-parentheses-before-trailing-lambda",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:unnecessary-parentheses-before-trailing-lambda"
       ],
@@ -3454,7 +3454,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3472,8 +3472,8 @@
         "status": "unverified"
       },
       "id": "standard:value-argument-comment",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:value-argument-comment"
       ],
@@ -3481,7 +3481,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3499,8 +3499,8 @@
         "status": "unverified"
       },
       "id": "standard:value-parameter-comment",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:value-parameter-comment"
       ],
@@ -3508,7 +3508,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": false,
@@ -3526,8 +3526,8 @@
         "status": "not-evaluated"
       },
       "id": "standard:when-entry-bracing",
-      "katarisEnabled": false,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": false,
       "ownerRustRuleIds": [
         "standard:when-entry-bracing"
       ],
@@ -3535,7 +3535,7 @@
       "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
-      "status": "disabled-by-kataris"
+      "status": "disabled-by-oracle"
     },
     {
       "coverageComplete": true,
@@ -3576,8 +3576,8 @@
         "status": "parity-verified"
       },
       "id": "standard:wrapping",
-      "katarisEnabled": true,
       "knownDirtyMismatchHits": 0,
+      "oracleEnabled": true,
       "ownerRustRuleIds": [
         "standard:wrapping"
       ],
@@ -3597,7 +3597,7 @@
     "registeredStandardOriented": 116,
     "registeredUniqueAll": 264,
     "statuses": {
-      "disabled-by-kataris": 68,
+      "disabled-by-oracle": 68,
       "parity-verified": 33
     }
   }
