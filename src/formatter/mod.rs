@@ -442,7 +442,10 @@ fn apply_spacing_rules(
             ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
             ("standard:fun-keyword-spacing", fix_keyword_spacing),
-            ("standard:function-return-type-spacing", fix_return_type_spacing),
+            (
+                "standard:function-return-type-spacing",
+                fix_return_type_spacing,
+            ),
             ("standard:dot-spacing", fix_dot_spacing),
             ("standard:keyword-spacing", fix_keyword_spacing),
             ("standard:range-spacing", fix_range_spacing),
@@ -949,10 +952,7 @@ fn fix_colons(source: &str) -> String {
             // Return-type colon (`fun foo(): Int`) belongs to
             // standard:function-return-type-spacing, never colon-spacing. Skip it
             // so disabling frt-spacing leaves `):Int` untouched.
-            let prev_non_ws = chars[..index]
-                .iter()
-                .rev()
-                .find(|c| !c.is_whitespace());
+            let prev_non_ws = chars[..index].iter().rev().find(|c| !c.is_whitespace());
             if matches!(prev_non_ws, Some(')' | '?' | '>')) {
                 output.push(':');
                 index += 1;
@@ -1014,10 +1014,7 @@ fn fix_return_type_spacing(source: &str) -> String {
                 index += 1;
                 continue;
             }
-            let prev_non_ws = chars[..index]
-                .iter()
-                .rev()
-                .find(|c| !c.is_whitespace());
+            let prev_non_ws = chars[..index].iter().rev().find(|c| !c.is_whitespace());
             // Only the return-type colon (preceded by `)`/`?`/`>` of the parameter
             // list) belongs here.
             if !matches!(prev_non_ws, Some(')' | '?' | '>')) {
@@ -1804,15 +1801,17 @@ mod tests {
             format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
         let twice =
             format_once(&once, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
-        assert_eq!(once, twice, "format_once must be idempotent on trailing blank lines");
+        assert_eq!(
+            once, twice,
+            "format_once must be idempotent on trailing blank lines"
+        );
         assert!(!once.contains("   \n"), "trailing spaces must be trimmed");
 
         // CLI parity: Android Studio style, final newline on/off.
         for code_style in [CodeStyle::KtlintOfficial, CodeStyle::AndroidStudio] {
             for newline in [true, false] {
                 let first = format_once(source, 4, newline, &HashMap::new(), code_style).unwrap();
-                let second =
-                    format_once(&first, 4, newline, &HashMap::new(), code_style).unwrap();
+                let second = format_once(&first, 4, newline, &HashMap::new(), code_style).unwrap();
                 assert_eq!(
                     first, second,
                     "style={code_style:?} newline={newline}: must be idempotent"
