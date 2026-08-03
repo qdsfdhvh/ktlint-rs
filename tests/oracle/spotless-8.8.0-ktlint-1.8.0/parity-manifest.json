@@ -1741,7 +1741,7 @@
       "fixtures": [],
       "formatter": {
         "passes": [],
-        "status": "not-fixable"
+        "status": "unverified"
       },
       "id": "standard:mixed-condition-operators",
       "knownDirtyMismatchHits": 0,
@@ -1750,7 +1750,7 @@
         "standard:mixed-condition-operators"
       ],
       "priority": "P1",
-      "registeredAutoFixable": false,
+      "registeredAutoFixable": true,
       "registrationMatch": "exact",
       "requiresTypeResolution": false,
       "status": "disabled-by-oracle"

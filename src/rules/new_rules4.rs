@@ -6,23 +6,12 @@ impl Rule for CommentWrappingRule {
     fn id(&self) -> &'static str {
         "standard:comment-wrapping"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if t.starts_with("/*") && t.len() > 80 {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Block comment line too long, consider wrapping".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -31,26 +20,12 @@ impl Rule for KdocWrappingRule {
     fn id(&self) -> &'static str {
         "standard:kdoc-wrapping"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            if ln.trim().starts_with("*")
-                && !ln.trim().starts_with("*/")
-                && !ln.trim().starts_with("/**")
-                && ln.len() > 100
-            {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "KDoc line too long, consider wrapping".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -86,21 +61,12 @@ impl Rule for BinaryExpressionWrappingRule {
     fn id(&self) -> &'static str {
         "standard:binary-expression-wrapping"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("&&") && l.contains("||") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Binary expression should be wrapped for clarity".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -109,24 +75,12 @@ impl Rule for PropertyWrappingRule {
     fn id(&self) -> &'static str {
         "standard:property-wrapping"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if (t.starts_with("val ") || t.starts_with("var ")) && t.contains('=') && t.len() > 100
-            {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Property declaration too long, consider wrapping".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -188,25 +142,12 @@ impl Rule for StatementWrappingRule {
     fn id(&self) -> &'static str {
         "standard:statement-wrapping"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if (t.starts_with("if ") || t.starts_with("for ") || t.starts_with("while "))
-                && t.len() > 100
-            {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Long statement should be wrapped".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -239,28 +180,11 @@ impl Rule for MultilineLoopRule {
     fn id(&self) -> &'static str {
         "standard:multiline-loop"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if (t.starts_with("for (") || t.starts_with("while ("))
-                && !t.ends_with('{')
-                && i + 1 < l.len()
-            {
-                let next = l[i + 1].trim();
-                if !next.is_empty() && !next.starts_with("//") {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: self.id().into(),
-                        message: "Multi-line loop should use braces".into(),
-                        auto_fixable: true,
-                    });
-                }
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }

@@ -97,21 +97,12 @@ impl Rule for TypeArgumentCommentRule {
     fn id(&self) -> &'static str {
         "standard:type-argument-comment"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("/*") && l.contains("<") && l.contains(">") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Type argument comment should use KDoc format".into(),
-                    auto_fixable: false,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -120,21 +111,12 @@ impl Rule for TypeParameterCommentRule {
     fn id(&self) -> &'static str {
         "standard:type-parameter-comment"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("<") && l.contains("//") && !l.contains("\"") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Type parameter comment should use /* */ or KDoc".into(),
-                    auto_fixable: false,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -143,21 +125,12 @@ impl Rule for ValueArgumentCommentRule {
     fn id(&self) -> &'static str {
         "standard:value-argument-comment"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("(") && l.contains("/*") && l.contains(")") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Value argument comment should use named parameters or KDoc".into(),
-                    auto_fixable: false,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -189,25 +162,12 @@ impl Rule for ThenSpacingRule {
     fn id(&self) -> &'static str {
         "standard:then-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("?.let")
-                || l.contains("?.run")
-                || l.contains("?.apply")
-                || l.contains("?.also")
-            {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Use \".\" instead of \"?.\" when receiver is not null".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 

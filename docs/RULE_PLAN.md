@@ -83,7 +83,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:import-ordering` | yes | disabled-by-oracle | `standard:import-ordering` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:kdoc` | yes | disabled-by-oracle | `standard:kdoc` | not-fixable | 0/6 | 0 | 0 |
 | P1 | `standard:max-line-length` | yes | disabled-by-oracle | `standard:max-line-length` | unverified | 0/6 | 0 | 0 |
-| P1 | `standard:mixed-condition-operators` | yes | disabled-by-oracle | `standard:mixed-condition-operators` | not-fixable | 0/6 | 0 | 0 |
+| P1 | `standard:mixed-condition-operators` | yes | disabled-by-oracle | `standard:mixed-condition-operators` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:modifier-order` | yes | disabled-by-oracle | `standard:modifier-order` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:multiline-if-else` | yes | disabled-by-oracle | `standard:multiline-if-else` | unverified | 0/6 | 0 | 0 |
 | P1 | `standard:multiline-loop` | yes | disabled-by-oracle | `standard:multiline-loop` | unverified | 0/6 | 0 | 0 |

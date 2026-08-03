@@ -49,6 +49,13 @@ impl Rule for ModifierListSpacing {
                     continue;
                 }
                 let gap = &source[modifier.end_byte()..next_start];
+                // `internal constructor(...)` parses as modifier + `(` when the
+                // constructor keyword is elided by tree-sitter; the gap then
+                // contains ` constructor`. That is legal — skip it.
+                let gap_stripped = gap.trim();
+                if gap_stripped.starts_with("constructor") || gap_stripped.starts_with("init") {
+                    continue;
+                }
                 let annotation = modifier.kind() == "annotation";
                 let message = if annotation {
                     annotation_gap_message(gap)
@@ -100,6 +107,14 @@ fn modifier_children<'tree>(
         let Some(child) = modifiers.named_child(index) else {
             continue;
         };
+        // `constructor` is a declaration, not a modifier: `internal constructor`
+        // is legal and must not be re-spaced by modifier-list-spacing.
+        if child.kind() == "constructor"
+            || child.kind() == "primary_constructor"
+            || child.kind() == "secondary_constructor"
+        {
+            continue;
+        }
         if child.kind() == "annotation" && bytes.get(child.start_byte()) != Some(&b'@') {
             continue;
         }

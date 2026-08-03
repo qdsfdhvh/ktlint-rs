@@ -20,6 +20,16 @@ impl Rule for ClassNaming {
         });
         let mut violations = Vec::new();
         for (line_index, line) in source.lines().enumerate() {
+            // Skip comment/KDoc lines: `class`/`interface`/`object` inside
+            // prose (e.g. "The class of bug...") is not a declaration.
+            let trimmed_line = line.trim_start();
+            if trimmed_line.starts_with("//")
+                || trimmed_line.starts_with("/*")
+                || trimmed_line.starts_with("/**")
+                || trimmed_line.starts_with("*")
+            {
+                continue;
+            }
             let declaration = ["class ", "interface ", "object "]
                 .into_iter()
                 .filter_map(|keyword| line.find(keyword).map(|start| (start, keyword)))
@@ -31,7 +41,14 @@ impl Rule for ClassNaming {
             let Some((name, display_name)) = declaration_name(&line[name_start..]) else {
                 continue;
             };
+            let is_data_object =
+                keyword == "object " && line[..keyword_start].trim_end().ends_with("data");
+            let upper_snake = !name.is_empty()
+                && name
+                    .chars()
+                    .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit() || ch == '_');
             if valid_name(name)
+                || (is_data_object && upper_snake)
                 || (display_name.starts_with('`')
                     && display_name.ends_with('`')
                     && (junit_file || is_keyword(name)))

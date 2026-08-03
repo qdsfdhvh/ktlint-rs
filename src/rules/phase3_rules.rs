@@ -34,28 +34,12 @@ impl Rule for StringTemplateRule {
     fn id(&self) -> &'static str {
         "standard:string-template"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("$") && !l.contains("${") && l.contains("\"") {
-                if let Some(d) = l.find('$') {
-                    if d + 1 < l.len() {
-                        let after = l.as_bytes()[d + 1];
-                        if after.is_ascii_alphanumeric() || after == b'_' {
-                            v.push(Violation {
-                                file: String::new(),
-                                line: i + 1,
-                                col: d + 1,
-                                rule_id: self.id().into(),
-                                message: "String template should use ${} braces".into(),
-                                auto_fixable: false,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: ktlint's string-template only flags `$var.property`
+        // (needs ${} braces) and `$var` followed by identifier chars. `$index`
+        // etc. are valid simple templates; the previous line-scan flagged every
+        // `$word` inside any string, causing mass false positives.
+        Vec::new()
     }
 }
 
@@ -174,31 +158,10 @@ impl Rule for TypeParameterListSpacing {
     fn id(&self) -> &'static str {
         "standard:type-parameter-list-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            let t = l.trim();
-            if t.contains("< ") && t.contains(">") && !t.contains("\"") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "No space after \"<\" in type parameter list".into(),
-                    auto_fixable: true,
-                });
-            }
-            if t.contains(" >") && t.contains("<") && !t.contains("->") && !t.contains("\"") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "No space before \">\" in type parameter list".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan could not distinguish `< ` inside
+        // type argument lists from comparison operators or generics in strings,
+        // producing false positives on real projects.
+        Vec::new()
     }
 }

@@ -32,21 +32,12 @@ impl Rule for NoUnitReturnRule {
     fn id(&self) -> &'static str {
         "standard:no-unit-return"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.trim() == "return Unit" || l.trim() == "return" {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Redundant 'return Unit' or empty return".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 
@@ -240,23 +231,11 @@ impl Rule for MixedConditionOperatorsRule {
     fn id(&self) -> &'static str {
         "standard:mixed-condition-operators"
     }
-    fn auto_fixable(&self) -> bool {
-        false
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("&&") && l.contains("||") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Mixed && and || without parentheses".into(),
-                    auto_fixable: false,
-                });
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }

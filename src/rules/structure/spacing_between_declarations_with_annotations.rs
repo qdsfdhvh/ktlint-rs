@@ -48,8 +48,6 @@ fn is_declaration(kind: &str) -> bool {
             | "property_declaration"
             | "type_alias"
             | "secondary_constructor"
-            | "getter"
-            | "setter"
     )
 }
 
@@ -67,6 +65,12 @@ fn has_annotation(node: tree_sitter::Node, source: &str) -> bool {
         }
         for index in (0..current.child_count()).rev() {
             if let Some(child) = current.child(index) {
+                // Skip the declaration's own type: annotations inside a type
+                // (e.g. `(@Composable () -> Unit)?`) are not declaration
+                // annotations and must not trigger this rule.
+                if child.kind().contains("type") || is_declaration(child.kind()) {
+                    continue;
+                }
                 stack.push(child);
             }
         }

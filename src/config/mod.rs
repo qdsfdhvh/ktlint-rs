@@ -10,6 +10,12 @@ use crate::cli::Cli;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+/// ktlint 1.8 standard rules that are NOT enabled by default — they require an
+/// explicit `ktlint_standard_X = enabled` in .editorconfig. The Oracle fixtures
+/// enable expression-operand-wrapping per-directory to test it; real projects
+/// (e.g. the Spotless reference) get zero diagnostics for it without enabling.
+const DEFAULT_DISABLED_RULES: &[&str] = &["standard:expression-operand-wrapping"];
+
 /// ktlint configuration.
 #[derive(Debug, Clone)]
 pub struct KtlintConfig {
@@ -387,6 +393,12 @@ impl KtlintConfig {
         // 3. Per-rule enable/disable
         if let Some(rule_config) = self.rules.get(rule_id) {
             return rule_config.enabled;
+        }
+        // 4. Rules that ktlint disables by default (require explicit `= enabled`
+        //    in .editorconfig). Mirror ktlint 1.8 defaults so real projects lint
+        //    identically to Spotless without an explicit enable.
+        if DEFAULT_DISABLED_RULES.contains(&rule_id) {
+            return false;
         }
         true
     }
