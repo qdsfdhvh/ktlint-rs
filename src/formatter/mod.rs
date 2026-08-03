@@ -737,7 +737,23 @@ fn fix_trailing_ws_protected(source: &str) -> String {
 // ── Spacing helpers ──
 
 fn fix_dot_spacing(source: &str) -> String {
-    source.replace(" .", ".").replace(".  ", ". ")
+    // Line-aware: strip whitespace before a dot only when the dot is NOT the
+    // first token on its line (chained-call leading dots must keep their indent).
+    // Also collapse multi-space after a dot.
+    let mut out = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        let trimmed_start = line.trim_start();
+        let leading_ws_len = line.len() - trimmed_start.len();
+        let (head, rest) = line.split_at(leading_ws_len);
+        out.push_str(head);
+        let mut rest = rest.to_string();
+        if !rest.starts_with('.') {
+            rest = rest.replace(" .", ".");
+        }
+        rest = rest.replace(".  ", ". ");
+        out.push_str(&rest);
+    }
+    out
 }
 
 fn fix_curly_braces(source: &str) -> String {

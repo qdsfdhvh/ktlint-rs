@@ -5,27 +5,15 @@ impl Rule for UnnecessaryParenBeforeLambda {
     fn id(&self) -> &'static str {
         "standard:unnecessary-parentheses-before-trailing-lambda"
     }
-    fn check(&self, _t: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
-        // Conservatively skip files with raw strings; line-oriented scanning cannot
-        // distinguish their interior without carrying multiline lexer state.
-        if source.contains("\"\"\"") {
-            return Vec::new();
-        }
-        source
-            .lines()
-            .enumerate()
-            .filter(|(_, line)| has_empty_parens_before_lambda(line))
-            .map(|(index, _)| Violation {
-                file: String::new(),
-                line: index + 1,
-                col: 1,
-                rule_id: self.id().into(),
-                message: "Unnecessary parentheses before trailing lambda".into(),
-                auto_fixable: true,
-            })
-            .collect()
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan could not distinguish a constructor
+        // call (`ViewModel() { ... }`, parens required) from a redundant lambda
+        // paren (`foo({ it })`). It flagged every `XxxViewModel() {` on real
+        // projects. A CST-aware implementation must replace this.
+        Vec::new()
     }
 }
+
 
 fn has_empty_parens_before_lambda(line: &str) -> bool {
     let bytes = line.as_bytes();
@@ -111,7 +99,10 @@ mod tests {
     }
     #[test]
     fn bad() {
-        assert!(!c("list.forEach() { it }\n").is_empty());
+        // Fail-closed: constructor calls like `ViewModel() { ... }` were wrongly
+        // flagged by the old line-scan; the rule now never reports until a CST
+        // implementation exists.
+        assert!(c("list.forEach() { it }\n").is_empty());
     }
 
     #[test]

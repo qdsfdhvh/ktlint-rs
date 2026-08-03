@@ -18,38 +18,68 @@ impl Rule for SpacingAroundDot {
     fn auto_fixable(&self) -> bool {
         true
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("\"") || l.contains("..") {
-                continue;
-            }
-            if let Some(pos) = l.find(" .") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: pos + 1,
-                    rule_id: self.id().into(),
-                    message: "Unexpected spacing before \".\"".into(),
-                    auto_fixable: true,
-                });
-            }
-            if let Some(pos) = l.find(". ") {
-                let next = &l[pos + 2..];
-                if !next.starts_with(' ') && !next.starts_with("..") {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: pos + 1,
-                        rule_id: self.id().into(),
-                        message: "Unexpected spacing after \".\"".into(),
-                        auto_fixable: true,
-                    });
-                }
-            }
-        }
-        v
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        collect_dots(tree.root_node(), source, &mut violations, &mut seen);
+        violations
     }
+}
+
+/// Collect real dot operators (navigation) from the CST, skipping comments and
+/// string literals, and ignoring line-leading dots (chained calls).
+fn collect_dots(
+    node: tree_sitter::Node,
+    source: &str,
+    out: &mut Vec<Violation>,
+    seen: &mut std::collections::HashSet<usize>,
+) {
+    if node.kind() == "." {
+        let start = node.start_byte();
+        if seen.insert(start) {
+            check_dot(node, source, out);
+        }
+        return;
+    }
+    if node.kind().contains("comment") || node.kind().contains("string") {
+        return;
+    }
+    for i in 0..node.child_count() {
+        if let Some(child) = node.child(i) {
+            collect_dots(child, source, out, seen);
+        }
+    }
+}
+
+fn check_dot(node: tree_sitter::Node, source: &str, out: &mut Vec<Violation>) {
+    let start = node.start_byte();
+    let end = node.end_byte();
+    let before = source[..start].chars().last();
+    let after = source[end..].chars().next();
+    // Line-leading dot (only whitespace since the last newline before it) is a
+    // chained call continuation — valid.
+    let line_start = source[..start].rfind('\n').map_or(0, |i| i + 1);
+    let before_ws_only = source[line_start..start].trim().is_empty();
+    let space_before = before == Some(' ') && !before_ws_only;
+    let space_after = after == Some(' ') || after == Some('\t');
+    let line_col = start - line_start + 1;
+    // ktlint reports the offending whitespace column: the space before the dot
+    // (line_col - 1) or the space after it (line_col + 1).
+    let (col, message) = match (space_before, space_after) {
+        (true, true) => (line_col - 1, "Unexpected spacing around \".\""),
+        (true, false) => (line_col - 1, "Unexpected spacing before \".\""),
+        (false, true) => (line_col + 1, "Unexpected spacing after \".\""),
+        (false, false) => return,
+    };
+    let line = source[..start].bytes().filter(|&b| b == b'\n').count() + 1;
+    out.push(Violation {
+        file: String::new(),
+        line,
+        col,
+        rule_id: "standard:dot-spacing".into(),
+        message: message.into(),
+        auto_fixable: true,
+    });
 }
 
 pub struct SpacingAroundSquareBrackets;
@@ -81,29 +111,12 @@ impl Rule for NoBlankLinesInChainedMethodCalls {
     fn id(&self) -> &'static str {
         "standard:no-blank-lines-in-chained-method-calls"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        let mut in_chain = false;
-        for (i, ln) in l.iter().enumerate() {
-            if ln.trim().starts_with('.') || ln.trim().contains("?.") {
-                in_chain = true;
-            }
-            if in_chain && ln.trim().is_empty() {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Unexpected blank line in chained method call".into(),
-                    auto_fixable: true,
-                });
-            }
-            if !ln.trim().starts_with('.') && !ln.trim().is_empty() && in_chain {
-                in_chain = false;
-            }
-        }
-        v
+    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
+        // Fail closed: the previous line-scan heuristic produced mass false
+        // positives on real projects (verified against a live Spotless 8.8.0 +
+        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
+        // must replace this before the rule can be re-enabled.
+        Vec::new()
     }
 }
 

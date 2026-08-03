@@ -31,6 +31,14 @@ impl Rule for ExpressionOperandWrapping {
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         for (line_index, line) in source.lines().enumerate() {
+            let trimmed_line = line.trim_start();
+            if trimmed_line.starts_with("//")
+                || trimmed_line.starts_with("/*")
+                || trimmed_line.starts_with("*")
+                || trimmed_line.starts_with("/**")
+            {
+                continue;
+            }
             if let Some(operator_end) = unwrapped_operand_after_operator(line) {
                 let operand = line[operator_end..]
                     .find(|character: char| !character.is_whitespace())

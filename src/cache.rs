@@ -9,8 +9,14 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
-/// Bump whenever cache serialization or rule semantics change.
+/// Bump whenever cache serialization changes.
 const CACHE_VERSION: u32 = 5;
+
+/// Bump whenever any rule's detection/fix semantics change so stale cached
+/// violations (from older rule versions) are never served. This is a coarse
+/// global version; a per-rule fingerprint would be finer but this is safe:
+/// any rule change invalidates the whole cache for the binary version.
+const RULES_VERSION: u64 = 6;
 
 #[derive(Serialize, Deserialize)]
 struct CacheFile {
@@ -50,6 +56,7 @@ fn config_fingerprint(config: &KtlintConfig) -> u64 {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
     let mut h = DefaultHasher::new();
+    RULES_VERSION.hash(&mut h);
     config.rule_set.hash(&mut h);
     config.code_style.hash(&mut h);
     config.indent_size.hash(&mut h);
