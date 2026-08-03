@@ -77,7 +77,7 @@ ktlint-rs --include '**/src/**/*.kt' --exclude '**/generated/**' .
 | ktlint 1.8.0 standard oracle | 101 | Runtime inventory from the pinned JVM oracle |
 | Oracle rules matched to Rust owners | 100 | Registration only; behavior remains unverified until differential fixtures pass |
 | Oracle rules currently missing | 0 | All pinned ktlint 1.8 providers have Rust owners |
-| Detekt registry IDs | 148 | Outside the Kataris Spotless replacement scope |
+| Detekt registry IDs | 148 | Outside the Spotless replacement scope |
 | **Unique registry total** | **264** | **116 standard-oriented + 148 detekt** |
 
 The machine-generated compatibility matrix, priorities, formatter coverage, and fixture evidence live in **[docs/RULE_PLAN.md](docs/RULE_PLAN.md)**. Counts are validated against `parity-manifest.json` in CI; registration is never treated as parity proof.

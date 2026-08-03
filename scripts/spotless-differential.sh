@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Differential harness for Kataris Spotless 8.8.0 + ktlint 1.8.0.
+# Differential harness for Spotless 8.8.0 + ktlint 1.8.0.
 # Usage:
 #   GRADLE=/path/to/gradlew KTLINT_RS=./target/release/ktlint-rs \
 #     ./scripts/spotless-differential.sh [--offline] [--expect-mismatch] [--inject-mismatch KIND] [--artifacts DIR]
@@ -167,6 +167,23 @@ if ! cmp -s "$TMP_ROOT/results/oracle-exit-code.txt" "$TMP_ROOT/results/actual-e
     MISMATCHES=$((MISMATCHES + 1))
 fi
 
+# Offline only: the committed golden tree is the only oracle surface. Overlay it
+# on oracle/src and keep oracle/actual symmetric — drop source files that have no
+# committed golden counterpart (e.g. config/Disabled.kt fixtures whose Spotless
+# output was never pinned). Diagnostics above used the full tree; this only
+# narrows the formatting comparison.
+if [[ "$OFFLINE" == true ]] && [[ -d "$ORACLE_SOURCE/expected/formatted/src" ]]; then
+    cp -R "$ORACLE_SOURCE/expected/formatted/src/." "$TMP_ROOT/oracle/src/"
+    for side in oracle actual; do
+        while IFS= read -r kt; do
+            rel="${kt#$TMP_ROOT/$side/}"
+            if [[ ! -f "$ORACLE_SOURCE/expected/formatted/$rel" ]]; then
+                rm -f "$kt"
+            fi
+        done < <(find "$TMP_ROOT/$side/src" -name '*.kt')
+    done
+fi
+
 if [[ "$OFFLINE" == false ]]; then
     "$GRADLE" -p "$TMP_ROOT/oracle" --no-daemon --no-configuration-cache oracleFormat >/dev/null
     cp -R "$TMP_ROOT/oracle/src" "$TMP_ROOT/results/oracle-first-src"
@@ -175,8 +192,6 @@ if [[ "$OFFLINE" == false ]]; then
         >"$TMP_ROOT/results/oracle-idempotence.diff"; then
         MISMATCHES=$((MISMATCHES + 1))
     fi
-elif [[ -d "$ORACLE_SOURCE/expected/formatted/src" ]]; then
-    cp -R "$ORACLE_SOURCE/expected/formatted/src/." "$TMP_ROOT/oracle/src/"
 fi
 run_actual_format() {
     set +e

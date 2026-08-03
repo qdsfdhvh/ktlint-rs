@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "oracleId": "kataris-spotless-8.8.0-ktlint-1.8.0",
+  "oracleId": "spotless-8.8.0-ktlint-1.8.0",
   "spotlessVersion": "8.8.0",
   "ktlintVersion": "1.8.0",
   "gradleVersion": "9.6.1",
@@ -11,9 +11,7 @@
     "includesKotlinScripts": false
   },
   "sourceContracts": {
-    "katarisEditorConfigSha256": "90666631f9bda979b316727e7ab236e72352746dda0349ffed999a3cb21345e9",
-    "katarisSpotlessConventionSha256": "31fd87357617fcfd224c7caecfd760e40cc77c74b4f6bca998db28e82963bac8",
-    "katarisGradleWrapperPropertiesSha256": "c94d41b634a5e0ff8a2f812023697b1337eebac18e9962610356a1793f72896d"
+    "editorConfigSha256": "7c4a547debe33897152a4a906e6b5c86f62bf1781eaed42c05528e22b13e2a71"
   },
   "artifactSha256": {
     "gradle-9.6.1-bin.zip": "9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14",

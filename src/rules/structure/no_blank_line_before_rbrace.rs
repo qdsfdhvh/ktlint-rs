@@ -20,7 +20,7 @@ impl Rule for NoBlankLineBeforeRbrace {
                 }
                 v.push(Violation {
                     file: String::new(),
-                    line: i + 1,
+                    line: i, // report the blank line itself, matching ktlint
                     col: 1,
                     rule_id: self.id().into(),
                     message: "Unexpected blank line(s) before \"}\"".into(),

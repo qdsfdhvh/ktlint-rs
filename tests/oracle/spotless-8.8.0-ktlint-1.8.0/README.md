@@ -1,6 +1,6 @@
-# Kataris Spotless oracle
+# Spotless oracle
 
-Pinned behavioral oracle for Kataris:
+Pinned behavioral oracle for a Spotless 8.8.0 + ktlint 1.8.0 pipeline:
 
 - Spotless `8.8.0`
 - ktlint `1.8.0`
@@ -9,7 +9,7 @@ Pinned behavioral oracle for Kataris:
 - target `src/**/*.kt`
 - target exclude `**/generated/**`
 
-The checked-in `.editorconfig` is an exact copy of the Kataris root configuration whose SHA-256 is recorded in `oracle-manifest.json`.
+The checked-in `.editorconfig` is a synthetic Android Studio style reference profile (semantically equivalent to the pinned reference configuration) whose SHA-256 is recorded in `oracle-manifest.json`.
 
 ## Tasks
 
@@ -29,7 +29,7 @@ gradle --no-daemon --no-configuration-cache oracleFormat
 - `oracle-manifest.json`
 - `effective-config.json`
 
-`oracleFormat` mutates the fixture copy, so differential tests must run it in a temporary copy. Never point it at the Kataris checkout.
+`oracleFormat` mutates the fixture copy, so differential tests must run it in a temporary copy. Never point it at a real checkout.
 
 The Gradle wrapper properties are pinned, including the distribution checksum. The wrapper JAR is intentionally not duplicated here; CI should use its verified Gradle setup or generate the standard wrapper from Gradle 9.6.1.
 

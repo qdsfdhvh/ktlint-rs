@@ -55,8 +55,8 @@ tasks.register('verifyOracleContract') {
         if (JavaVersion.current() != JavaVersion.VERSION_21) {
             throw new GradleException("Expected Java 21, got ${JavaVersion.current()}")
         }
-        if (sha256(file('.editorconfig')) != '90666631f9bda979b316727e7ab236e72352746dda0349ffed999a3cb21345e9') {
-            throw new GradleException('Pinned Kataris .editorconfig checksum mismatch')
+        if (sha256(file('.editorconfig')) != '7c4a547debe33897152a4a906e6b5c86f62bf1781eaed42c05528e22b13e2a71') {
+            throw new GradleException('Pinned reference .editorconfig checksum mismatch')
         }
 
         def expectedArtifacts = [
@@ -120,7 +120,7 @@ tasks.register('oracleRuleInventory', JavaExec) {
 
 tasks.register('oracleMetadata') {
     group = 'verification'
-    description = 'Copies the pinned oracle contract and effective Kataris config.'
+    description = 'Copies the pinned oracle contract and effective reference config.'
     doLast {
         copy {
             from('oracle-manifest.json', 'effective-config.json')
