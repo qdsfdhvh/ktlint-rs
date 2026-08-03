@@ -41,7 +41,6 @@ impl Rule for NoUnitReturnRule {
     }
 }
 
-
 pub struct NoSingleLineBlockCommentRule;
 impl Rule for NoSingleLineBlockCommentRule {
     fn id(&self) -> &'static str {
@@ -240,4 +239,3 @@ impl Rule for MixedConditionOperatorsRule {
         Vec::new()
     }
 }
-

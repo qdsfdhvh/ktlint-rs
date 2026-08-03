@@ -15,7 +15,6 @@ impl Rule for CommentWrappingRule {
     }
 }
 
-
 pub struct KdocWrappingRule;
 impl Rule for KdocWrappingRule {
     fn id(&self) -> &'static str {
@@ -29,7 +28,6 @@ impl Rule for KdocWrappingRule {
         Vec::new()
     }
 }
-
 
 // FunctionExpressionBodyRule removed — dead duplicate of phase3b_rules::FunctionExpressionBody
 
@@ -72,7 +70,6 @@ impl Rule for BinaryExpressionWrappingRule {
     }
 }
 
-
 pub struct PropertyWrappingRule;
 impl Rule for PropertyWrappingRule {
     fn id(&self) -> &'static str {
@@ -86,7 +83,6 @@ impl Rule for PropertyWrappingRule {
         Vec::new()
     }
 }
-
 
 pub struct ParameterWrappingRule;
 impl Rule for ParameterWrappingRule {
@@ -154,7 +150,6 @@ impl Rule for StatementWrappingRule {
         Vec::new()
     }
 }
-
 
 pub struct ChainMethodContinuationRule;
 impl Rule for ChainMethodContinuationRule {

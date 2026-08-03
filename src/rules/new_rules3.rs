@@ -106,7 +106,6 @@ impl Rule for TypeArgumentCommentRule {
     }
 }
 
-
 pub struct TypeParameterCommentRule;
 impl Rule for TypeParameterCommentRule {
     fn id(&self) -> &'static str {
@@ -121,7 +120,6 @@ impl Rule for TypeParameterCommentRule {
     }
 }
 
-
 pub struct ValueArgumentCommentRule;
 impl Rule for ValueArgumentCommentRule {
     fn id(&self) -> &'static str {
@@ -135,7 +133,6 @@ impl Rule for ValueArgumentCommentRule {
         Vec::new()
     }
 }
-
 
 pub struct ValueParameterCommentRule;
 impl Rule for ValueParameterCommentRule {
@@ -173,7 +170,6 @@ impl Rule for ThenSpacingRule {
         Vec::new()
     }
 }
-
 
 pub struct LambdaReturnRule;
 impl Rule for LambdaReturnRule {

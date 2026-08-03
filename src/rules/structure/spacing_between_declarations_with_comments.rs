@@ -15,4 +15,3 @@ impl Rule for SpacingBetweenDeclarationsWithComments {
         Vec::new()
     }
 }
-
