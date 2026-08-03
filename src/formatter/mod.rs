@@ -442,10 +442,7 @@ fn apply_spacing_rules(
             ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
             ("standard:fun-keyword-spacing", fix_keyword_spacing),
-            (
-                "standard:function-return-type-spacing",
-                fix_return_type_spacing,
-            ),
+            ("standard:function-return-type-spacing", fix_colons),
             ("standard:dot-spacing", fix_dot_spacing),
             ("standard:keyword-spacing", fix_keyword_spacing),
             ("standard:range-spacing", fix_range_spacing),
@@ -949,15 +946,6 @@ fn fix_colons(source: &str) -> String {
                 index += 1;
                 continue;
             }
-            // Return-type colon (`fun foo(): Int`) belongs to
-            // standard:function-return-type-spacing, never colon-spacing. Skip it
-            // so disabling frt-spacing leaves `):Int` untouched.
-            let prev_non_ws = chars[..index].iter().rev().find(|c| !c.is_whitespace());
-            if matches!(prev_non_ws, Some(')' | '?' | '>')) {
-                output.push(':');
-                index += 1;
-                continue;
-            }
             let prefix: String = chars[..index].iter().collect();
             let word_start = prefix
                 .char_indices()
@@ -983,47 +971,6 @@ fn fix_colons(source: &str) -> String {
                 prefix.rfind('<') > prefix.rfind('>') || prefix.contains(" where ");
             if class_header || type_constraint {
                 output.push(' ');
-            }
-            output.push(':');
-            index += 1;
-            while matches!(chars.get(index), Some(' ' | '\t')) {
-                index += 1;
-            }
-            if !matches!(chars.get(index), None | Some('\n' | '\r')) {
-                output.push(' ');
-            }
-        }
-    }
-    output
-}
-
-/// `standard:function-return-type-spacing` — ensure exactly one space after the
-/// return-type colon of a function declaration (`fun foo(): Int`), without
-/// touching annotation colons (`val x: Int`) which colon-spacing owns.
-fn fix_return_type_spacing(source: &str) -> String {
-    let mut output = String::with_capacity(source.len());
-    for line in source.split_inclusive('\n') {
-        let chars: Vec<char> = line.chars().collect();
-        let mut index = 0;
-        while index < chars.len() {
-            if chars[index] != ':'
-                || chars.get(index + 1) == Some(&':')
-                || (index > 0 && chars[index - 1] == ':')
-            {
-                output.push(chars[index]);
-                index += 1;
-                continue;
-            }
-            let prev_non_ws = chars[..index].iter().rev().find(|c| !c.is_whitespace());
-            // Only the return-type colon (preceded by `)`/`?`/`>` of the parameter
-            // list) belongs here.
-            if !matches!(prev_non_ws, Some(')' | '?' | '>')) {
-                output.push(chars[index]);
-                index += 1;
-                continue;
-            }
-            while output.ends_with(' ') || output.ends_with('\t') {
-                output.pop();
             }
             output.push(':');
             index += 1;
