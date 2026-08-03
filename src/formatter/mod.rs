@@ -442,7 +442,7 @@ fn apply_spacing_rules(
             ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
             ("standard:fun-keyword-spacing", fix_keyword_spacing),
-            ("standard:function-return-type-spacing", fix_colons),
+            ("standard:function-return-type-spacing", fix_return_type_spacing),
             ("standard:dot-spacing", fix_dot_spacing),
             ("standard:keyword-spacing", fix_keyword_spacing),
             ("standard:range-spacing", fix_range_spacing),
@@ -708,11 +708,21 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
 }
 
 fn fix_trailing_ws(source: &str) -> String {
+    // Trim trailing whitespace per line while preserving the newline structure.
+    // split_inclusive keeps each line's terminator, so we must strip it first,
+    // trim the content, then re-attach it — otherwise trim_end_matches stops at
+    // the '\n' and leaves trailing spaces on `{ \n`-style lines untouched.
     source
-        .lines()
-        .map(|l| l.trim_end())
-        .collect::<Vec<_>>()
-        .join("\n")
+        .split_inclusive('\n')
+        .map(|line| {
+            let (content, nl) = match line.strip_suffix('\n') {
+                Some(c) => (c, "\n"),
+                None => (line, ""),
+            };
+            let trimmed = content.trim_end_matches([' ', '\t']);
+            format!("{trimmed}{nl}")
+        })
+        .collect::<String>()
 }
 
 fn fix_trailing_ws_protected(source: &str) -> String {
@@ -741,7 +751,21 @@ fn fix_curly_braces(source: &str) -> String {
             }
         }
     }
-    s = s.replace("{", "{ ").replace("{  ", "{ ");
+    // Add a space after `{` only when followed by a non-whitespace character on
+    // the same line (ktlint's curly-spacing). A `{` at end of line (`{\n`) or
+    // followed by whitespace must stay untouched — inserting a space there creates
+    // a trailing-space violation and breaks idempotence.
+    let mut next = String::with_capacity(s.len());
+    for (i, ch) in s.char_indices() {
+        next.push(ch);
+        if ch == '{' {
+            let after = s[i + ch.len_utf8()..].chars().next();
+            if matches!(after, Some(c) if !c.is_whitespace() && c != '\n') {
+                next.push(' ');
+            }
+        }
+    }
+    s = next;
     let closes: Vec<usize> = s.match_indices('}').map(|(i, _)| i).collect();
     for &pos in closes.iter().rev() {
         if pos > 0 {
@@ -922,6 +946,18 @@ fn fix_colons(source: &str) -> String {
                 index += 1;
                 continue;
             }
+            // Return-type colon (`fun foo(): Int`) belongs to
+            // standard:function-return-type-spacing, never colon-spacing. Skip it
+            // so disabling frt-spacing leaves `):Int` untouched.
+            let prev_non_ws = chars[..index]
+                .iter()
+                .rev()
+                .find(|c| !c.is_whitespace());
+            if matches!(prev_non_ws, Some(')' | '?' | '>')) {
+                output.push(':');
+                index += 1;
+                continue;
+            }
             let prefix: String = chars[..index].iter().collect();
             let word_start = prefix
                 .char_indices()
@@ -947,6 +983,50 @@ fn fix_colons(source: &str) -> String {
                 prefix.rfind('<') > prefix.rfind('>') || prefix.contains(" where ");
             if class_header || type_constraint {
                 output.push(' ');
+            }
+            output.push(':');
+            index += 1;
+            while matches!(chars.get(index), Some(' ' | '\t')) {
+                index += 1;
+            }
+            if !matches!(chars.get(index), None | Some('\n' | '\r')) {
+                output.push(' ');
+            }
+        }
+    }
+    output
+}
+
+/// `standard:function-return-type-spacing` — ensure exactly one space after the
+/// return-type colon of a function declaration (`fun foo(): Int`), without
+/// touching annotation colons (`val x: Int`) which colon-spacing owns.
+fn fix_return_type_spacing(source: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        let chars: Vec<char> = line.chars().collect();
+        let mut index = 0;
+        while index < chars.len() {
+            if chars[index] != ':'
+                || chars.get(index + 1) == Some(&':')
+                || (index > 0 && chars[index - 1] == ':')
+            {
+                output.push(chars[index]);
+                index += 1;
+                continue;
+            }
+            let prev_non_ws = chars[..index]
+                .iter()
+                .rev()
+                .find(|c| !c.is_whitespace());
+            // Only the return-type colon (preceded by `)`/`?`/`>` of the parameter
+            // list) belongs here.
+            if !matches!(prev_non_ws, Some(')' | '?' | '>')) {
+                output.push(chars[index]);
+                index += 1;
+                continue;
+            }
+            while output.ends_with(' ') || output.ends_with('\t') {
+                output.pop();
             }
             output.push(':');
             index += 1;
@@ -1417,6 +1497,27 @@ fn fix_blank_lines(source: &str) -> String {
     while s.contains("\n\n\n") {
         s = s.replace("\n\n\n", "\n\n");
     }
+    // Collapse blank lines immediately before a closing brace on its own line
+    // (standard:no-blank-line-before-rbrace): `\n\n}` → `\n}`.
+    let mut next = String::with_capacity(s.len());
+    let lines: Vec<&str> = s.split_inclusive('\n').collect();
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i];
+        let next_line = lines.get(i + 1).copied().unwrap_or("");
+        if line.trim().is_empty() && next_line.trim_start().starts_with('}') {
+            i += 1; // drop the blank line before the closing brace
+            continue;
+        }
+        next.push_str(line);
+        i += 1;
+    }
+    s = next;
+    // Collapse trailing blank lines: keep at most one final newline.
+    let trimmed_end = s.trim_end_matches('\n');
+    if trimmed_end.len() != s.len() {
+        s = format!("{trimmed_end}\n");
+    }
     s
 }
 
@@ -1691,6 +1792,33 @@ mod tests {
             format_once(&once, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial,).unwrap(),
             once
         );
+    }
+
+    #[test]
+    fn trailing_blank_lines_are_idempotent() {
+        // Trailing whitespace + trailing blank lines must not make the
+        // no-trailing-spaces pass oscillate (regression: fix_trailing_ws used
+        // lines()/join which dropped the final newline on round two).
+        let source = "val x = 1   \n\n";
+        let once =
+            format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
+        let twice =
+            format_once(&once, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
+        assert_eq!(once, twice, "format_once must be idempotent on trailing blank lines");
+        assert!(!once.contains("   \n"), "trailing spaces must be trimmed");
+
+        // CLI parity: Android Studio style, final newline on/off.
+        for code_style in [CodeStyle::KtlintOfficial, CodeStyle::AndroidStudio] {
+            for newline in [true, false] {
+                let first = format_once(source, 4, newline, &HashMap::new(), code_style).unwrap();
+                let second =
+                    format_once(&first, 4, newline, &HashMap::new(), code_style).unwrap();
+                assert_eq!(
+                    first, second,
+                    "style={code_style:?} newline={newline}: must be idempotent"
+                );
+            }
+        }
     }
 
     #[test]

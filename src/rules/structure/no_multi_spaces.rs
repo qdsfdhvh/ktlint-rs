@@ -33,7 +33,7 @@ impl Rule for NoMultiSpaces {
                     violations.push(Violation {
                         file: String::new(),
                         line: i + 1,
-                        col: 1,
+                        col: col + 2, // ktlint reports the redundant space's column (1-based)
                         rule_id: self.id().to_string(),
                         message: "Unnecessary long whitespace".to_string(),
                         auto_fixable: true,
