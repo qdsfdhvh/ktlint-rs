@@ -147,8 +147,8 @@ EOF
 - **不要**直接 push 到 main（仓库规则禁止）
 - **一定要**在 PR body 里加 `Closes #<num>` 来关联 issue
 - **一定要**检查并提交 `Cargo.lock`，版本 bump 或依赖变更后 lockfile 可能不同步
-- CI 全部通过后，需要 `--admin` 标志才能合并（项目设置了 required checks）
-- 合并用 squash：`gh pr merge <num> --squash --delete-branch --admin`
+- CI 全绿后合并（不需要 --admin，除非 branch protection 拦截，如 docs-only PR 跳过 required checks）
+- 合并用 squash：`gh pr merge <num> --squash --delete-branch`（被拦时加 `--admin`）
 - 预发版本：合并后创建 tag + release
 - **发版后必须**用 `cargo install --git` 从 GitHub 安装，不要本地 `cp` 到 `~/.local/bin`
 ```bash

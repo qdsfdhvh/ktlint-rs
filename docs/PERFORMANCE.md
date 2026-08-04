@@ -50,3 +50,22 @@ Benchmarked 2026-07-15.
 
 > ⚠️ **detekt on androidx**: 423s (7 min) with `--all-rules`. The 130K violations show detekt's broader scope (static analysis, not just formatting).
 > ktor and demo-gradle omitted — bench timed out before completion.
+
+---
+
+### Post-parity benchmark (2026-08) — after differential fixes
+
+Violation counts dropped dramatically once false positives were eliminated
+(PRs #96-#98); timing is unchanged:
+
+| Project | Files | ktlint-rs check | Violations now | Notes |
+|---|---|---|---|---|
+| ktor | 2311 | 4.3s | 490 | mostly real (ktor doesn't run ktlint in CI) |
+| kataris-app | 1949 | 3.7s | 1 | **matches Spotless exactly** |
+| nowinandroid | 310 | 1.2s | 1 (real) | ktlint 1.4 codebase |
+
+`--format` on already-formatted code changes **0 files** (ktor/nowinandroid/kataris-app)
+and matches `spotlessApply` byte-for-byte on unformatted new code.
+
+> Earlier rows above reflect pre-fix behavior (mass false positives from
+> placeholder line-scan rules); see git history #96-#98 for the fixes.
