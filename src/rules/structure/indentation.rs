@@ -73,12 +73,29 @@ impl Rule for Indentation {
                 || trimmed.starts_with("* ")
                 || trimmed.starts_with("*/")
                 || trimmed.starts_with('"')
+                || trimmed.contains("get(")
+                || trimmed.contains("set(")
             {
                 continue;
             }
 
-            // Core JVM logic: indent must be a multiple of indent_size
+            // Core JVM logic: indent must be a multiple of indent_size.
+            let mut too_shallow = false;
             if spaces % is != 0 {
+                too_shallow = true;
+            }
+            // Also flag code that sits at the top level of a block but has no
+            // indentation at all (`class Foo {\nval x`): clearly unformatted
+            // new code that the formatter should fix. Closing braces and
+            // continuation lines are skipped.
+            if !too_shallow
+                && spaces == 0
+                && !trimmed.starts_with('}')
+                && expected_depth(&lines, i) > 0
+            {
+                too_shallow = true;
+            }
+            if too_shallow {
                 violations.push(Violation {
                     file: String::new(),
                     line: i + 1,
@@ -94,6 +111,22 @@ impl Rule for Indentation {
         }
         violations
     }
+}
+
+/// Brace depth before a given line — used to detect zero-indent lines inside
+/// a block without full continuation analysis.
+fn expected_depth(lines: &[&str], target: usize) -> usize {
+    let mut depth = 0usize;
+    for (i, line) in lines.iter().enumerate() {
+        if i >= target {
+            break;
+        }
+        let t = line.trim();
+        let opens = t.bytes().filter(|b| *b == b'{').count();
+        let closes = t.bytes().filter(|b| *b == b'}').count();
+        depth = depth.saturating_add(opens).saturating_sub(closes);
+    }
+    depth
 }
 
 #[cfg(test)]

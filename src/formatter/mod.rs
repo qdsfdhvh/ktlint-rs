@@ -375,15 +375,22 @@ fn masked_transform(source: &str, transform: fn(&str) -> String) -> String {
     restore_protected(&transform(&masked), &store)
 }
 
+/// ktlint 1.8 rules that are NOT enabled by default (must be explicitly
+/// `= enabled` in .editorconfig). Mirrors config::DEFAULT_DISABLED_RULES.
+const DEFAULT_DISABLED_RULES: &[&str] = &["standard:expression-operand-wrapping"];
+
 fn rule_enabled(
     rule_configs: &HashMap<String, RuleConfig>,
     rule_id: &str,
     code_style: CodeStyle,
 ) -> bool {
     crate::rules::code_style_allows(rule_id, code_style)
-        && rule_configs
-            .get(rule_id)
-            .is_none_or(|config| config.enabled)
+        && match rule_configs.get(rule_id) {
+            // Explicit .editorconfig wins (enabled or disabled).
+            Some(config) => config.enabled,
+            // Otherwise ktlint 1.8 default-disabled rules stay off.
+            None => !DEFAULT_DISABLED_RULES.contains(&rule_id),
+        }
 }
 
 fn apply_spacing_rules(
@@ -402,7 +409,7 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 29] = [
+        let passes: [(&'static str, fn(&str) -> String); 30] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -454,6 +461,10 @@ fn apply_spacing_rules(
             ("standard:trailing-comma", fix_single_line_trailing_comma),
             ("standard:no-consecutive-blank-lines", fix_blank_lines),
             ("standard:no-blank-line-in-list", fix_blank_line_in_list),
+            (
+                "standard:blank-line-between-when-conditions",
+                fix_when_conditions_blank_lines,
+            ),
             ("legacy:brace-between-pass", fix_brace_between),
             ("legacy:double-space-pass", fix_double_spaces),
         ];
@@ -664,47 +675,83 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
     let Some((masked, store)) = mask_protected(source, &tree) else {
         return source.to_string();
     };
-    let existing_indented_code_lines = masked
-        .lines()
-        .filter(|line| {
-            let trimmed = line.trim_start();
-            !trimmed.is_empty()
-                && !trimmed.contains(SENTINEL)
-                && line.len().saturating_sub(trimmed.len()) > 0
-        })
-        .count();
-    // Avoid globally reflowing already-indented files until continuation
-    // indentation is fully CST-driven. Wrapping may introduce one or two lines.
-    if existing_indented_code_lines > 2 {
-        return source.to_string();
-    }
-    let mut depth = 0usize;
-    let mut output = Vec::new();
-    for line in masked.lines() {
+
+    // AST-driven expected indentation: for every code line, the containing
+    // block's depth (class_body/function_body/control_structure_body/...)
+    // determines the expected leading spaces. We only *raise* lines whose
+    // current indent is clearly too shallow for their block — never lower
+    // existing indentation, so continuation/wrapped lines are preserved.
+    let mut expected: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
+    collect_expected_indents(&masked, &mut expected, indent_size);
+    let lines: Vec<&str> = masked.split_inclusive('\n').collect();
+    let mut output = String::with_capacity(masked.len());
+    for (row, line) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
-        if trimmed.is_empty() {
-            output.push(String::new());
+        if trimmed.is_empty() || trimmed.starts_with(SENTINEL) {
+            output.push_str(line);
             continue;
         }
-        let line_depth = depth.saturating_sub(usize::from(trimmed.starts_with('}')));
-        if trimmed.starts_with(SENTINEL) {
-            output.push(line.to_string());
-        } else {
-            output.push(format!(
-                "{}{}",
-                " ".repeat(line_depth * indent_size),
-                trimmed
-            ));
+        let current = line.len() - trimmed.len();
+        if let Some(&want) = expected.get(&row) {
+            if current < want && current < want.saturating_sub(indent_size).max(1) {
+                let has_nl = line.ends_with('\n');
+                output.push_str(&" ".repeat(want));
+                output.push_str(trimmed.trim_end_matches('\n'));
+                if has_nl {
+                    output.push('\n');
+                }
+                continue;
+            }
         }
-        let opens = trimmed.bytes().filter(|byte| *byte == b'{').count();
-        let closes = trimmed.bytes().filter(|byte| *byte == b'}').count();
-        depth = depth.saturating_add(opens).saturating_sub(closes);
+        output.push_str(line);
     }
-    let mut result = output.join("\n");
-    if source.ends_with('\n') {
+    let mut result = output;
+    if source.ends_with('\n') && !result.ends_with('\n') {
         result.push('\n');
     }
     restore_protected(&result, &store)
+}
+
+/// Depth-first: every block-like node raises the expected indent of the lines
+/// between its opening and closing brace by one level. Continuation lines
+/// (those at depth>0 but not starting a new statement) are left alone because
+/// we only ever raise clearly-too-shallow lines.
+fn collect_expected_indents(
+    masked: &str,
+    expected: &mut std::collections::HashMap<usize, usize>,
+    indent_size: usize,
+) {
+    // Brace-depth (+ paren-continuation) expected indent over the
+    // protected-masked source (string interiors are SENTINEL). A line's
+    // expected indent reflects braces closed at its start; its own braces then
+    // update depth. Lines inside unclosed parens are continuations (no
+    // expected — the fixer leaves them alone).
+    let mut depth = 0usize;
+    let mut parens = 0usize;
+    for (row, line) in masked.split('\n').enumerate() {
+        let trimmed = line.trim();
+        let opens = trimmed.bytes().filter(|b| *b == b'{').count();
+        // Only a line that *starts* with `}` (a closer / `} else` continuation)
+        // sits one level shallower; interior braces belong to the same line.
+        let leading_closes = trimmed.bytes().take_while(|b| *b == b'}').count();
+        let po = trimmed.bytes().filter(|b| *b == b'(').count();
+        let pc = trimmed.bytes().filter(|b| *b == b')').count();
+        let line_depth = depth.saturating_sub(leading_closes);
+        if parens == 0 {
+            let entry = expected.entry(row).or_insert(0);
+            let line_expected = line_depth * indent_size;
+            if *entry < line_expected {
+                *entry = line_expected;
+            }
+        }
+        // Net depth: leading closers pop; this line's opens push; interior
+        // braces (`x { ... }` on one line) pair and cancel.
+        let total_closes = trimmed.bytes().filter(|b| *b == b'}').count();
+        let interior_closes = total_closes - leading_closes;
+        let net = opens.saturating_sub(interior_closes);
+        depth = depth.saturating_sub(leading_closes).saturating_add(net);
+        parens = parens.saturating_add(po).saturating_sub(pc);
+    }
 }
 
 fn fix_trailing_ws(source: &str) -> String {
@@ -977,6 +1024,10 @@ fn fix_colons(source: &str) -> String {
                 output.pop();
             }
             let trimmed = line.trim_start();
+            // A super-type colon (`class X(...) : Base`, `object : Y`) gets a
+            // space before it; a constructor/property parameter colon
+            // (`private val activity : X`) must not. So only add the space when
+            // the colon follows a closing paren or generic bracket.
             let class_header = trimmed.starts_with("class ")
                 || trimmed.starts_with("data class ")
                 || trimmed.starts_with("enum class ")
@@ -1070,7 +1121,12 @@ fn fix_spacing_before_annotated_declarations(source: &str) -> String {
     let lines: Vec<&str> = source.split_inclusive('\n').collect();
     let mut output = String::with_capacity(source.len() + 1);
     for (index, line) in lines.iter().enumerate() {
-        if is_annotation_only_line(line.trim_start()) && index > 0 {
+        let trimmed = line.trim_start();
+        // A getter/setter annotation (`@Composable get()`) belongs to the
+        // property above it — never separate it with a blank line.
+        let is_accessor_annotation =
+            trimmed.starts_with('@') && (trimmed.contains("get(") || trimmed.contains("set("));
+        if is_annotation_only_line(trimmed) && index > 0 && !is_accessor_annotation {
             let previous = lines[index - 1].trim();
             if !previous.is_empty() && looks_like_declaration_line(previous) {
                 output.push('\n');
@@ -1097,9 +1153,16 @@ fn fix_expression_operand_wrapping(source: &str) -> String {
         if let Some(operator_end) =
             crate::rules::wrapping::compatibility::unwrapped_operand_after_operator(line)
         {
+            // Only wrap when a real operand follows the operator on the same
+            // line (`a * b` -> `a *\n    b`). A line that already ends with an
+            // operator has no operand to move — leave it untouched.
             let operand_start = line[operator_end..]
                 .find(|character: char| !character.is_whitespace())
                 .map_or(operator_end, |offset| operator_end + offset);
+            if operand_start >= line.len().saturating_sub(1) {
+                output.push_str(line);
+                continue;
+            }
             let indent = line.len() - line.trim_start().len();
             output.push_str(&line[..operator_end]);
             output.push('\n');
@@ -1394,12 +1457,31 @@ fn fix_trailing_lambda_parentheses(source: &str) -> String {
     source
         .split('\n')
         .map(|line| {
-            if !line.contains("fun ") && !line.contains("class ")
-                || line.contains("fun ")
-                    && !line.contains("interface ")
-                    && !line.contains("object ")
-                    && line.contains('.')
-            {
+            // Only strip `()` before a trailing lambda when the callee is a
+            // function-style lowercase identifier (`listOf(1).forEach() { }`).
+            // A capitalized name is a constructor call (`ViewModel() { }`),
+            // where the parens are required — stripping them corrupts syntax.
+            let callee = line
+                .split('(')
+                .next()
+                .and_then(|head| {
+                    head.rsplit(|c: char| !c.is_alphanumeric() && c != '_')
+                        .next()
+                })
+                .unwrap_or("");
+            let lowercase_callee = callee
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_lowercase());
+            let trimmed = line.trim_start();
+            let is_decl_or_accessor = trimmed.starts_with("fun ")
+                || trimmed.contains(" fun ")
+                || trimmed.starts_with("class ")
+                || trimmed.starts_with("interface ")
+                || trimmed.starts_with("object ")
+                || trimmed.contains("get() {")
+                || trimmed.contains("set(");
+            if lowercase_callee && !is_decl_or_accessor {
                 line.replace("() {", " {")
             } else {
                 line.to_string()
@@ -1450,6 +1532,51 @@ fn fix_class_header_spacing(source: &str) -> String {
         .collect::<Vec<_>>()
         .join("\n");
     restore_protected(&fixed, &store)
+}
+
+/// `standard:blank-line-between-when-conditions` — insert a blank line before
+/// a when-branch whose body is a block (`else -> {`), separating it from a
+/// preceding simple-expression branch, mirroring ktlint 1.8.
+fn fix_when_conditions_blank_lines(source: &str) -> String {
+    let lines: Vec<&str> = source.split_inclusive('\n').collect();
+    let mut out: Vec<&str> = Vec::with_capacity(lines.len());
+    let mut in_when = false;
+    let mut prev_was_branch = false;
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if !in_when {
+            let has_when = trimmed
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .any(|w| w == "when");
+            if has_when && trimmed.contains('{') && !trimmed.contains('}') {
+                in_when = true;
+                prev_was_branch = false;
+            }
+            out.push(line);
+            continue;
+        }
+        if trimmed == "}" {
+            in_when = false;
+            out.push(line);
+            continue;
+        }
+        if trimmed.contains("->") {
+            let this_is_block = trimmed.ends_with('{');
+            if (prev_was_branch || this_is_block)
+                && i > 0
+                && !out.last().is_some_and(|l| l.trim().is_empty())
+            {
+                // Insert a blank line before this branch (unless one exists).
+                out.push("\n");
+            }
+            prev_was_branch = this_is_block;
+        } else if !trimmed.is_empty() && !trimmed.starts_with('}') {
+            // Branch block body content; the block branch itself was already
+            // separated.
+        }
+        out.push(line);
+    }
+    out.concat()
 }
 
 fn fix_blank_lines(source: &str) -> String {
@@ -1872,10 +1999,36 @@ mod tests {
         assert!(fix_all_spacing("val x:String").contains("x: String"));
     }
     #[test]
+    #[test]
+    fn lambda_parens_stripped_for_calls_not_constructors() {
+        let call = "fun lambda() {\n    listOf(1).forEach() { value -> println(value) }\n}\n";
+        assert!(fix_trailing_lambda_parentheses(call).contains("forEach {"));
+        // Declarations and constructor calls keep their parens.
+        let decl = "fun foo() {\n}\n";
+        assert!(fix_trailing_lambda_parentheses(decl).contains("fun foo() {"));
+        let ctor = "class Foo : ViewModel() {\n}\n";
+        assert!(fix_trailing_lambda_parentheses(ctor).contains("ViewModel() {"));
+    }
+
     fn fix_trailing_ws_test() {
         assert_eq!(fix_trailing_ws("val x = 1   \n   "), "val x = 1\n");
     }
     #[test]
+    #[test]
+    fn expression_operand_wraps_line_end_operator() {
+        // A line ending in an operator with an operand before it splits the
+        // operand onto a continuation line; a line that already ends with the
+        // operator (no operand after) stays put.
+        let src = "val interaction =\n    (first + second) * third *\n        fourth\n";
+        let out = fix_expression_operand_wrapping(src);
+        assert!(
+            out.contains("(first + second) *\n        third *\n"),
+            "should split the trailing operand: {out:?}"
+        );
+        let end_op = "val x = a +\n    b\n";
+        assert_eq!(fix_expression_operand_wrapping(end_op), end_op);
+    }
+
     fn fix_indent() {
         let src = "class Foo {\nval x = 1\n}";
         assert_eq!(fix_indentation(src, 4), "class Foo {\n    val x = 1\n}");
