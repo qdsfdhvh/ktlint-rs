@@ -16,6 +16,7 @@ pub mod function_type_spacing;
 pub mod modifier_list_spacing;
 pub mod modifier_order;
 pub mod operator;
+pub mod parameter_list_spacing;
 pub mod paren;
 pub mod range_operator;
 
@@ -33,5 +34,6 @@ pub use function_return_type::FunctionReturnTypeSpacing;
 pub use function_start_body::FunctionStartOfBodySpacing;
 pub use modifier_order::ModifierOrder;
 pub use operator::OperatorSpacing;
+pub use parameter_list_spacing::ParameterListSpacing;
 pub use paren::ParenSpacing;
 pub use range_operator::RangeOperatorSpacing;
