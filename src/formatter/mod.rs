@@ -38,17 +38,11 @@ fn is_protected_kind(kind: &str) -> bool {
 /// `fix_colons` collapses ` : `→`: ` (correct for `val x: Int`, wrong here), so these
 /// specific colons are protected via their CST parent.
 fn is_space_before_colon(node: &tree_sitter::Node) -> bool {
-    node.kind() == ":"
-        && node.parent().is_some_and(|p| {
-            matches!(
-                p.kind(),
-                "class_declaration"
-                    | "object_declaration"
-                    | "object_literal"
-                    | "type_constraint"
-                    | "secondary_constructor"
-            )
-        })
+    // Super-type colons are repaired by fix_colons itself (it distinguishes
+    // `class Foo(...) : Base` from constructor parameter colons). Do not mask
+    // them away here, otherwise fix_colons never sees `object Bar:Base`.
+    let _ = node;
+    false
 }
 
 /// A backtick-quoted identifier (e.g. `` fun `name with spaces`() ``) is not a
@@ -1069,15 +1063,32 @@ fn fix_colons(source: &str) -> String {
             // space before it; a constructor/property parameter colon
             // (`private val activity : X`) must not. So only add the space when
             // the colon follows a closing paren or generic bracket.
-            let class_header = trimmed.starts_with("class ")
+            // A super-type colon (`class Foo(...) : Base`, `object : Y`) gets a
+            // space before it. Function return types (`fun foo() : Ret`) and
+            // constructor/property parameter colons must NOT — verified against
+            // real ktlint 1.8.0.
+            let is_declaration = trimmed.starts_with("class ")
                 || trimmed.starts_with("data class ")
                 || trimmed.starts_with("enum class ")
                 || trimmed.starts_with("sealed class ")
-                || trimmed.starts_with("object ")
-                || trimmed.starts_with("constructor");
+                || trimmed.starts_with("interface ")
+                || trimmed.starts_with("object ");
+            let prev_char = prefix.chars().rev().find(|c| !c.is_whitespace());
+            // Super-type colon: after the primary constructor's `)` (class Foo
+            // ...(..) : Base), after a generic `>` (class Foo<T> : Base), or an
+            // object/interface without parens (object Bar : Base).
+            let direct_object = (trimmed.starts_with("object ")
+                || trimmed.starts_with("interface "))
+                && prefix
+                    .trim_end()
+                    .chars()
+                    .next_back()
+                    .is_some_and(|c| c.is_alphanumeric() || c == '_');
+            let super_colon =
+                (is_declaration && matches!(prev_char, Some(')' | '>'))) || direct_object;
             let type_constraint =
                 prefix.rfind('<') > prefix.rfind('>') || prefix.contains(" where ");
-            if class_header || type_constraint {
+            if super_colon || type_constraint {
                 output.push(' ');
             }
             output.push(':');

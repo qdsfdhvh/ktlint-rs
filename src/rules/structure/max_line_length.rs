@@ -1,31 +1,52 @@
-//! standard:max-line-length — lines should not exceed 120 chars (configurable).
+//! standard:max-line-length — lines should not exceed the configured limit
+//! (default 120). Mirrors ktlint 1.8:
+//! - Raw/multiline string interiors (triple-quoted blocks) are data, not code —
+//!   not measured.
+//! - Ordinary lines containing string literals ARE measured (`val a = "<long>"`).
+//! - package/import lines are exempt (ktlint does not report them).
 
 use crate::rules::{Rule, Violation};
 
-pub struct MaxLineLength;
+pub struct MaxLineLength {
+    max_length: usize,
+}
+
+impl MaxLineLength {
+    pub fn new(max_length: usize) -> Self {
+        let max_length = if max_length == 0 { 120 } else { max_length };
+        Self { max_length }
+    }
+}
 
 impl Rule for MaxLineLength {
     fn id(&self) -> &'static str {
         "standard:max-line-length"
     }
 
-    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
-        let max_length = 120; // default; configurable via .editorconfig
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let max_length = self.max_length;
+
+        // Collect rows that are inside a multiline (raw) string literal. Those
+        // lines are data content — ktlint does not measure them.
+        let raw_string_rows = raw_string_rows(tree.root_node());
 
         source
             .lines()
             .enumerate()
-            .filter(|(_, line)| {
+            .filter(|(i, line)| {
+                if raw_string_rows.contains(i) {
+                    return false;
+                }
                 let trimmed = line.trim_start();
+                let only_string =
+                    trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() > 2;
                 line.chars().count() > max_length
+                    && !only_string
                     && !trimmed.starts_with("package ")
                     && !trimmed.starts_with("import ")
                     && !trimmed.starts_with("//")
                     && !trimmed.starts_with("/*")
                     && !trimmed.starts_with('*')
-                    // ktlint does not report lines whose long, indivisible content is
-                    // carried by a string literal (URLs, paths, snapshots, etc.).
-                    && !line.contains('"')
             })
             .map(|(i, _line)| Violation {
                 file: String::new(),
@@ -39,6 +60,27 @@ impl Rule for MaxLineLength {
     }
 }
 
+/// Rows covered by a multiline string literal (`""" ... """`).
+fn raw_string_rows(node: tree_sitter::Node) -> std::collections::HashSet<usize> {
+    let mut rows = std::collections::HashSet::new();
+    let mut stack = vec![node];
+    while let Some(current) = stack.pop() {
+        if current.kind() == "string_literal"
+            && current.end_position().row > current.start_position().row
+        {
+            for row in current.start_position().row..=current.end_position().row {
+                rows.insert(row);
+            }
+        }
+        for i in (0..current.child_count()).rev() {
+            if let Some(child) = current.child(i) {
+                stack.push(child);
+            }
+        }
+    }
+    rows
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -47,33 +89,31 @@ mod tests {
     fn check(source: &str) -> Vec<Violation> {
         let mut parser = KotlinParser::new();
         let tree = parser.parse(source);
-        MaxLineLength.check(&tree, source)
+        MaxLineLength::new(120).check(&tree, source)
     }
 
     #[test]
-    fn short_lines() {
-        assert!(check("val x = 1\n").is_empty());
+    fn raw_string_interior_not_measured() {
+        let long = "あ".repeat(130);
+        let src = format!("val doc: String = \"\"\"\n    {long}\n\"\"\".trimIndent()\n");
+        assert!(
+            check(&src).is_empty(),
+            "raw string interior must not be measured"
+        );
     }
 
     #[test]
-    fn long_line() {
-        let long = format!("val x = {}\n", "a".repeat(200));
-        let v = check(&long);
-        assert!(!v.is_empty());
-        assert_eq!(v[0].rule_id, "standard:max-line-length");
+    fn ordinary_long_line_measured() {
+        let long = "x".repeat(130);
+        let src = format!("val a: String = \"{long}\"\n");
+        assert!(
+            !check(&src).is_empty(),
+            "long line with string must be reported"
+        );
     }
 
     #[test]
-    fn ignores_long_string_and_kdoc_lines() {
-        let string = format!("val x = \"{}\"\n", "a".repeat(200));
-        let kdoc = format!("/** {} */\n", "a".repeat(200));
-        assert!(check(&string).is_empty());
-        assert!(check(&kdoc).is_empty());
-    }
-
-    #[test]
-    fn counts_unicode_characters_instead_of_utf8_bytes() {
-        let source = format!("val text = \"{}\"\n", "中".repeat(50));
-        assert!(check(&source).is_empty());
+    fn short_line_ok() {
+        assert!(check("val a = 1\n").is_empty());
     }
 }

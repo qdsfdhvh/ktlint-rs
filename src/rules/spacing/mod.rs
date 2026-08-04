@@ -16,10 +16,12 @@ pub mod function_type_spacing;
 pub mod modifier_list_spacing;
 pub mod modifier_order;
 pub mod operator;
+pub mod parameter_list_spacing;
 pub mod paren;
 pub mod range_operator;
 
 pub use annotation::AnnotationSpacing;
+pub use parameter_list_spacing::ParameterListSpacing;
 pub use argument_list::ArgumentListWrapping;
 pub use block_comment_star::BlockCommentStar;
 pub use class_signature::ClassSignatureSpacing;
