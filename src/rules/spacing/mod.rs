@@ -1,6 +1,7 @@
 pub mod annotation;
 pub mod annotation_spacing;
 pub mod argument_list;
+pub mod binary_expression_wrapping;
 pub mod block_comment_alignment;
 pub mod block_comment_star;
 pub mod class_signature;
@@ -18,10 +19,12 @@ pub mod modifier_order;
 pub mod operator;
 pub mod parameter_list_spacing;
 pub mod paren;
+pub mod property_wrapping;
 pub mod range_operator;
 
 pub use annotation::AnnotationSpacing;
 pub use argument_list::ArgumentListWrapping;
+pub use binary_expression_wrapping::BinaryExpressionWrapping;
 pub use block_comment_star::BlockCommentStar;
 pub use class_signature::ClassSignatureSpacing;
 pub use colon::ColonSpacing;
@@ -36,4 +39,5 @@ pub use modifier_order::ModifierOrder;
 pub use operator::OperatorSpacing;
 pub use parameter_list_spacing::ParameterListSpacing;
 pub use paren::ParenSpacing;
+pub use property_wrapping::PropertyWrapping;
 pub use range_operator::RangeOperatorSpacing;
