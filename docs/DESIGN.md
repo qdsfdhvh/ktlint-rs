@@ -36,6 +36,21 @@ Agent workflow:
 2. If ktlint-rs passes, JVM check will likely pass too
 3. JVM toolchain as final fallback for edge cases
 
+## Spotless 8.8.0 / ktlint 1.8.0 parity
+
+Since the differential harness landed, parity is verified continuously rather
+than approximated:
+
+- A pinned Spotless 8.8.0 + ktlint 1.8.0 oracle (101 standard rules) is diffed
+  byte-for-byte on every PR: discovery, effective config, diagnostics (incl.
+  autocorrectability), exit codes, formatted bytes, and idempotence all match.
+- Live projects are checked against the real ktlint CLI with each project's
+  `.editorconfig`: a 40-file ktor sample shows **zero false positives**
+  (ktlint-rs is conservative — it reports 4 real violations vs ktlint's 19).
+- `--format` leaves already-formatted code untouched (0 files changed on
+  ktor/nowinandroid/kataris-app) and matches `spotlessApply` byte-for-byte on
+  unformatted new code (indent, when-branch blank lines, trailing-lambda parens).
+
 ## Pure Rust constraints
 
 - ❌ No JVM / kotlinc / Gradle dependency

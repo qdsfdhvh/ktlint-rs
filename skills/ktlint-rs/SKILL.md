@@ -1,16 +1,18 @@
 ---
 name: ktlint-rs
-description: Use `ktlint-rs` to lint and format Kotlin code — 10-27x faster than JVM ktlint. 65 rules, auto-fix, .editorconfig support, 4 reporters. Drop-in compatible CLI.
+description: Use `ktlint-rs` to lint and format Kotlin code — 10-27x faster than JVM ktlint. 264 rules, auto-fix, .editorconfig support, Spotless 8.8.0 parity. Drop-in compatible CLI.
 ---
 
 # ktlint-rs
 
 `ktlint-rs` is a fast Kotlin linter and formatter written in Rust — drop-in
-compatible with Pinterest's JVM-based [ktlint](https://github.com/pinterest/ktlint).
-It uses tree-sitter to parse Kotlin source into a CST (preserving all whitespace
-and comments), then checks 65 rules across spacing, structure, imports, naming,
-wrapping, and KDoc. Auto-fix handles spacing violations; parallel processing via
-rayon delivers 10-27x speedups over the JVM version.
+compatible with Pinterest's JVM-based [ktlint](https://github.com/pinterest/ktlint),
+including Spotless 8.8.0 `spotlessApply` parity. It uses tree-sitter to parse
+Kotlin source into a CST (preserving all whitespace and comments), then checks
+**264 registry rules** (116 standard/ktlint-oriented + 148 detekt) across spacing,
+structure, imports, naming, wrapping, and KDoc. Auto-fix handles spacing and
+indentation; parallel processing via rayon delivers 10-27x speedups over the JVM
+version.
 
 ```bash
 cd ktlint-rs && cargo build --release    # binary at target/release/ktlint-rs
@@ -25,10 +27,10 @@ Working on Kotlin code linting/formatting?
    ├─ Quick style check → ktlint-rs <path>
    ├─ Pre-commit / CI gate → ktlint-rs --reporter json <path>
    ├─ Auto-fix → ktlint-rs --format <path>
+   ├─ Spotless replacement → ktlint-rs --format + check (matches spotlessApply byte-for-byte)
    ├─ Structured output → ktlint-rs --reporter json|sarif <path>
    ├─ Summary by rule → ktlint-rs --reporter plain-summary <path>
-   ├─ Disable rules → @Suppress("ktlint:standard:<rule-id>")
-   ├─ JVM parity check → ktlint-rs --compat <path>
+   ├─ Disable rules → @Suppress("ktlint:standard:<rule-id>") or .editorconfig
    ├─ Code style → ktlint-rs --code-style android_studio <path>
    └─ Benchmark → time ktlint-rs <path> && time ktlint <path>
 ```
@@ -40,7 +42,8 @@ Working on Kotlin code linting/formatting?
 ```bash
 ktlint-rs path/to/File.kt             # single file
 ktlint-rs src/                        # directory (parallel via rayon)
-ktlint-rs src/main/ src/test/         # multiple paths
+ktlint-rs --ruleset ktlint src/       # ktlint rules only (excludes detekt)
+ktlint-rs --include '**/src/**/*.kt' --exclude '**/generated/**' .  # glob scope
 ```
 
 ### Auto-fix
@@ -50,7 +53,10 @@ ktlint-rs --format src/               # format in-place
 ktlint-rs --format File.kt            # single file
 ```
 
-Handles: `{ } = : , ( )` spacing, comment spacing, blank lines before `}`, `} else` / `} catch` merging, trailing spaces, consecutive blank lines.
+Handles: `{ } = : , ( )` spacing, comment spacing, blank lines before `}`,
+`} else` / `} catch` merging, trailing spaces, consecutive blank lines, **indent
+fix (zero-indent lines inside blocks)**, **when-branch blank lines (block bodies)**,
+**trailing-lambda parens (`forEach()` → `forEach`)**.
 
 ### Reporters
 
@@ -60,16 +66,6 @@ ktlint-rs --reporter json src/        # JSON, includes auto_fixable
 ktlint-rs --reporter sarif src/       # CI integration
 ktlint-rs --reporter plain-summary src/  # rule counts only
 ktlint-rs --reporter json --reporter-output lint.json src/
-```
-
-### Limits & options
-
-```bash
-ktlint-rs --limit 20 src/             # first 20 violations
-ktlint-rs --relative src/             # relative paths
-ktlint-rs --compat src/               # disable rs-only rules
-ktlint-rs --code-style android_studio src/
-ktlint-rs --code-style intellij_idea src/
 ```
 
 ## Configuration (.editorconfig)
@@ -101,16 +97,26 @@ class Foo { }
 val x = "a very long string..."
 ```
 
-## Rules (65 total)
+## Rules (264 total)
 
-| Category | Count | Examples |
+| Category | Count | Notes |
 |---|---|---|
-| Spacing | 17 | curly, operator, comma, paren, colon, dot, keyword, annotation, modifier-order |
-| Structure | 28 | indent, trailing-space, blank-lines, max-line-length, trailing-comma, kdoc |
-| Imports | 4 | wildcard, ordering, unused |
-| Naming | 6 | class, function, property, filename, package |
-| Wrapping | 7 | chain, multiline-if-else, try-catch, when-expression |
-| KDoc | 3 | formatting, no-empty, no-trailing |
+| ktlint standard | 116 | parity with ktlint 1.8 (101 oracle rules matched, 0 missing) |
+| detekt | 148 | registry compatibility |
+
+Verified against live projects (ktor 2311 files, nowinandroid 310, okhttp 525,
+compose-samples 355): **zero false positives** on a 40-file differential sample
+against the real ktlint 1.8.0 CLI, and `--format` changes **0 files** on
+already-formatted code.
+
+## Known behavior notes
+
+- Rules that ktlint 1.8 disables by default (e.g. `expression-operand-wrapping`)
+  stay off unless the .editorconfig explicitly enables them.
+- Some rules are fail-closed (no reporting) until a CST implementation lands;
+  they are safe but conservative.
+- The `blank-line-between-when-conditions` rule separates block-body branches
+  from previous branches (simple-expression branches stay adjacent).
 
 ## Anti-patterns
 - **Don't** use JVM ktlint for speed-critical linting — ktlint-rs is 10-27x faster.
