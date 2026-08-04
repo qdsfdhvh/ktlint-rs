@@ -21,6 +21,7 @@ impl Registry {
             Box::new(NoConsecutiveBlankLines),
             // ── Spacing ──────────────────────────────────────────────
             Box::new(spacing::AnnotationSpacing),
+            Box::new(spacing::BinaryExpressionWrapping),
             Box::new(spacing::annotation_spacing::AnnotationConstructSpacing),
             Box::new(spacing::modifier_list_spacing::ModifierListSpacing),
             Box::new(spacing::function_type_spacing::FunctionTypeModifierSpacing),
@@ -41,6 +42,7 @@ impl Registry {
             Box::new(spacing::ModifierOrder),
             Box::new(spacing::OperatorSpacing),
             Box::new(spacing::ParenSpacing),
+            Box::new(spacing::PropertyWrapping),
             Box::new(spacing::RangeOperatorSpacing),
             // `standard:keyword-spacing` is registered in phase3b below.
             Box::new(new_rules::SpacingAroundDot),
@@ -120,14 +122,12 @@ impl Registry {
             Box::new(wrapping::WhenExpressionLineBreak),
             // ── Wrapping (more) ────────────────────────────────────────
             Box::new(wrapping::WhenEntryBracing),
-            Box::new(new_rules4::BinaryExpressionWrappingRule),
             Box::new(new_rules4::ChainMethodContinuationRule),
             Box::new(new_rules4::CommentWrappingRule),
             Box::new(new_rules4::IfElseWrappingRule),
             Box::new(new_rules4::KdocWrappingRule),
             Box::new(new_rules4::MultilineLoopRule),
             Box::new(new_rules4::ParameterWrappingRule),
-            Box::new(new_rules4::PropertyWrappingRule),
             Box::new(new_rules4::StatementWrappingRule),
             Box::new(phase3_rules::ContextReceiverWrapping),
             Box::new(wrapping::string_template_indent::StringTemplateIndent),
