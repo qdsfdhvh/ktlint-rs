@@ -1,4 +1,9 @@
 //! standard:blank-line-between-when-conditions
+//!
+//! ktlint separates a when-branch whose body is a block (`{ ... }`) from the
+//! previous branch with a blank line. Branches with simple-expression bodies
+//! may sit adjacent. Mirrors ktlint 1.8 behavior verified against the live
+//! Spotless oracle.
 use crate::rules::{Rule, Violation};
 
 pub struct BlankLineBetweenWhenConditions;
@@ -11,26 +16,40 @@ impl Rule for BlankLineBetweenWhenConditions {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
         let mut in_when = false;
+        let mut prev_is_block = false;
         for i in 0..l.len() {
             let t = l[i].trim();
-            if t.starts_with("when ") || t.starts_with("when(") {
-                in_when = true;
+            if !in_when {
+                // `when` can sit mid-expression (`val x = when(x) {`); detect by
+                // word boundary to avoid `somewhen` false positives.
+                let has_when = t
+                    .split(|c: char| !c.is_alphanumeric() && c != '_')
+                    .any(|w| w == "when");
+                if has_when && t.contains('{') && !t.contains('}') {
+                    in_when = true;
+                    prev_is_block = false;
+                }
+                continue;
             }
-            if in_when && t == "}" {
+            if t == "}" {
                 in_when = false;
+                continue;
             }
-            if in_when && t.contains("->") && i + 1 < l.len() {
-                let next = l[i + 1].trim();
-                if !next.is_empty() && next.contains("->") {
+            if t.contains("->") {
+                let this_is_block = t.ends_with('{');
+                if (prev_is_block || this_is_block) && i > 0 && !l[i - 1].trim().is_empty() {
                     v.push(Violation {
                         file: String::new(),
-                        line: i + 2,
+                        line: i + 1,
                         col: 1,
                         rule_id: self.id().into(),
                         message: "Consider blank line between when conditions".into(),
                         auto_fixable: true,
                     });
                 }
+                prev_is_block = this_is_block;
+            } else if !t.is_empty() {
+                // Inside a branch block body; prev branch was a block.
             }
         }
         v

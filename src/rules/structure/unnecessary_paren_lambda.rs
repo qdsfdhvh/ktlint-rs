@@ -5,12 +5,79 @@ impl Rule for UnnecessaryParenBeforeLambda {
     fn id(&self) -> &'static str {
         "standard:unnecessary-parentheses-before-trailing-lambda"
     }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan could not distinguish a constructor
-        // call (`ViewModel() { ... }`, parens required) from a redundant lambda
-        // paren (`foo({ it })`). It flagged every `XxxViewModel() {` on real
-        // projects. A CST-aware implementation must replace this.
-        Vec::new()
+    fn check(&self, _t: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        source
+            .lines()
+            .enumerate()
+            .filter(|(_, line)| {
+                // Only flag empty parens before a trailing lambda when the
+                // callee is a lowercase function-style identifier
+                // (`listOf(1).forEach() { }`). Capitalized names are
+                // constructor calls (`ViewModel() { }`) where parens are
+                // required.
+                // Function/class declarations (`fun cleanUp() {`) and
+                // constructor calls are not redundant parens.
+                let trimmed = line.trim_start();
+                // Comments / strings: `() {` inside them is not a call.
+                if trimmed.starts_with("//")
+                    || trimmed.starts_with("/*")
+                    || trimmed.contains("\"\"\"")
+                {
+                    return false;
+                }
+                let paren_in_string = line
+                    .find("() {")
+                    .is_some_and(|pos| line[..pos].matches('"').count() % 2 == 1);
+                if paren_in_string {
+                    return false;
+                }
+                // Getter/setter accessors (`get() {`, incl. inline
+                // `val x: Boolean get() {`) — parens are required.
+                if trimmed.contains("get() {") || trimmed.contains("set(") {
+                    return false;
+                }
+                // Any function/class declaration (`fun x() {`, `private fun y() {`,
+                // `class Z() {`) — the parens belong to the declaration.
+                let is_declaration = trimmed
+                    .split(|c: char| !c.is_alphanumeric() && c != '_')
+                    .take_while(|w| {
+                        *w != "fun" && *w != "class" && *w != "interface" && *w != "object"
+                    })
+                    .last()
+                    .is_none()
+                    || trimmed.contains(" fun ")
+                    || trimmed.contains(" class ")
+                    || trimmed.contains(" interface ")
+                    || trimmed.contains(" object ")
+                    || trimmed.starts_with("class ")
+                    || trimmed.starts_with("interface ")
+                    || trimmed.starts_with("object ");
+                if is_declaration {
+                    return false;
+                }
+                let callee = line
+                    .split('(')
+                    .next()
+                    .and_then(|head| {
+                        head.rsplit(|c: char| !c.is_alphanumeric() && c != '_')
+                            .next()
+                    })
+                    .unwrap_or("");
+                let lowercase = callee
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_lowercase());
+                lowercase && line.contains("() {")
+            })
+            .map(|(index, _)| Violation {
+                file: String::new(),
+                line: index + 1,
+                col: 1,
+                rule_id: self.id().into(),
+                message: "Unnecessary parentheses before trailing lambda".into(),
+                auto_fixable: true,
+            })
+            .collect()
     }
 }
 
@@ -98,10 +165,12 @@ mod tests {
     }
     #[test]
     fn bad() {
-        // Fail-closed: constructor calls like `ViewModel() { ... }` were wrongly
-        // flagged by the old line-scan; the rule now never reports until a CST
-        // implementation exists.
-        assert!(c("list.forEach() { it }\n").is_empty());
+        // Redundant empty parens before a trailing lambda on a lowercase
+        // function-style callee are reported.
+        assert!(!c("list.forEach() { it }\n").is_empty());
+        // Constructor calls keep their required parens.
+        assert!(c("class Foo : ViewModel() {\n}\n").is_empty());
+        assert!(c("SubscriptionViewModel() {\n}\n").is_empty());
     }
 
     #[test]
