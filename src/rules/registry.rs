@@ -71,7 +71,6 @@ impl Registry {
             Box::new(structure::NoSemicolons),
             Box::new(structure::NoSingleExpressionBody),
             Box::new(structure::NoTrailingSpacesInString),
-            Box::new(structure::ParameterListSpacing),
             Box::new(structure::SpacingBetweenDeclarations),
             Box::new(structure::TrailingComma),
             Box::new(structure::TrailingSpacesInComment),
