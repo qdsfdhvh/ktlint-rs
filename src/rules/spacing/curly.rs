@@ -60,6 +60,8 @@ impl CurlySpacing {
                 // OK — directly after opening paren/bracket
             } else if matches!(prev_char, b'(' | b'[') {
                 // OK — lambda literals can directly follow an opening delimiter.
+            } else if prev_char == b'@' {
+                // OK — labeled lambda (`label@{ ... }`) has no space.
             } else if prev_char != b' ' {
                 violations.push(Violation {
                     file: String::new(),
@@ -87,12 +89,30 @@ impl CurlySpacing {
         let pos = node.start_position();
         let start_byte = node.start_byte();
 
+        // A closing brace that starts its own line (only whitespace before it)
+        // is a block closer — always fine regardless of AST quirks.
+        let line_start = bytes[..start_byte]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |i| i + 1);
+        if bytes[line_start..start_byte]
+            .iter()
+            .all(|b| *b == b' ' || *b == b'\t')
+        {
+            return;
+        }
+
         // } should be at the start of a line (possibly with indent) or preceded by a single space
         if start_byte > 0 {
             let prev_char = bytes[start_byte - 1];
             if prev_char == b'\n' {
                 // OK — at line start
-            } else if prev_char != b' ' && prev_char != b'{' && prev_char != b';' {
+            } else if prev_char != b' '
+                && prev_char != b'\t'
+                && prev_char != b'{'
+                && prev_char != b'}'
+                && prev_char != b';'
+            {
                 violations.push(Violation {
                     file: String::new(),
                     line: pos.row + 1,

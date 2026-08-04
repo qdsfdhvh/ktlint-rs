@@ -136,7 +136,76 @@ impl RuleEngine {
                 violations.push(v);
             }
         }
+        // Text-scanning spacing rules can report inside comments/KDoc (e.g.
+        // `https://` in a doc link, `*` in a license header). Filter those out
+        // — comment content is not code. Max-line-length etc. still report.
+        let mut comment_rows = Self::comment_rows(tree.root_node());
+        Self::comment_rows_in_source(source, &mut comment_rows);
+        let spacing_ids: &[&str] = &[
+            "standard:colon-spacing",
+            "standard:op-spacing",
+            "standard:curly-spacing",
+            "standard:comma-spacing",
+            "standard:dot-spacing",
+            "standard:paren-spacing",
+            "standard:keyword-spacing",
+            "standard:range-spacing",
+            "standard:modifier-order",
+            "standard:spacing-around-angle-brackets",
+            "standard:type-argument-list-spacing",
+            "standard:type-parameter-list-spacing",
+            "standard:annotation-spacing",
+            "standard:function-return-type-spacing",
+            "standard:no-semi",
+            "standard:double-colon-spacing",
+            "standard:value-parameter-comment",
+            "standard:value-argument-comment",
+            "standard:type-parameter-comment",
+            "standard:type-argument-comment",
+            "standard:function-naming",
+            "standard:enum-entry-name-case",
+            "standard:no-unused-imports",
+        ];
+        violations.retain(|v| {
+            !(comment_rows.contains(&(v.line.saturating_sub(1)))
+                && spacing_ids.contains(&v.rule_id.as_str()))
+        });
         violations
+    }
+
+    fn comment_rows(node: tree_sitter::Node) -> std::collections::HashSet<usize> {
+        let mut rows = std::collections::HashSet::new();
+        let mut stack = vec![node];
+        while let Some(current) = stack.pop() {
+            if current.kind().contains("comment") {
+                for row in current.start_position().row..=current.end_position().row {
+                    rows.insert(row);
+                }
+            }
+            for i in (0..current.child_count()).rev() {
+                if let Some(child) = current.child(i) {
+                    stack.push(child);
+                }
+            }
+        }
+        rows
+    }
+
+    /// Text-scanning fallback: some KDoc/comment lines (`/**`, `*/`, `*`) are
+    /// not covered by the CST comment node's row span, so also mark them by
+    /// their leading tokens.
+    fn comment_rows_in_source(source: &str, rows: &mut std::collections::HashSet<usize>) {
+        for (i, line) in source.lines().enumerate() {
+            let t = line.trim_start();
+            if t.starts_with("//")
+                || t.starts_with("/*")
+                || t.starts_with("*/")
+                || t.starts_with("*")
+                || t.starts_with("/**")
+            {
+                rows.insert(i);
+            }
+        }
     }
 
     /// Rs-only rules: no JVM ktlint equivalent. Excluded from default --ruleset ktlint

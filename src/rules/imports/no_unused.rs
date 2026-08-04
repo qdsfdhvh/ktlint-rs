@@ -30,6 +30,17 @@ impl Rule for NoUnusedImports {
         let used_ids = self.collect_identifiers(tree, source);
 
         for (line, import_name) in &imports {
+            // Extension/function imports (`import org.khronos.webgl.get`) use a
+            // lowercase member name that identifier collection cannot reliably
+            // match; skip lowercase last segments to avoid false positives.
+            let last_segment = import_name.split('.').last().unwrap_or("");
+            let lowercase_import = last_segment
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_lowercase());
+            if lowercase_import {
+                continue;
+            }
             if !used_ids.contains(import_name) {
                 violations.push(Violation {
                     file: String::new(),

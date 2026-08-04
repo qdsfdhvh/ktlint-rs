@@ -63,6 +63,30 @@ fn walk_fn(node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation
         if name.is_empty() || name.starts_with("test_") {
             return;
         }
+        // Factory functions (`fun Foo(...): Foo`) and actual/expect
+        // declarations may use PascalCase — ktlint 1.8 exempts these (common
+        // in multiplatform factory patterns). Detect by checking whether the
+        // return type names the same identifier as the function.
+        let return_type = node.child_by_field_name("return_type").or_else(|| {
+            (0..node.child_count()).find_map(|i| node.child(i).filter(|c| c.kind() == "user_type"))
+        });
+        let is_factory = return_type.is_some_and(|rt| {
+            let rt_text = rt.utf8_text(bytes).unwrap_or("");
+            rt_text.trim() == name
+        });
+        let is_actual_or_expect = (0..node.child_count()).any(|i| {
+            node.child(i).is_some_and(|c| {
+                let t = c.utf8_text(bytes).unwrap_or("");
+                if c.kind() == "modifiers" {
+                    t.contains("actual") || t.contains("expect")
+                } else {
+                    t == "actual" || t == "expect"
+                }
+            })
+        });
+        if is_actual_or_expect || is_factory {
+            return;
+        }
 
         // Skip operator functions
         if is_operator_function(name) {

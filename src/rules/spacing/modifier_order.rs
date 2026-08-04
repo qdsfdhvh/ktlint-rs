@@ -60,22 +60,25 @@ impl Rule for ModifierOrder {
             // Only inspect modifiers attached to the declaration itself. Constructor
             // parameters can contain another visibility modifier (`public data class
             // Foo(public val x: Int)`) and must not be compared with the class modifiers.
-            let declaration_end = words
-                .iter()
-                .position(|word| {
-                    matches!(
-                        word.trim_matches(|c: char| !c.is_ascii_alphabetic()),
-                        "class"
-                            | "interface"
-                            | "object"
-                            | "fun"
-                            | "val"
-                            | "var"
-                            | "constructor"
-                            | "typealias"
-                    )
-                })
-                .unwrap_or(words.len());
+            let declaration_end = words.iter().position(|word| {
+                matches!(
+                    word.trim_matches(|c: char| !c.is_ascii_alphabetic()),
+                    "class"
+                        | "interface"
+                        | "object"
+                        | "fun"
+                        | "val"
+                        | "var"
+                        | "constructor"
+                        | "typealias"
+                )
+            });
+            let Some(declaration_end) = declaration_end else {
+                // No declaration keyword on this line — it is a parameter or
+                // continuation line (`noinline body: suspend ...`), not a
+                // declaration header. Skip.
+                continue;
+            };
             let modifiers: Vec<(&str, usize)> = words[..declaration_end]
                 .iter()
                 .enumerate()
