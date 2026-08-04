@@ -21,9 +21,16 @@ impl Rule for TypeArgumentListSpacing {
                     };
                     let pos = child.start_position();
                     let offset = child.start_byte();
+                    let line_start = bytes[..offset]
+                        .iter()
+                        .rposition(|&b| b == b'\n')
+                        .map_or(0, |i| i + 1);
+                    let only_indent = bytes[line_start..offset]
+                        .iter()
+                        .all(|&b| b == b' ' || b == b'\t');
                     let has_unexpected_space = match child.kind() {
                         "<" => child.end_byte() < bytes.len() && bytes[child.end_byte()] == b' ',
-                        ">" => offset > 0 && bytes[offset - 1] == b' ',
+                        ">" => offset > 0 && bytes[offset - 1] == b' ' && !only_indent,
                         _ => false,
                     };
                     if has_unexpected_space {
@@ -67,14 +74,25 @@ impl SpacingAroundAngleBrackets {
             let pos = node.start_position();
             let s = node.start_byte();
             if kind == ">" && s > 0 && bytes[s - 1] == b' ' {
-                v.push(Violation {
-                    file: String::new(),
-                    line: pos.row + 1,
-                    col: pos.column + 1,
-                    rule_id: "standard:spacing-around-angle-brackets".into(),
-                    message: "Unexpected spacing before \">\" in generics".into(),
-                    auto_fixable: true,
-                });
+                // A `>` that starts its own line (only indentation before it,
+                // e.g. a wrapped generic parameter list) is fine.
+                let line_start = bytes[..s]
+                    .iter()
+                    .rposition(|&b| b == b'\n')
+                    .map_or(0, |i| i + 1);
+                let only_indent = bytes[line_start..s]
+                    .iter()
+                    .all(|&b| b == b' ' || b == b'\t');
+                if !only_indent {
+                    v.push(Violation {
+                        file: String::new(),
+                        line: pos.row + 1,
+                        col: pos.column + 1,
+                        rule_id: "standard:spacing-around-angle-brackets".into(),
+                        message: "Unexpected spacing before \">\" in generics".into(),
+                        auto_fixable: true,
+                    });
+                }
             }
             if kind == "<" {
                 let e = node.end_byte();

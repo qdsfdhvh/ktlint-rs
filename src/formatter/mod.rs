@@ -638,7 +638,6 @@ fn fix_all_spacing(source: &str) -> String {
         text = fix_trailing_lambda_parentheses(&text);
         text = fix_semicolons(&text);
         text = fix_single_line_trailing_comma(&text);
-        text = fix_comment_spacing(&text);
         text = fix_blank_lines(&text);
         text = fix_blank_line_in_list(&text);
         text = fix_brace_between(&text);
@@ -847,7 +846,46 @@ fn fix_curly_braces(source: &str) -> String {
 }
 
 fn fix_operators(source: &str) -> String {
+    // Import lines (`import foo.bar.*`) contain operator chars (`*`) that are
+    // wildcards, not operators — leave them untouched.
+    if source
+        .lines()
+        .any(|l| l.trim_start().starts_with("import "))
+    {
+        // Fast path: only reflow non-import lines; comment/KDoc lines and
+        // string content are left untouched.
+        let mut out = String::with_capacity(source.len());
+        for line in source.split_inclusive('\n') {
+            let t = line.trim_start();
+            if t.starts_with("import ")
+                || t.starts_with("//")
+                || t.starts_with("/*")
+                || t.starts_with("*")
+                || t.starts_with('/')
+            {
+                out.push_str(line);
+            } else {
+                out.push_str(&fix_operators_inner(line));
+            }
+        }
+        return out;
+    }
+    fix_operators_inner(source)
+}
+
+fn fix_operators_inner(source: &str) -> String {
+    // Guard ranges (`0..<n`, `a..b`) from operator spacing by tokenizing them
+    // away before the operator pass and restoring afterwards (inserts shift
+    // byte offsets, so a precomputed range list is unsafe).
     let mut s = source.to_string();
+    let mut range_tokens: Vec<(String, String)> = Vec::new();
+    for token in ["..<", ".."] {
+        while let Some(pos) = s.find(token) {
+            let placeholder = format!("\u{E001}RG{}\u{E001}", range_tokens.len());
+            s.replace_range(pos..pos + token.len(), &placeholder);
+            range_tokens.push((placeholder.clone(), token.to_string()));
+        }
+    }
     let ops = [
         "==", "!=", "<=", ">=", "->", "&&", "||", "+=", "-=", "*=", "/=", "=", "<", ">", "+", "-",
         "*", "/", "%",
@@ -924,6 +962,9 @@ fn fix_operators(source: &str) -> String {
                 }
             }
         }
+    }
+    for (placeholder, token) in range_tokens {
+        s = s.replace(&placeholder, &token);
     }
     s
 }
@@ -1330,11 +1371,15 @@ fn block_comment_alignment_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<
     let mut stack = vec![tree.root_node()];
     while let Some(node) = stack.pop() {
         if matches!(node.kind(), "block_comment" | "multiline_comment") {
+            let comment_text = &source[node.byte_range()];
+            // License headers (`/*\n* Copyright ... */`) keep their own style —
+            // the `*` column is managed by the license tooling, not ktlint.
+            let is_license = comment_text.to_ascii_lowercase().contains("copyright");
             let expected = " ".repeat(node.start_position().column + 1);
             let text = &source[node.byte_range()];
             let mut absolute = node.start_byte();
             for (line_index, line) in text.split_inclusive('\n').enumerate() {
-                if line_index > 0 {
+                if line_index > 0 && !is_license {
                     let whitespace = line
                         .bytes()
                         .take_while(|byte| matches!(byte, b' ' | b'\t'))
@@ -1481,7 +1526,9 @@ fn fix_trailing_lambda_parentheses(source: &str) -> String {
                 || trimmed.starts_with("object ")
                 || trimmed.contains("get() {")
                 || trimmed.contains("set(");
-            if lowercase_callee && !is_decl_or_accessor {
+            let is_delegation =
+                line.contains("this(") || line.contains("super(") || line.contains("constructor(");
+            if lowercase_callee && !is_decl_or_accessor && !is_delegation {
                 line.replace("() {", " {")
             } else {
                 line.to_string()
@@ -1496,8 +1543,44 @@ fn fix_semicolons(source: &str) -> String {
         .split('\n')
         .map(|line| {
             let trimmed = line.trim();
+            // Only strip a trailing semicolon when it is real code, not inside
+            // a string/char literal or a comment (e.g. `println("a;b")` or
+            // `// foo;`).
             if trimmed != ";" && line.trim_end().ends_with(';') {
-                line.trim_end().trim_end_matches(';').to_string()
+                let code = line.trim_end();
+                let semi = code.rfind(';').unwrap_or(0);
+                let prefix = &code[..semi];
+                let in_string = prefix.matches('"').count() % 2 == 1
+                    || prefix.matches("\"\"\"").count() % 2 == 1;
+                let in_comment = prefix.contains("//") || prefix.contains("/*");
+                // An enum entry separator (`CLOSE;` before member functions)
+                // is required syntax — never strip it.
+                let enum_name = prefix.trim();
+                // Enum entries: bare identifier (`CLOSE;`), uppercase constant
+                // (`CONNECT;`), or with args (`ApplicationData(0x17);`).
+                // Anything with statement keywords is real code.
+                let is_enum_entry = {
+                    let first = enum_name.chars().next().unwrap_or(' ');
+                    let has_statement_kw =
+                        ["return", "val ", "var ", "fun ", "if ", "for ", "while "]
+                            .iter()
+                            .any(|kw| enum_name.starts_with(kw));
+                    !has_statement_kw
+                        && (first.is_ascii_uppercase()
+                            || first.is_ascii_lowercase()
+                            || first == '_')
+                        && enum_name.ends_with(')')
+                        || (first.is_ascii_uppercase()
+                            && enum_name
+                                .chars()
+                                .all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit())
+                            && !enum_name.is_empty())
+                };
+                if !in_string && !in_comment && !is_enum_entry {
+                    code.trim_end_matches(';').to_string()
+                } else {
+                    line.to_string()
+                }
             } else {
                 line.to_string()
             }
@@ -1990,6 +2073,7 @@ mod tests {
     fn fix_operator_equals() {
         assert_eq!(fix_all_spacing("val x=1"), "val x = 1");
     }
+    #[test]
     #[test]
     fn fix_curly_brace() {
         assert_eq!(fix_all_spacing("fun foo(){x}"), "fun foo() { x }");

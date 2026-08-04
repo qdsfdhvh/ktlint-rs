@@ -17,8 +17,10 @@ impl Rule for BlockCommentInitialStarAlignment {
             }
             let expected = node.start_position().column + 1;
             let text = &source[node.byte_range()];
+            // License headers (`/*\n* Copyright ... */`) keep their own style.
+            let is_license = text.to_ascii_lowercase().contains("copyright");
             for (line_index, line) in text.split_inclusive('\n').enumerate() {
-                if line_index > 0 {
+                if line_index > 0 && !is_license {
                     let whitespace = line
                         .bytes()
                         .take_while(|byte| matches!(byte, b' ' | b'\t'))

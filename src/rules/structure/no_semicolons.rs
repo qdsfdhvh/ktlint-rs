@@ -30,7 +30,15 @@ impl Rule for NoSemicolons {
             if trimmed.starts_with("//") || trimmed.starts_with("* ") || trimmed == "*" {
                 continue;
             }
-            if trimmed.ends_with(';') && trimmed != ";" {
+            // Enum entries (`CLOSE;`, `ApplicationData(0x17);`) require the
+            // separator before member declarations — not unnecessary.
+            let code = trimmed.trim_end_matches(';');
+            let is_enum_entry = !code.is_empty()
+                && (code
+                    .chars()
+                    .all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit())
+                    || code.ends_with(')'));
+            if trimmed.ends_with(';') && trimmed != ";" && !is_enum_entry {
                 violations.push(Violation {
                     file: String::new(),
                     line: line_index + 1,

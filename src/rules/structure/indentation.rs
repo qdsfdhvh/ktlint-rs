@@ -122,8 +122,22 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
             break;
         }
         let t = line.trim();
-        let opens = t.bytes().filter(|b| *b == b'{').count();
-        let closes = t.bytes().filter(|b| *b == b'}').count();
+        // Skip string content: `{`/`}` inside quotes (or raw strings) are not
+        // block delimiters and would inflate the depth.
+        let mut in_string = false;
+        let mut cleaned = String::with_capacity(t.len());
+        let mut chars = t.chars().peekable();
+        while let Some(c) = chars.next() {
+            if c == '"' {
+                in_string = !in_string;
+            }
+            if in_string && (c == '{' || c == '}') {
+                continue;
+            }
+            cleaned.push(c);
+        }
+        let opens = cleaned.bytes().filter(|b| *b == b'{').count();
+        let closes = cleaned.bytes().filter(|b| *b == b'}').count();
         depth = depth.saturating_add(opens).saturating_sub(closes);
     }
     depth

@@ -44,6 +44,19 @@ impl CommentSpacing {
         let text = &source[node.start_byte()..node.end_byte()];
         let pos = node.start_position();
 
+        // KDoc lines (` * [Report](https://...)`) contain `//` inside URLs —
+        // that is content, not a comment marker. Skip lines that are part of
+        // a KDoc block.
+        let line_prefix = source[..node.start_byte()]
+            .rsplit('\n')
+            .next()
+            .unwrap_or("")
+            .trim_start();
+        if line_prefix.starts_with('*')
+            || line_prefix.starts_with('/') && line_prefix.starts_with("/**")
+        {
+            return;
+        }
         // `//` should be followed by a space (unless it's `////\n` or empty `//`)
         if text.starts_with("//") && text.len() > 2 {
             let third = text.as_bytes()[2];

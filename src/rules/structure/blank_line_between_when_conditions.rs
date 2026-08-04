@@ -37,7 +37,10 @@ impl Rule for BlankLineBetweenWhenConditions {
             }
             if t.contains("->") {
                 let this_is_block = t.ends_with('{');
-                if (prev_is_block || this_is_block) && i > 0 && !l[i - 1].trim().is_empty() {
+                // A block-body branch is separated from any previous branch;
+                // the first branch after `when {` needs no separator.
+                let has_prev_branch = i > 1 && (prev_is_block || l[i - 1].trim().contains("->"));
+                if this_is_block && has_prev_branch && !l[i - 1].trim().is_empty() {
                     v.push(Violation {
                         file: String::new(),
                         line: i + 1,
