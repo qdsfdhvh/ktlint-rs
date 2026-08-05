@@ -23,6 +23,7 @@ mod format_tests {
             true,
             &Default::default(),
             crate::config::CodeStyle::KtlintOfficial,
+            120,
         )
         .unwrap();
         let after = std::fs::read_to_string(tmp.path()).unwrap();
@@ -84,6 +85,7 @@ mod format_tests {
             true,
             &Default::default(),
             crate::config::CodeStyle::KtlintOfficial,
+            120,
         )
         .unwrap();
 
