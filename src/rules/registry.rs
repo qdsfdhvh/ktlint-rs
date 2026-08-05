@@ -137,7 +137,7 @@ impl Registry {
             // `standard:wrapping` is provided by wrapping::GeneralWrapping above.
             Box::new(phase1_more::KtlintNoConsecutiveComments),
             // ── Phase 3b ──────────────────────────────────────────────
-            Box::new(phase3b_rules::FunctionSignatureSpacing),
+            Box::new(phase3b_rules::FunctionSignatureSpacing::new(config.max_line_length)),
             Box::new(phase3b_rules::FunctionExpressionBody),
             Box::new(phase3b_rules::KeywordSpacing),
             // ── Final rules ───────────────────────────────────────────
