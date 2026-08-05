@@ -522,6 +522,11 @@ fn format_once(
             fix_wrapping(input, indent_size, max_line_length)
         })?;
     }
+    if rule_enabled(rule_configs, "standard:statement-wrapping", code_style) {
+        text = safe_transform("standard:statement-wrapping", &text, |input| {
+            fix_statement_wrapping(input, indent_size)
+        })?;
+    }
     if rule_enabled(rule_configs, "standard:indent", code_style) {
         text = safe_transform("standard:indent", &text, |input| {
             fix_indentation(input, indent_size)
@@ -987,6 +992,279 @@ fn fix_argument_list_wrapping(source: &str, indent_size: usize, max_line_length:
     edits.sort_by_key(|(start, _, _)| *start);
     let mut text = source.to_string();
     for (start, end, repl) in edits.into_iter().rev() {
+        text.replace_range(start..end, &repl);
+    }
+    text
+}
+
+/// Expand single-line brace blocks (`fun main() { println("hi") }` → the body
+/// on its own line), mirroring ktlint's StatementWrappingRule autocorrect.
+/// Same exclusions as the rule: empty/comment-only blocks, single-line
+/// lambdas and enums, and tree-sitter's mis-parsed `by remember(...) { }`.
+fn fix_statement_wrapping(source: &str, indent_size: usize) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    if tree.root_node().has_error() {
+        return source.to_string();
+    }
+    // Fence off string/char-literal and comment interiors so braces and
+    // semicolons inside them are never touched. Re-parse the masked text so
+    // node byte offsets match the text we edit.
+    let Some((masked, store)) = mask_protected(source, &tree) else {
+        return source.to_string();
+    };
+    let tree = parser.parse(&masked);
+    let source = &masked;
+    // (start, end, replacement) — replace the whitespace run after `{` or
+    // before `}` with a newline + indent.
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if matches!(
+            node.kind(),
+            "function_body"
+                | "control_structure_body"
+                | "class_body"
+                | "enum_class_body"
+                | "when_entry"
+        ) {
+            collect_statement_wrapping_edits(&node, source, indent_size, &mut edits);
+        }
+        for i in (0..node.child_count()).rev() {
+            if let Some(child) = node.child(i) {
+                stack.push(child);
+            }
+        }
+    }
+    let mut text = source.to_string();
+    if !edits.is_empty() {
+        edits.sort_by_key(|(start, _, _)| std::cmp::Reverse(*start));
+        for (start, end, repl) in edits {
+            text.replace_range(start..end, &repl);
+        }
+    }
+    text = fix_semicolon_newlines(&text, indent_size);
+    restore_protected(&text, &store)
+}
+
+fn collect_statement_wrapping_edits(
+    node: &tree_sitter::Node,
+    source: &str,
+    indent_size: usize,
+    edits: &mut Vec<(usize, usize, String)>,
+) {
+    let start = node.start_byte();
+    let end = node.end_byte();
+    let text = &source[start..end];
+
+    // Exclusions mirroring the rule's check_block.
+    if node.kind() == "enum_class_body" && node.start_position().row == node.end_position().row {
+        return;
+    }
+    if node.kind() == "function_body" {
+        let is_real_fun = node
+            .parent()
+            .filter(|p| p.kind() == "function_declaration")
+            .is_some_and(|p| {
+                let mut pw = p.walk();
+                let kids: Vec<tree_sitter::Node> = p.children(&mut pw).collect();
+                for (i, kid) in kids.iter().enumerate() {
+                    if kid == node && i > 0 {
+                        let prev = kids[i - 1];
+                        if prev.kind() == "function_value_parameters" {
+                            if source[prev.start_byte()..prev.end_byte()].contains('{') {
+                                return false;
+                            }
+                            return source[prev.end_byte()..node.start_byte()]
+                                .chars()
+                                .all(|c| c.is_whitespace());
+                        }
+                    }
+                }
+                false
+            });
+        if !is_real_fun {
+            return;
+        }
+    }
+
+    let (lbrace, rbrace) = if node.kind() == "when_entry" {
+        let Some(arrow) = text.find("->") else { return };
+        let after = text[arrow + 2..].trim_start();
+        if !after.starts_with('{') {
+            return;
+        }
+        let lbrace_rel = arrow + 2 + (text[arrow + 2..].len() - after.len());
+        let Some(rbrace_rel) = text[lbrace_rel + 1..].rfind('}') else {
+            return;
+        };
+        (start + lbrace_rel, start + lbrace_rel + 1 + rbrace_rel)
+    } else {
+        let trimmed = text.trim_start();
+        if !trimmed.starts_with('{') {
+            return;
+        }
+        let lbrace_rel = text.len() - trimmed.len();
+        let Some(rbrace_rel) = text[lbrace_rel + 1..].rfind('}') else {
+            return;
+        };
+        (start + lbrace_rel, start + lbrace_rel + 1 + rbrace_rel)
+    };
+    // Empty / comment-only blocks are allowed.
+    if next_code_token_sw(source, lbrace + 1, rbrace).is_none() {
+        return;
+    }
+    // The block must be on a single line for this expansion.
+    let block_line = source[..lbrace].matches('\n').count();
+    if source[lbrace..rbrace].contains('\n') {
+        return;
+    }
+    // Indent of the line containing the `{` (or `->`).
+    let line_start = source[..lbrace].rfind('\n').map_or(0, |i| i + 1);
+    let indent = source[line_start..lbrace]
+        .chars()
+        .take_while(|c| *c == ' ' || *c == '\t')
+        .count();
+    // Newline + indent after `{`.
+    let first = next_code_token_sw(source, lbrace + 1, rbrace).unwrap();
+    let after_lbrace = &source[lbrace + 1..first.0];
+    if !after_lbrace.is_empty() {
+        edits.push((
+            lbrace + 1,
+            first.0,
+            format!("\n{}", " ".repeat(indent + indent_size)),
+        ));
+    }
+    // Newline + indent before `}`.
+    if let Some(prev) = prev_code_token_sw(source, lbrace + 1, rbrace) {
+        let before_rbrace = &source[prev.1..rbrace];
+        if !before_rbrace.is_empty() {
+            edits.push((prev.1, rbrace, format!("\n{}", " ".repeat(indent))));
+        }
+    }
+    let _ = block_line;
+}
+
+fn next_code_token_sw(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
+    let mut i = start;
+    while i < end {
+        let c = source[i..].chars().next()?;
+        if c.is_whitespace() {
+            i += c.len_utf8();
+            continue;
+        }
+        if source[i..].starts_with("//") || source[i..].starts_with("/*") {
+            if source[i..].starts_with("/*") {
+                let close = source[i + 2..].find("*/").map_or(end, |j| i + 2 + j + 2);
+                i = close;
+            } else {
+                let nl = source[i..].find('\n').map_or(end, |j| i + j);
+                i = nl;
+            }
+            continue;
+        }
+        return Some((i, i + c.len_utf8()));
+    }
+    None
+}
+
+fn prev_code_token_sw(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
+    let mut chars = source[start..end].char_indices().rev();
+    while let Some((rel, c)) = chars.next() {
+        let i = start + rel;
+        if c.is_whitespace() {
+            continue;
+        }
+        if source[..i].ends_with("*/") {
+            continue;
+        }
+        return Some((i, i + c.len_utf8()));
+    }
+    None
+}
+
+/// `;` separating statements on one line → newline after the `;`.
+fn fix_semicolon_newlines(source: &str, indent_size: usize) -> String {
+    let bytes = source.as_bytes();
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        // Advance over multi-byte characters (masked SENTINELs, non-ASCII) so
+        // byte indexes stay on char boundaries.
+        if bytes[i] >= 128 {
+            let c = source[i..].chars().next().unwrap();
+            i += c.len_utf8();
+            continue;
+        }
+        if bytes[i] == b'"' {
+            if source[i..].starts_with("\"\"\"") {
+                let close = source[i + 3..]
+                    .find("\"\"\"")
+                    .map_or(bytes.len(), |j| i + 3 + j + 3);
+                i = close;
+                continue;
+            }
+            let close = source[i + 1..]
+                .find('"')
+                .map_or(bytes.len(), |j| i + 1 + j + 1);
+            i = close;
+            continue;
+        }
+        if bytes[i] == b'\'' {
+            let close = source[i + 1..]
+                .find('\'')
+                .map_or(bytes.len(), |j| i + 1 + j + 1);
+            i = close;
+            continue;
+        }
+        if source[i..].starts_with("//") {
+            let nl = source[i..].find('\n').map_or(bytes.len(), |j| i + j);
+            i = nl;
+            continue;
+        }
+        if source[i..].starts_with("/*") {
+            let close = source[i + 2..]
+                .find("*/")
+                .map_or(bytes.len(), |j| i + 2 + j + 2);
+            i = close;
+            continue;
+        }
+        if bytes[i] == b';' {
+            // Already followed by a newline (possibly after spaces) — the
+            // statement is separated; nothing to expand. This also covers the
+            // trailing `;` of enum class bodies.
+            let mut k = i + 1;
+            while k < bytes.len() && (bytes[k] == b' ' || bytes[k] == b'\t') {
+                k += 1;
+            }
+            if k < bytes.len() && bytes[k] == b'\n' {
+                i += 1;
+                continue;
+            }
+            let after = source[i + 1..].trim_start();
+            if !after.starts_with('}') && !after.is_empty() && !after.starts_with("//") {
+                let line_start = source[..i].rfind('\n').map_or(0, |j| j + 1);
+                let indent = source[line_start..i]
+                    .chars()
+                    .take_while(|c| *c == ' ' || *c == '\t')
+                    .count();
+                // Replace the `;` (and trailing space) with a newline —
+                // ktlint removes the separator when expanding to two lines.
+                edits.push((
+                    i,
+                    i + 1 + (source[i + 1..].len() - after.len()),
+                    format!("\n{}", " ".repeat(indent)),
+                ));
+            }
+        }
+        i += 1;
+    }
+    if edits.is_empty() {
+        return source.to_string();
+    }
+    edits.sort_by_key(|(start, _, _)| std::cmp::Reverse(*start));
+    let mut text = source.to_string();
+    for (start, end, repl) in edits {
         text.replace_range(start..end, &repl);
     }
     text
