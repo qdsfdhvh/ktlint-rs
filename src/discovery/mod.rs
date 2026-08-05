@@ -160,6 +160,8 @@ mod tests {
 
         let cli = Cli {
             format: false,
+            stdin: false,
+            stdin_path: "stdin.kt".to_string(),
             compat: false,
             strict: false,
             patterns_from_stdin: vec![],

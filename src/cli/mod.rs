@@ -13,6 +13,15 @@ pub struct Cli {
     /// Auto-correct style violations
     #[arg(short = 'F', long)]
     pub format: bool,
+
+    /// Read Kotlin source from standard input instead of files
+    #[arg(long, conflicts_with_all = ["patterns"])]
+    pub stdin: bool,
+
+    /// Path used for stdin input (affects the filename rule and reporters)
+    #[arg(long, default_value = "stdin.kt")]
+    pub stdin_path: String,
+
     #[arg(skip)]
     pub patterns_from_stdin: Vec<String>,
 

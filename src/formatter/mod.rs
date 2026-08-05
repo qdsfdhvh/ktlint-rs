@@ -546,6 +546,41 @@ fn format_once(
     Ok(text)
 }
 
+/// Format an in-memory source string (used by `--stdin --format`). Mirrors
+/// `auto_fix`'s whole-file pipeline without touching the filesystem.
+pub fn format_source(
+    source: &str,
+    indent_size: usize,
+    insert_final_newline: bool,
+    rule_configs: &HashMap<String, RuleConfig>,
+    code_style: CodeStyle,
+    max_line_length: usize,
+) -> anyhow::Result<String> {
+    if source.contains(SENTINEL) || parse_clean(source).is_none() {
+        return Ok(source.to_string());
+    }
+    let text = format_once(
+        source,
+        indent_size,
+        insert_final_newline,
+        rule_configs,
+        code_style,
+        max_line_length,
+    )?;
+    if format_once(
+        &text,
+        indent_size,
+        insert_final_newline,
+        rule_configs,
+        code_style,
+        max_line_length,
+    )? != text
+    {
+        anyhow::bail!("formatter pipeline is not idempotent for stdin input");
+    }
+    Ok(text)
+}
+
 pub fn auto_fix(
     _files: &[PathBuf],
     violations: &[Violation],
