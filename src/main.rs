@@ -109,6 +109,17 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // No paths / patterns given: mirror ktlint's CLI, which lints the current
+    // directory tree with its default patterns. That can be surprising (and
+    // slow) when the directory is large or full of temp files, so warn on
+    // stderr — stdout stays clean for reporters, exit code is unaffected.
+    if cli.patterns.is_empty() && !cli.print_files && !cli.print_effective_config {
+        eprintln!(
+            "ktlint-rs: no paths given — scanning '{}' recursively. Use --include/--exclude              or pass explicit paths to limit scope.",
+            config.project_root.display()
+        );
+    }
+
     let files = FileCollector::new(&cli, &config).collect()?;
     if cli.print_files {
         print_parity_files(&files, &config.project_root)?;
