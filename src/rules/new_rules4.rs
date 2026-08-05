@@ -142,13 +142,303 @@ impl Rule for StatementWrappingRule {
     fn id(&self) -> &'static str {
         "standard:statement-wrapping"
     }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
+
+    /// Mirrors ktlint 1.8 StatementWrappingRule: a block whose `{` (or `}`)
+    /// shares a line with its first (last) statement needs a newline:
+    ///   fun main() { println("hi") }   → 2 violations
+    /// A `;` separating statements on one line also needs a newline:
+    ///   val x = 1; println(x)          → 1 violation
+    /// Excluded: empty blocks, single-line lambdas, single-line enums,
+    /// trailing enum `;`.
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if matches!(
+                node.kind(),
+                "function_body"
+                    | "control_structure_body"
+                    | "class_body"
+                    | "enum_class_body"
+                    | "when_entry"
+            ) {
+                self.check_block(&node, source, &mut violations);
+            }
+            for i in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(i) {
+                    stack.push(child);
+                }
+            }
+        }
+        self.check_semicolons(tree, source, &mut violations);
+        violations
     }
+}
+
+impl StatementWrappingRule {
+    fn check_semicolons(
+        &self,
+        tree: &tree_sitter::Tree,
+        source: &str,
+        violations: &mut Vec<Violation>,
+    ) {
+        // Text scan for `;` used as a statement separator (skipping strings
+        // and comments). ktlint's visitSemiColon: a `;` followed by code on
+        // the same line needs a newline — except a trailing `;` in an
+        // enum class body (`enum class E { A; }`).
+        let bytes = source.as_bytes();
+        let mut i = 0;
+        let mut in_enum_tail = false;
+        let mut enum_lines: Vec<usize> = Vec::new();
+        // Identify enum class bodies (their trailing `;` is allowed).
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "enum_class_body" {
+                for row in node.start_position().row..=node.end_position().row {
+                    enum_lines.push(row);
+                }
+            }
+            for k in (0..node.child_count()).rev() {
+                if let Some(c) = node.child(k) {
+                    stack.push(c);
+                }
+            }
+        }
+        let _ = in_enum_tail;
+        while i < bytes.len() {
+            // Advance over multi-byte characters so byte indexes stay on
+            // char boundaries (e.g. `\u2192` in KDoc/strings).
+            if bytes[i] >= 128 {
+                let c = source[i..].chars().next().unwrap();
+                i += c.len_utf8();
+                continue;
+            }
+            // Skip strings and comments.
+            if bytes[i] == b'"' {
+                if source[i..].starts_with("\"\"\"") {
+                    let close = source[i + 3..]
+                        .find("\"\"\"")
+                        .map_or(bytes.len(), |j| i + 3 + j + 3);
+                    i = close;
+                    continue;
+                }
+                // Skip a regular string, honoring escaped quotes.
+                let mut j = i + 1;
+                while j < bytes.len() && bytes[j] != b'"' {
+                    if bytes[j] == b'\\' {
+                        j += 2;
+                    } else {
+                        j += 1;
+                    }
+                }
+                i = (j + 1).min(bytes.len());
+                continue;
+            }
+            if bytes[i] == b'\'' {
+                let mut j = i + 1;
+                while j < bytes.len() && bytes[j] != b'\'' {
+                    if bytes[j] == b'\\' {
+                        j += 2;
+                    } else {
+                        j += 1;
+                    }
+                }
+                i = (j + 1).min(bytes.len());
+                continue;
+            }
+            if source[i..].starts_with("//") {
+                let nl = source[i..].find('\n').map_or(bytes.len(), |j| i + j);
+                i = nl;
+                continue;
+            }
+            if source[i..].starts_with("/*") {
+                let close = source[i + 2..]
+                    .find("*/")
+                    .map_or(bytes.len(), |j| i + 2 + j + 2);
+                i = close;
+                continue;
+            }
+            if bytes[i] == b';' {
+                let row = source[..i].bytes().filter(|&b| b == b'\n').count();
+                // Skip enum-class trailing semicolons.
+                if enum_lines.contains(&row) {
+                    i += 1;
+                    continue;
+                }
+                let after = &source[i + 1..];
+                let next = after
+                    .chars()
+                    .next()
+                    .map(|c| c != '\n' && !c.is_whitespace())
+                    .unwrap_or(false)
+                    || after
+                        .chars()
+                        .take_while(|c| c.is_whitespace())
+                        .next()
+                        .is_some_and(|c| c != '\n')
+                        && after.trim_start().chars().next().is_some_and(|c| c != '\n');
+                if next && !after.trim_start().starts_with("//") {
+                    violations.push(self.v(i + 1, source, "Missing newline after ';'"));
+                }
+            }
+            i += 1;
+        }
+    }
+
+    fn check_block(&self, node: &tree_sitter::Node, source: &str, violations: &mut Vec<Violation>) {
+        let start = node.start_byte();
+        let end = node.end_byte();
+        let text = &source[start..end];
+
+        // Single-line lambda and single-line enum bodies are allowed
+        // (`val f = { a -> a }`, `enum class E { A, B }`).
+        if node.kind() == "enum_class_body" && node.start_position().row == node.end_position().row
+        {
+            return;
+        }
+        // tree-sitter-kotlin parses `by remember(...) { expr }` as a nested
+        // function_declaration with a brace body (the lambda's `{` becomes the
+        // function_body). A real `fun` declaration has its parameter list
+        // immediately before the function_body; the mis-parsed one does not.
+        if node.kind() == "function_body" {
+            // The function_body must directly follow the parameter list —
+            // only whitespace in between. tree-sitter-kotlin mis-parses
+            // `var x by remember(...) { expr }` so the lambda's `{` becomes
+            // the enclosing function's body, with code (the `by` delegation)
+            // sitting between the params and the `{`.
+            let is_real_fun = node
+                .parent()
+                .filter(|p| p.kind() == "function_declaration")
+                .is_some_and(|p| {
+                    let mut pw = p.walk();
+                    let kids: Vec<tree_sitter::Node> = p.children(&mut pw).collect();
+                    for (i, kid) in kids.iter().enumerate() {
+                        if kid == node && i > 0 {
+                            let prev = kids[i - 1];
+                            if prev.kind() == "function_value_parameters" {
+                                // tree-sitter bug: `by remember(...) { }`
+                                // swallows the delegation (and its `{`) into
+                                // the parameter list; a real parameter list
+                                // never contains `{`.
+                                let params_text = &source[prev.start_byte()..prev.end_byte()];
+                                if params_text.contains('{') {
+                                    return false;
+                                }
+                                return source[prev.end_byte()..node.start_byte()]
+                                    .chars()
+                                    .all(|c| c.is_whitespace());
+                            }
+                        }
+                    }
+                    false
+                });
+            if !is_real_fun {
+                return;
+            }
+        }
+
+        // A block's `{` must be the first code character of the node (or,
+        // for when-entries, follow the `->`). Anything else — expression
+        // bodies, `-> let { … }` lambdas, `{` inside string templates — is
+        // not a brace block.
+        let (lbrace, rbrace) = if node.kind() == "when_entry" {
+            let Some(arrow) = text.find("->") else { return };
+            let after = text[arrow + 2..].trim_start();
+            if !after.starts_with('{') {
+                return;
+            }
+            let lbrace_rel = arrow + 2 + (text[arrow + 2..].len() - after.len());
+            let Some(rbrace_rel) = text[lbrace_rel + 1..].rfind('}') else {
+                return;
+            };
+            (start + lbrace_rel, start + lbrace_rel + 1 + rbrace_rel)
+        } else {
+            let trimmed = text.trim_start();
+            if !trimmed.starts_with('{') {
+                return;
+            }
+            let lbrace_rel = text.len() - trimmed.len();
+            let Some(rbrace_rel) = text[lbrace_rel + 1..].rfind('}') else {
+                return;
+            };
+            (start + lbrace_rel, start + lbrace_rel + 1 + rbrace_rel)
+        };
+        // Empty block `{}` and comment-only blocks `{ /* no-op */ }` are allowed.
+        if next_code_token(source, lbrace + 1, rbrace).is_none() {
+            return;
+        }
+
+        // The first code token after `{` — ktlint's `nextCodeLeaf` (skips
+        // whitespace and comments).
+        if let Some(next) = next_code_token(source, lbrace + 1, rbrace) {
+            if source[lbrace..next.0].contains('\n') == false
+                && node.start_position().row == source[..next.0].matches('\n').count()
+            {
+                // `{` and the first statement share a line.
+                violations.push(self.v(next.0, source, "Missing newline after '{'"));
+            }
+        }
+        // The last code token before `}`.
+        if let Some(prev) = prev_code_token(source, lbrace + 1, rbrace) {
+            if source[prev.1..rbrace].contains('\n') == false {
+                violations.push(self.v(rbrace, source, "Missing newline before '}'"));
+            }
+        }
+    }
+
+    fn v(&self, pos: usize, source: &str, message: &str) -> Violation {
+        let line = source[..pos].bytes().filter(|&b| b == b'\n').count() + 1;
+        let line_start = source[..pos].rfind('\n').map_or(0, |i| i + 1);
+        Violation {
+            file: String::new(),
+            line,
+            col: pos - line_start + 1,
+            rule_id: self.id().into(),
+            message: message.into(),
+            auto_fixable: true,
+        }
+    }
+}
+
+/// Byte range of the first non-whitespace, non-comment token in `[start, end)`.
+fn next_code_token(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
+    let mut i = start;
+    while i < end {
+        let c = source[i..].chars().next()?;
+        if c.is_whitespace() {
+            i += c.len_utf8();
+            continue;
+        }
+        if source[i..].starts_with("//") || source[i..].starts_with("/*") {
+            let nl = source[i..].find('\n').map_or(end, |j| i + j);
+            if source[i..].starts_with("/*") {
+                let close = source[i + 2..].find("*/").map_or(end, |j| i + 2 + j + 2);
+                i = close;
+            } else {
+                i = nl;
+            }
+            continue;
+        }
+        return Some((i, i + c.len_utf8()));
+    }
+    None
+}
+
+/// Byte range of the last non-whitespace, non-comment token in `[start, end)`.
+fn prev_code_token(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
+    let mut chars = source[start..end].char_indices().rev();
+    while let Some((rel, c)) = chars.next() {
+        let i = start + rel;
+        if c.is_whitespace() {
+            continue;
+        }
+        // Simple backward skip for comments (rare before `}`).
+        if source[..i].ends_with("//") || source[..i].ends_with("*/") {
+            continue;
+        }
+        return Some((i, i + c.len_utf8()));
+    }
+    None
 }
 
 pub struct ChainMethodContinuationRule;
