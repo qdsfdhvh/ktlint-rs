@@ -113,11 +113,38 @@ fn main() -> anyhow::Result<()> {
     // directory tree with its default patterns. That can be surprising (and
     // slow) when the directory is large or full of temp files, so warn on
     // stderr — stdout stays clean for reporters, exit code is unaffected.
-    if cli.patterns.is_empty() && !cli.print_files && !cli.print_effective_config {
+    if cli.patterns.is_empty() && !cli.stdin && !cli.print_files && !cli.print_effective_config {
         eprintln!(
             "ktlint-rs: no paths given — scanning '{}' recursively. Use --include/--exclude              or pass explicit paths to limit scope.",
             config.project_root.display()
         );
+    }
+
+    // --stdin: lint (or format) a single source read from standard input,
+    // mirroring `ktlint --stdin --stdin-path <path>` (used by editors/CI).
+    if cli.stdin {
+        let mut source = String::new();
+        std::io::Read::read_to_string(&mut std::io::stdin(), &mut source)?;
+        let stdin_config = KtlintConfig::load(&cli)?;
+        let engine = RuleEngine::new(&stdin_config);
+        if cli.format {
+            let formatted = formatter::format_source(
+                &source,
+                stdin_config.indent_size,
+                stdin_config.insert_final_newline,
+                &stdin_config.rules,
+                stdin_config.code_style,
+                stdin_config.max_line_length,
+            )?;
+            print!("{formatted}");
+            return Ok(());
+        }
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(&source);
+        let violations = engine.check(&cli.stdin_path, &tree, &source);
+        let reporter = DiagnosticReporter::new(&cli);
+        let exit_code = reporter.report(&violations);
+        std::process::exit(exit_code);
     }
 
     let files = FileCollector::new(&cli, &config).collect()?;

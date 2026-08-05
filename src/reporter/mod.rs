@@ -388,6 +388,8 @@ mod tests {
             compat: false,
             strict: false,
             format: false,
+            stdin: false,
+            stdin_path: "stdin.kt".to_string(),
             patterns_from_stdin: vec![],
             print_files: false,
             print_effective_config: false,
