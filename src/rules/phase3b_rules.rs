@@ -25,12 +25,120 @@ impl Rule for NoEmptyFile {
     }
 }
 
-pub struct FunctionSignatureSpacing;
+pub struct FunctionSignatureSpacing {
+    max_length: usize,
+}
+
+impl FunctionSignatureSpacing {
+    pub fn new(max_length: usize) -> Self {
+        let max_length = if max_length == 0 { 120 } else { max_length };
+        Self { max_length }
+    }
+
+    /// Body-expression merge (mirrors ktlint 1.8 FunctionSignatureRule):
+    /// `fun foo(...): Type =` followed by a newline + body expression. When
+    /// the first line of the body fits on the signature line
+    /// (`firstLineOfBodyExpression.length < maxLineLength - signatureLength`,
+    /// strict), the body should join the signature.
+    fn check_body_merge(&self, tree: &tree_sitter::Tree, s: &str, v: &mut Vec<Violation>) {
+        let max_length = self.max_length;
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "function_declaration" {
+                if let Some(body) = node
+                    .children(&mut node.walk())
+                    .find(|c| c.kind() == "function_body")
+                {
+                    let mut body_walker = body.walk();
+                    let mut it = body.children(&mut body_walker);
+                    let eq = it.next();
+                    if let Some(eq) = eq.filter(|n| n.kind() == "=") {
+                        let Some(expr) = it.next() else { continue };
+                        // Body must be on a later line than the `=` (newline between).
+                        if expr.start_position().row <= eq.start_position().row {
+                            continue;
+                        }
+                        // Signature length mirrors ktlint's
+                        // `indent + functionSignatureNodes.joinTextToString()`:
+                        // every leaf from the first code token to `=` (end
+                        // inclusive) with whitespace preserved — i.e. the raw
+                        // text of the whole signature as if on one line
+                        // (multiline signatures keep their newlines, which makes
+                        // them too long to merge).
+                        let func_start = node.start_byte();
+                        let indent_start = s[..func_start].rfind('\n').map_or(0, |i| i + 1);
+                        let indent_len = s[indent_start..func_start].chars().count();
+                        let sig_len = indent_len + s[func_start..eq.end_byte()].chars().count();
+                        // ktlint only rewrites an over-long signature to
+                        // multiline (then measures from the last signature line,
+                        // `maxLengthRemaining = maxLineLength - lengthOfLastLine`)
+                        // when the signature *has parameters*. A parameterless
+                        // multiline signature is never rewritten — the full
+                        // (multiline) signature length is used, which exceeds the
+                        // limit and therefore never merges the body.
+                        let params_node = node
+                            .children(&mut node.walk())
+                            .find(|c| c.kind() == "function_value_parameters");
+                        let param_multiline = params_node.is_some_and(|p| {
+                            p.utf8_text(s.as_bytes())
+                                .map_or(false, |t| t.contains('\n'))
+                        });
+                        let has_params = params_node.is_some_and(|p| {
+                            let mut w = p.walk();
+                            let any = p.children(&mut w).any(|c| c.kind() == "value_parameter");
+                            any
+                        });
+                        let remaining = if has_params && (param_multiline || sig_len > max_length) {
+                            max_length.saturating_sub(eq.end_position().column)
+                        } else {
+                            max_length.saturating_sub(sig_len)
+                        };
+                        // First line of body expression (no leading indent —
+                        // expression node starts at first code token).
+                        let body_start = expr.start_byte();
+                        let body_line_end = s[body_start..]
+                            .find('\n')
+                            .map_or(s.len(), |i| body_start + i);
+                        let first_line = &s[body_start..body_line_end];
+                        let first_line_len = first_line.len();
+                        // Never merge an annotated expression body.
+                        if first_line.trim_start().starts_with('@') {
+                            continue;
+                        }
+                        // Never merge a multiline string template body.
+                        if s[body_start..expr.end_byte()].contains("\"\"\"") {
+                            continue;
+                        }
+                        // Strictly less than the remaining space.
+                        if first_line_len >= remaining {
+                            continue;
+                        }
+                        v.push(Violation {
+                            file: String::new(),
+                            line: eq.start_position().row + 1,
+                            col: eq.end_position().column + 1,
+                            rule_id: self.id().into(),
+                            message:
+                                "First line of body expression fits on same line as function signature"
+                                    .into(),
+                            auto_fixable: true,
+                        });
+                    }
+                }
+            }
+            let mut walker = node.walk();
+            for c in node.children(&mut walker) {
+                stack.push(c);
+            }
+        }
+    }
+}
+
 impl Rule for FunctionSignatureSpacing {
     fn id(&self) -> &'static str {
         "standard:function-signature"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
         for (i, ln) in l.iter().enumerate() {
@@ -50,6 +158,7 @@ impl Rule for FunctionSignatureSpacing {
                 }
             }
         }
+        self.check_body_merge(tree, s, &mut v);
         v
     }
 }
@@ -188,5 +297,52 @@ mod tests {
             1
         );
         assert!(keyword_check("if (true) println(1)\n").is_empty());
+    }
+
+    fn fs_check(source: &str) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(source);
+        FunctionSignatureSpacing::new(120).check(&tree, source)
+    }
+
+    #[test]
+    fn body_merge_reports_when_body_fits_on_signature_line() {
+        // Case B from #101: `mapOf(` (6 chars) fits after the 68-char signature.
+        let src = "package com.example\n\nfun build(extra: Array<Pair<String, String>>): Map<String, String> =\n    mapOf(\n        *extra,\n        \"k\" to \"v\",\n    )\n";
+        let v = fs_check(src);
+        let fs: Vec<_> = v
+            .iter()
+            .filter(|x| x.message.contains("First line of body expression"))
+            .collect();
+        assert_eq!(fs.len(), 1);
+        assert_eq!(fs[0].line, 3);
+        assert_eq!(fs[0].col, 69); // offset right after the `=`
+    }
+
+    #[test]
+    fn body_merge_skips_when_body_does_not_fit() {
+        // Signature incl. `=` = 75 chars -> 45 remaining; body is 46 -> no merge.
+        let src = "package com.example\n\nclass Test {\n    override suspend fun currentLastSocialSignInProvider(): AuthProvider? =\n        sessionStore.currentLastSocialSignInProvider()\n}\n";
+        let v = fs_check(src);
+        assert!(
+            v.iter()
+                .filter(|x| x.message.contains("First line of body expression"))
+                .next()
+                .is_none(),
+            "46-char body must not merge into 45-char remaining space"
+        );
+    }
+
+    #[test]
+    fn body_merge_reports_when_body_short_with_modifiers() {
+        let src = "package com.example\n\nclass Test {\n    override suspend fun f(): AuthProvider? =\n        abc()\n}\n";
+        let v = fs_check(src);
+        let fs: Vec<_> = v
+            .iter()
+            .filter(|x| x.message.contains("First line of body expression"))
+            .collect();
+        assert_eq!(fs.len(), 1);
+        assert_eq!(fs[0].line, 4);
+        assert_eq!(fs[0].col, 46);
     }
 }
