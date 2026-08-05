@@ -94,7 +94,9 @@ impl Rule for ParameterWrappingRule {
         let l: Vec<&str> = s.lines().collect();
         for (i, ln) in l.iter().enumerate() {
             let t = ln.trim();
-            if t.starts_with("fun ") && !t.contains("\n") && t.len() > 120 {
+            // Character count, not byte count — multi-byte text (e.g. CJK
+            // strings) must not push a 115-char line over the 120 limit.
+            if t.starts_with("fun ") && !t.contains('\n') && t.chars().count() > 120 {
                 v.push(Violation {
                     file: String::new(),
                     line: i + 1,
