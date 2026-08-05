@@ -489,6 +489,7 @@ fn format_once(
     insert_final_newline: bool,
     rule_configs: &HashMap<String, RuleConfig>,
     code_style: CodeStyle,
+    max_line_length: usize,
 ) -> anyhow::Result<String> {
     let mut text = source.to_string();
     if rule_enabled(
@@ -511,6 +512,14 @@ fn format_once(
     if rule_enabled(rule_configs, "standard:wrapping", code_style) {
         text = safe_transform("standard:wrapping", &text, |input| {
             masked_transform(input, fix_single_line_control_blocks)
+        })?;
+    }
+    if rule_enabled(rule_configs, "standard:argument-list-wrapping", code_style)
+        || rule_enabled(rule_configs, "standard:property-wrapping", code_style)
+        || rule_enabled(rule_configs, "standard:function-signature", code_style)
+    {
+        text = safe_transform("standard:wrapping-fix", &text, |input| {
+            fix_wrapping(input, indent_size, max_line_length)
         })?;
     }
     if rule_enabled(rule_configs, "standard:indent", code_style) {
@@ -544,6 +553,7 @@ pub fn auto_fix(
     insert_final_newline: bool,
     rule_configs: &HashMap<String, RuleConfig>,
     code_style: CodeStyle,
+    max_line_length: usize,
 ) -> anyhow::Result<()> {
     let fixable: Vec<&Violation> = violations.iter().filter(|v| v.auto_fixable).collect();
     if fixable.is_empty() {
@@ -578,16 +588,23 @@ pub fn auto_fix(
             insert_final_newline,
             rule_configs,
             code_style,
+            max_line_length,
         )?;
-        if format_once(
+        match format_once(
             &text,
             indent_size,
             insert_final_newline,
             rule_configs,
             code_style,
-        )? != text
-        {
-            anyhow::bail!("formatter pipeline is not idempotent for {file_path}");
+            max_line_length,
+        ) {
+            Ok(t) if t != text => {
+                anyhow::bail!("formatter pipeline is not idempotent for {file_path}");
+            }
+            Ok(_) => {}
+            Err(e) => {
+                anyhow::bail!("formatter pipeline second pass failed for {file_path}: {e}");
+            }
         }
         if text != original {
             std::fs::write(file_path, text)?;
@@ -657,6 +674,287 @@ fn fix_all_wrapping(source: &str) -> String {
     };
     let text = fix_single_line_control_blocks(&fix_try_catch(&masked));
     restore_protected(&text, &store)
+}
+
+/// Wrapping auto-fixes mirroring ktlint's autocorrect for the wrapping rules
+/// (function-signature body-merge, property-wrapping, argument-list-wrapping).
+/// Each pass only touches *single-line overlong* constructs; multiline inputs
+/// are left to the indent rule. Edits are applied bottom-up so offsets stay
+/// valid. All passes are conservative: they never touch strings/comments (via
+/// masked_transform in the caller) and only fire when the line actually
+/// exceeds max_line_length.
+fn fix_wrapping(source: &str, indent_size: usize, max_line_length: usize) -> String {
+    let max_line_length = if max_line_length == 0 {
+        120
+    } else {
+        max_line_length
+    };
+    let mut text = source.to_string();
+    text = fix_function_body_merge(&text, max_line_length);
+    text = fix_property_wrapping(&text, indent_size, max_line_length);
+    text = fix_argument_list_wrapping(&text, indent_size, max_line_length);
+    text
+}
+
+/// `fun foo(...): Type =` + newline + body whose first line fits on the
+/// signature line → join body onto the signature line (`= body`).
+///
+/// Conservative: only merges single-line signatures with a genuine `=`
+/// assignment (tree-sitter can mis-parse `= a == b` into `=` tokens), and only
+/// when the body expression starts on the next line.
+fn fix_function_body_merge(source: &str, max_line_length: usize) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    if tree.root_node().has_error() {
+        return source.to_string();
+    }
+    // (start, end) byte ranges of whitespace runs to replace with a single space.
+    let mut edits: Vec<(usize, usize)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "function_declaration" {
+            let body = {
+                let mut w = node.walk();
+                let x = node.children(&mut w).find(|c| c.kind() == "function_body");
+                x
+            };
+            if let Some(body) = body {
+                let mut bw = body.walk();
+                let mut it = body.children(&mut bw);
+                if let Some(eq) = it.next().filter(|n| n.kind() == "=") {
+                    if let Some(expr) = it.next() {
+                        if expr.start_position().row > eq.start_position().row
+                            && node.start_position().row == eq.start_position().row
+                            && &source[eq.start_byte()..eq.end_byte()] == "="
+                            && source[..eq.start_byte()].chars().next_back() != Some('=')
+                            && source[eq.end_byte()..].chars().next() != Some('=')
+                            && expr.start_position().row == eq.start_position().row + 1
+                        {
+                            let func_start = node.start_byte();
+                            let ls = source[..func_start].rfind('\n').map_or(0, |i| i + 1);
+                            let indent_len = source[ls..func_start].chars().count();
+                            let sig_len =
+                                indent_len + source[func_start..eq.end_byte()].chars().count();
+                            let params_node = {
+                                let mut pw = node.walk();
+                                let x = node
+                                    .children(&mut pw)
+                                    .find(|c| c.kind() == "function_value_parameters");
+                                x
+                            };
+                            let has_params = params_node.is_some_and(|p| {
+                                let mut pw = p.walk();
+                                let any =
+                                    p.children(&mut pw).any(|c| c.kind() == "value_parameter");
+                                any
+                            });
+                            let remaining = if has_params && sig_len > max_line_length {
+                                max_line_length.saturating_sub(eq.end_position().column)
+                            } else {
+                                max_line_length.saturating_sub(sig_len)
+                            };
+                            let body_start = expr.start_byte();
+                            let body_line_end = source[body_start..]
+                                .find('\n')
+                                .map_or(source.len(), |i| body_start + i);
+                            let first_line = &source[body_start..body_line_end];
+                            let first_line_len = first_line.len();
+                            if first_line_len < remaining
+                                && !first_line.trim_start().starts_with('@')
+                                && !source[body_start..expr.end_byte()].contains("\"\"\"")
+                                && source[eq.end_byte()..body_start]
+                                    .chars()
+                                    .all(|c| c.is_whitespace())
+                            {
+                                edits.push((eq.end_byte(), body_start));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let mut w2 = node.walk();
+        for c in node.children(&mut w2) {
+            stack.push(c);
+        }
+    }
+    if edits.is_empty() {
+        return source.to_string();
+    }
+    // Apply from the end of the file backwards so earlier byte offsets stay
+    // valid (edits are collected in DFS order, which is not file order).
+    edits.sort_by_key(|(start, _)| std::cmp::Reverse(*start));
+    let mut text = source.to_string();
+    for (start, end) in edits {
+        text.replace_range(start..end, " ");
+    }
+    text
+}
+
+/// `val x: Type = foo(...)` on a single overlong line → newline after `=`.
+/// Mirrors PropertyWrappingRule: when the line up to the call expression
+/// exceeds the limit, break after `=` (or before the call).
+fn fix_property_wrapping(source: &str, indent_size: usize, max_line_length: usize) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    if tree.root_node().has_error() {
+        return source.to_string();
+    }
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "property_declaration" {
+            if node.start_position().row != node.end_position().row {
+                let mut w2 = node.walk();
+                for c in node.children(&mut w2) {
+                    stack.push(c);
+                }
+                continue;
+            }
+            let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+            let line_end = source[node.end_byte()..]
+                .find('\n')
+                .map_or(source.len(), |i| node.end_byte() + i);
+            if line_end - line_start <= max_line_length {
+                let mut w2 = node.walk();
+                for c in node.children(&mut w2) {
+                    stack.push(c);
+                }
+                continue;
+            }
+            let mut nw = node.walk();
+            let children: Vec<tree_sitter::Node> = node.children(&mut nw).collect();
+            let eq_idx = children.iter().position(|c| c.kind() == "=");
+            if let Some(eq_idx) = eq_idx {
+                let eq = children[eq_idx];
+                if let Some(rhs) = children[eq_idx + 1..].iter().find(|c| !c.kind().is_empty()) {
+                    if source[eq.end_byte()..rhs.start_byte()]
+                        .chars()
+                        .all(|c| c.is_whitespace())
+                    {
+                        let line_text = &source[line_start..line_end];
+                        let new_indent = line_text.len() - line_text.trim_start().len();
+                        let repl = format!("\n{}", " ".repeat(new_indent + indent_size));
+                        edits.push((eq.end_byte(), rhs.start_byte(), repl));
+                    }
+                }
+            }
+        }
+        let mut w2 = node.walk();
+        for c in node.children(&mut w2) {
+            stack.push(c);
+        }
+    }
+    if edits.is_empty() {
+        return source.to_string();
+    }
+    let mut text = source.to_string();
+    for (start, end, repl) in edits.into_iter().rev() {
+        text.replace_range(start..end, &repl);
+    }
+    text
+}
+
+/// Single-line argument list exceeding the limit → each argument on its own
+/// line; `)` aligned with the opening line's indent. Mirrors
+/// ArgumentListWrappingRule autocorrect.
+fn fix_argument_list_wrapping(source: &str, indent_size: usize, max_line_length: usize) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    if tree.root_node().has_error() {
+        return source.to_string();
+    }
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if matches!(node.kind(), "value_arguments" | "function_value_parameters") {
+            if node.start_position().row == node.end_position().row {
+                let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+                let line_end = source[node.end_byte()..]
+                    .find('\n')
+                    .map_or(source.len(), |i| node.end_byte() + i);
+                if line_end - line_start > max_line_length {
+                    let line_text = &source[line_start..line_end];
+                    let indent = line_text.len() - line_text.trim_start().len();
+                    let arg_indent = indent + indent_size;
+                    let mut cw = node.walk();
+                    let children: Vec<tree_sitter::Node> = node.children(&mut cw).collect();
+                    let has_lambda = children.iter().any(|c| {
+                        let text = &source[c.start_byte()..c.end_byte()];
+                        text.trim_start().starts_with('{') || text.trim_end().ends_with('}')
+                    });
+                    if has_lambda {
+                        let mut w2 = node.walk();
+                        for c in node.children(&mut w2) {
+                            stack.push(c);
+                        }
+                        continue;
+                    }
+                    let args: Vec<tree_sitter::Node> = children
+                        .iter()
+                        .copied()
+                        .filter(|c| !matches!(c.kind(), "(" | ")" | ","))
+                        .collect();
+                    if args.is_empty() {
+                        let mut w2 = node.walk();
+                        for c in node.children(&mut w2) {
+                            stack.push(c);
+                        }
+                        continue;
+                    }
+                    for arg in &args {
+                        if source[arg.start_byte()..arg.end_byte()]
+                            .chars()
+                            .all(|c| c.is_whitespace())
+                        {
+                            continue;
+                        }
+                        let prev_end = arg
+                            .prev_sibling()
+                            .map_or(node.start_byte() + 1, |p| p.end_byte());
+                        if source[prev_end..arg.start_byte()]
+                            .chars()
+                            .all(|c| c.is_whitespace())
+                        {
+                            edits.push((
+                                prev_end,
+                                arg.start_byte(),
+                                format!("\n{}", " ".repeat(arg_indent)),
+                            ));
+                        }
+                    }
+                    if let Some(rp) = children.iter().find(|c| c.kind() == ")") {
+                        let prev = rp
+                            .prev_sibling()
+                            .map_or(node.start_byte() + 1, |p| p.end_byte());
+                        if source[prev..rp.start_byte()]
+                            .chars()
+                            .all(|c| c.is_whitespace())
+                        {
+                            edits.push((
+                                prev,
+                                rp.start_byte(),
+                                format!("\n{}", " ".repeat(indent)),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        let mut w2 = node.walk();
+        for c in node.children(&mut w2) {
+            stack.push(c);
+        }
+    }
+    if edits.is_empty() {
+        return source.to_string();
+    }
+    edits.sort_by_key(|(start, _, _)| *start);
+    let mut text = source.to_string();
+    for (start, end, repl) in edits.into_iter().rev() {
+        text.replace_range(start..end, &repl);
+    }
+    text
 }
 
 fn fix_indentation(source: &str, indent_size: usize) -> String {
@@ -1607,7 +1905,10 @@ fn fix_class_header_spacing(source: &str) -> String {
     let fixed = masked
         .split('\n')
         .map(|line| {
-            if !line.contains("class ") {
+            // `class ` also matches `::class` (callable reference) inside
+            // expressions (`this::class == ...`) — those lines must not have
+            // their `):` (e.g. a function return type) rewritten.
+            if !line.contains("class ") || line.contains("::class") {
                 return line.to_string();
             }
             let mut fixed = line.replace("):", ") :");
@@ -1967,10 +2268,25 @@ mod tests {
     #[test]
     fn formatter_pipeline_is_idempotent() {
         let source = "fun main(){val x=1}  ";
-        let once =
-            format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
+        let once = format_once(
+            source,
+            4,
+            true,
+            &HashMap::new(),
+            CodeStyle::KtlintOfficial,
+            120,
+        )
+        .unwrap();
         assert_eq!(
-            format_once(&once, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial,).unwrap(),
+            format_once(
+                &once,
+                4,
+                true,
+                &HashMap::new(),
+                CodeStyle::KtlintOfficial,
+                120
+            )
+            .unwrap(),
             once
         );
     }
@@ -1981,10 +2297,24 @@ mod tests {
         // no-trailing-spaces pass oscillate (regression: fix_trailing_ws used
         // lines()/join which dropped the final newline on round two).
         let source = "val x = 1   \n\n";
-        let once =
-            format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
-        let twice =
-            format_once(&once, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
+        let once = format_once(
+            source,
+            4,
+            true,
+            &HashMap::new(),
+            CodeStyle::KtlintOfficial,
+            120,
+        )
+        .unwrap();
+        let twice = format_once(
+            &once,
+            4,
+            true,
+            &HashMap::new(),
+            CodeStyle::KtlintOfficial,
+            120,
+        )
+        .unwrap();
         assert_eq!(
             once, twice,
             "format_once must be idempotent on trailing blank lines"
@@ -1994,8 +2324,10 @@ mod tests {
         // CLI parity: Android Studio style, final newline on/off.
         for code_style in [CodeStyle::KtlintOfficial, CodeStyle::AndroidStudio] {
             for newline in [true, false] {
-                let first = format_once(source, 4, newline, &HashMap::new(), code_style).unwrap();
-                let second = format_once(&first, 4, newline, &HashMap::new(), code_style).unwrap();
+                let first =
+                    format_once(source, 4, newline, &HashMap::new(), code_style, 120).unwrap();
+                let second =
+                    format_once(&first, 4, newline, &HashMap::new(), code_style, 120).unwrap();
                 assert_eq!(
                     first, second,
                     "style={code_style:?} newline={newline}: must be idempotent"
@@ -2019,8 +2351,15 @@ mod tests {
 "####;
         let before_tree = parse_clean(source).unwrap();
         let before = protected_snapshot(source, &before_tree).unwrap().fragments;
-        let output =
-            format_once(source, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial).unwrap();
+        let output = format_once(
+            source,
+            4,
+            true,
+            &HashMap::new(),
+            CodeStyle::KtlintOfficial,
+            120,
+        )
+        .unwrap();
         let after_tree = parse_clean(&output).unwrap();
         assert_eq!(
             protected_snapshot(&output, &after_tree).unwrap().fragments,
@@ -2031,7 +2370,15 @@ mod tests {
         assert!(output.contains("val binary = unary + 2"));
         assert!(!output.contains('\u{FFFD}'));
         assert_eq!(
-            format_once(&output, 4, true, &HashMap::new(), CodeStyle::KtlintOfficial,).unwrap(),
+            format_once(
+                &output,
+                4,
+                true,
+                &HashMap::new(),
+                CodeStyle::KtlintOfficial,
+                120
+            )
+            .unwrap(),
             output
         );
     }
@@ -2793,5 +3140,54 @@ catch(e: E) { b() }"
             "eq expr lost: {r:?}"
         );
         // second class brace may not fix inside multi-block string
+    }
+
+    #[test]
+    fn wrapping_fix_argument_list_expands_single_line_overlong() {
+        let src = "package com.example\n\nval result = combineValues(firstValueName, secondValueName, thirdValueName, fourthValueName, fifthValueName, sixthValueName, seventhValueName)\n";
+        let out = fix_wrapping(src, 4, 120);
+        assert!(
+            out.contains("combineValues(\n"),
+            "should open after callee: {out}"
+        );
+        assert!(
+            out.contains("\n        firstValueName,"),
+            "first arg on own line: {out}"
+        );
+        assert!(
+            out.contains("\n        secondValueName,"),
+            "second arg on own line: {out}"
+        );
+        assert!(
+            out.contains("\n    )"),
+            "closing paren at opening indent: {out}"
+        );
+    }
+
+    #[test]
+    fn wrapping_fix_body_merge_joins_fitting_body() {
+        let src = "package com.example\n\nfun build(extra: Array<Pair<String, String>>): Map<String, String> =\n    mapOf(\n        *extra,\n    )\n";
+        let out = fix_wrapping(src, 4, 120);
+        assert!(
+            out.contains("Map<String, String> = mapOf("),
+            "body should join signature line: {out}"
+        );
+    }
+
+    #[test]
+    fn wrapping_fix_property_breaks_overlong_line_after_equal() {
+        let src =
+            "package com.example\n\nval result = combineValues(firstValueName, secondValueName, thirdValueName, fourthValueName, fifthValueName, sixthValueName)\n";
+        let out = fix_wrapping(src, 4, 120);
+        assert!(
+            out.contains("val result =\n    combineValues("),
+            "property should break after =: {out}"
+        );
+    }
+
+    #[test]
+    fn wrapping_fix_leaves_short_code_untouched() {
+        let src = "package com.example\n\nval ok = shortCall(a, b)\n";
+        assert_eq!(fix_wrapping(src, 4, 120), src);
     }
 }

@@ -101,11 +101,10 @@ impl ArgumentListWrapping {
                 prev_row = row;
             }
         } else {
-            // Single-line exceeding limit: each argument should be wrapped.
-            for (i, arg) in args.iter().enumerate() {
-                if i > 0 {
-                    violations.push(self.v(*arg, source));
-                }
+            // Single-line exceeding limit: each argument should be wrapped,
+            // including the first (ktlint reports the first argument too).
+            for arg in &args {
+                violations.push(self.v(*arg, source));
             }
         }
     }

@@ -110,7 +110,18 @@ fn disallowed_kdoc_lines(tree: &Tree, source: &str) -> HashSet<usize> {
             && source[node.start_byte()..node.end_byte()].starts_with("/**")
             && is_in_executable_context(node)
         {
-            result.insert(node.start_position().row);
+            // A KDoc attaching to a following declaration (val/fun/class/…)
+            // is allowed even inside a function body — ktlint's KdocRule
+            // attaches the comment to the declaration's PSI node, whose type
+            // is in `allowedParentElementTypes`. Without this, every KDoc
+            // documenting a local variable inside a function would be
+            // flagged (verified: real ktlint 1.8.0 does not report these).
+            let attaches_to_declaration = node
+                .next_sibling()
+                .is_some_and(|next| is_declaration_kind(next.kind()));
+            if !attaches_to_declaration {
+                result.insert(node.start_position().row);
+            }
         }
         for index in (0..node.child_count()).rev() {
             if let Some(child) = node.child(index) {
@@ -119,6 +130,21 @@ fn disallowed_kdoc_lines(tree: &Tree, source: &str) -> HashSet<usize> {
         }
     }
     result
+}
+
+fn is_declaration_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "property_declaration"
+            | "function_declaration"
+            | "class_declaration"
+            | "object_declaration"
+            | "interface_declaration"
+            | "type_alias"
+            | "variable_declaration"
+            | "enum_entry"
+            | "secondary_constructor"
+    )
 }
 
 fn is_in_executable_context(node: tree_sitter::Node<'_>) -> bool {
