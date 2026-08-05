@@ -572,21 +572,16 @@ pub fn format_source(
         code_style,
         max_line_length,
     )?;
-    match format_once(
+    if format_once(
         &text,
         indent_size,
         insert_final_newline,
         rule_configs,
         code_style,
         max_line_length,
-    ) {
-        Ok(t) if t != text => {
-            let _ = std::fs::write("/tmp/f1.txt", &text);
-            let _ = std::fs::write("/tmp/f2.txt", &t);
-            anyhow::bail!("formatter pipeline is not idempotent for stdin input");
-        }
-        Ok(_) => {}
-        Err(e) => anyhow::bail!("formatter second pass failed: {e}"),
+    )? != text
+    {
+        anyhow::bail!("formatter pipeline is not idempotent for stdin input");
     }
     Ok(text)
 }
