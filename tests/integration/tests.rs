@@ -4,7 +4,10 @@ mod integration_tests {
     use std::process::Command;
 
     fn ktlint_bin() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/ktlint-rs")
+        // Release binary: the smoke tests lint large real-world fixtures
+        // (compose-samples 8.4G, androidx 20K files) — the debug binary is
+        // 10-50x slower there and made the smoke suite take over an hour.
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/release/ktlint-rs")
     }
 
     fn fixtures_dir(name: &str) -> PathBuf {
@@ -18,11 +21,11 @@ mod integration_tests {
     }
 
     fn ensure_built() {
-        // Build debug binary if not exists
+        // Build the release binary if it does not exist yet.
         let bin = ktlint_bin();
         if !bin.exists() {
             let status = Command::new("cargo")
-                .args(["build"])
+                .args(["build", "--release"])
                 .current_dir(env!("CARGO_MANIFEST_DIR"))
                 .status()
                 .expect("Failed to build");
