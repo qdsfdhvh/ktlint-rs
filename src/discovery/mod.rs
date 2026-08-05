@@ -89,7 +89,11 @@ impl<'a> FileCollector<'a> {
             .git_global(true)
             .git_exclude(true)
             .add_custom_ignore_filename(".ktlintignore")
-            .hidden(false)
+            // Skip hidden entries (`.git`, `.cache`, `.gradle`, …). Without
+            // this, running with no patterns in a directory that contains
+            // large hidden trees (e.g. /tmp with build caches) walks them all,
+            // which looks like the process is stuck.
+            .hidden(true)
             .follow_links(false);
 
         for entry in builder.build() {
