@@ -127,7 +127,7 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
         let mut in_string = false;
         let mut cleaned = String::with_capacity(t.len());
         let mut chars = t.chars().peekable();
-        while let Some(c) = chars.next() {
+        for c in chars {
             if c == '"' {
                 in_string = !in_string;
             }

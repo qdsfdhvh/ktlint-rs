@@ -337,8 +337,7 @@ fn extract_imports(node: &Node, bytes: &[u8], table: &mut SymbolTable) {
     let text = node.utf8_text(bytes).unwrap_or("");
     let trimmed = text.strip_prefix("import").unwrap_or(text).trim();
 
-    if trimmed.ends_with(".*") {
-        let pkg = &trimmed[..trimmed.len() - 2];
+    if let Some(pkg) = trimmed.strip_suffix(".*") {
         table.add_star_import(pkg.to_string());
     } else if let Some((path, alias)) = trimmed.split_once(" as ") {
         // Aliased import: "com.example.Foo as Bar"

@@ -248,10 +248,8 @@ impl Rule for PackageImportSpacingRule {
             if t.starts_with("package ") {
                 saw_package = true;
             }
-            if t.starts_with("import ") {
-                if saw_package && !saw_import {
-                    saw_import = true;
-                }
+            if t.starts_with("import ") && saw_package && !saw_import {
+                saw_import = true;
             }
             if saw_import
                 && t.is_empty()

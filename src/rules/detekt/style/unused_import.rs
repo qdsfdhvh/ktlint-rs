@@ -55,7 +55,7 @@ impl Rule for UnusedImport {
         };
 
         // Check each import against usage
-        for (alias, _full_path) in &table.imports {
+        for alias in table.imports.keys() {
             let simple = alias.rsplit('.').next().unwrap_or(alias);
             if !used.contains(simple) && !used.contains(alias) {
                 // Find the import line

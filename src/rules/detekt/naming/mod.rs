@@ -183,7 +183,7 @@ impl Rule for FunctionParameterNaming {
                     if let Some(c) = n.child(i) {
                         if c.kind() == "simple_identifier" {
                             if let Ok(nm) = c.utf8_text(b) {
-                                if nm.chars().next().map_or(false, |c| c.is_uppercase()) {
+                                if nm.chars().next().is_some_and(|c| c.is_uppercase()) {
                                     let p = c.start_position();
                                     v.push(Violation {
                                         file: String::new(),
@@ -231,7 +231,7 @@ impl Rule for ClassNaming {
             bytes,
             "class_declaration",
             &mut |_, name, line, col| {
-                if !name.chars().next().map_or(false, |c| c.is_uppercase()) {
+                if !name.chars().next().is_some_and(|c| c.is_uppercase()) {
                     v.push(Violation {
                         file: String::new(),
                         line,
@@ -264,7 +264,7 @@ impl Rule for ObjectNaming {
             bytes,
             "object_declaration",
             &mut |_, name, line, col| {
-                if !name.chars().next().map_or(false, |c| c.is_uppercase()) {
+                if !name.chars().next().is_some_and(|c| c.is_uppercase()) {
                     v.push(Violation {
                         file: String::new(),
                         line,
@@ -305,7 +305,7 @@ impl Rule for VariableNaming {
                         .map(|n| n.trim())
                     {
                         if !name.is_empty()
-                            && name.chars().next().map_or(false, |c| c.is_uppercase())
+                            && name.chars().next().is_some_and(|c| c.is_uppercase())
                             && !name.chars().all(|c| c.is_uppercase() || c == '_')
                         {
                             return Some(Violation {
@@ -377,7 +377,7 @@ impl Rule for ConstructorParameterNaming {
                     if let Some(c) = n.child(i) {
                         if c.kind() == "simple_identifier" {
                             if let Ok(nm) = c.utf8_text(bytes) {
-                                if nm.chars().next().map_or(false, |c| c.is_uppercase()) {
+                                if nm.chars().next().is_some_and(|c| c.is_uppercase()) {
                                     let p = c.start_position();
                                     v.push(Violation {
                                         file: String::new(),

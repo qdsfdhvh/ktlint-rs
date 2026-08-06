@@ -139,7 +139,7 @@ fn is_operator_function(name: &str) -> bool {
 }
 
 fn is_camel_case(s: &str) -> bool {
-    s.chars().next().map_or(false, |c| c.is_lowercase()) && !s.contains('_')
+    s.chars().next().is_some_and(|c| c.is_lowercase()) && !s.contains('_')
 }
 
 #[cfg(test)]

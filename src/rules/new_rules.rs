@@ -161,8 +161,7 @@ impl Rule for NoBlankLinesInChainedMethodCalls {
             // first blank line — ktlint reports the whitespace start + 1).
             if lines[..i]
                 .iter()
-                .rev()
-                .next()
+                .next_back()
                 .is_some_and(|l| l.trim().is_empty())
             {
                 continue;

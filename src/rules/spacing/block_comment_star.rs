@@ -22,17 +22,17 @@ impl Rule for BlockCommentStar {
                 && trimmed.starts_with('*')
                 && !trimmed.starts_with("*/")
                 && !trimmed.starts_with("/**")
+                && !trimmed.starts_with("* ")
+                && trimmed.len() > 1
             {
-                if !trimmed.starts_with("* ") && trimmed.len() > 1 {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: self.id().to_string(),
-                        message: "Block comment star should be followed by space".to_string(),
-                        auto_fixable: true,
-                    });
-                }
+                violations.push(Violation {
+                    file: String::new(),
+                    line: i + 1,
+                    col: 1,
+                    rule_id: self.id().to_string(),
+                    message: "Block comment star should be followed by space".to_string(),
+                    auto_fixable: true,
+                });
             }
             if trimmed.ends_with("*/") {
                 in_block = false;

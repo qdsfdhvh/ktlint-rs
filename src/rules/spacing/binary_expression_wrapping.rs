@@ -68,7 +68,7 @@ impl BinaryExpressionWrapping {
         if node.end_position().row == node.start_position().row && line_len > max_line_length {
             // If preceded by `=` (property/function assignment), break after `=`.
             let before = &source[..start];
-            let has_assignment = before.rfind('=').map_or(false, |i| {
+            let has_assignment = before.rfind('=').is_some_and(|i| {
                 let after_eq = &before[i + 1..];
                 after_eq.trim_start().is_empty() || after_eq.starts_with(char::is_whitespace)
             });

@@ -102,7 +102,7 @@ fn extract_name_after_keyword(line: &str, keyword: &str) -> Option<String> {
 }
 
 fn is_camel_case(s: &str) -> bool {
-    s.chars().next().map_or(false, |c| c.is_lowercase()) && !s.contains('_')
+    s.chars().next().is_some_and(|c| c.is_lowercase()) && !s.contains('_')
 }
 
 fn is_pascal_case(s: &str) -> bool {

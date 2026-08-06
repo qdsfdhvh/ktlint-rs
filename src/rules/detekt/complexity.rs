@@ -51,7 +51,7 @@ fn cyclomatic(n: &tree_sitter::Node) -> usize {
     1 + (0..n.child_count())
         .map(|i| n.child(i))
         .filter(|c| {
-            c.map_or(false, |c| {
+            c.is_some_and(|c| {
                 matches!(
                     c.kind(),
                     "if_expression"
@@ -543,8 +543,7 @@ impl Rule for MethodOverloading {
                 if depth == 0 && t.contains('}') {
                     in_class = false;
                 }
-                if t.starts_with("fun ") {
-                    let rest = &t[4..];
+                if let Some(rest) = t.strip_prefix("fun ") {
                     if let Some(paren) = rest.find('(') {
                         let name = rest[..paren].trim();
                         if !name.is_empty() && !name.contains(' ') {

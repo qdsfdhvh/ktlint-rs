@@ -41,7 +41,7 @@ impl ArgumentListWrapping {
     fn check_list(
         &self,
         node: &tree_sitter::Node,
-        bytes: &[u8],
+        _bytes: &[u8],
         source: &str,
         violations: &mut Vec<Violation>,
     ) {

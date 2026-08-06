@@ -732,7 +732,7 @@ impl Rule for UnnecessarySafeCallOnNonNullable {
                     .collect();
                 eprintln!("[UnnecessarySafeCall] words before ?.: {:?}", words);
                 for word in &words {
-                    if let Some(dt) = ti.type_of(*word) {
+                    if let Some(dt) = ti.type_of(word) {
                         eprintln!(
                             "[UnnecessarySafeCall] {}: type={}, nullable={}",
                             word, dt.type_name, dt.is_nullable

@@ -176,21 +176,20 @@ impl Rule for KDocMissing {
                 prev_was_kdoc = true;
                 continue;
             }
-            if t.starts_with("public ")
+            if (t.starts_with("public ")
                 || t.starts_with("open ")
                 || t.starts_with("internal ")
-                || t.starts_with("protected ")
+                || t.starts_with("protected "))
+                && !prev_was_kdoc
             {
-                if !prev_was_kdoc {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: "detekt:comments:KDocMissing".into(),
-                        message: "Public/internal declaration is missing KDoc".into(),
-                        auto_fixable: false,
-                    });
-                }
+                v.push(Violation {
+                    file: String::new(),
+                    line: i + 1,
+                    col: 1,
+                    rule_id: "detekt:comments:KDocMissing".into(),
+                    message: "Public/internal declaration is missing KDoc".into(),
+                    auto_fixable: false,
+                });
             }
             prev_was_kdoc = false;
         }
@@ -325,7 +324,7 @@ fn walk_undocumented_shared(
         "class_declaration" => check_undoc(
             bytes,
             &n,
-            &mut v[0],
+            v[0],
             last_comment_end,
             "UndocumentedPublicClass",
             "Public class is missing KDoc",
@@ -333,7 +332,7 @@ fn walk_undocumented_shared(
         "function_declaration" => check_undoc(
             bytes,
             &n,
-            &mut v[1],
+            v[1],
             last_comment_end,
             "UndocumentedPublicFunction",
             "Public function is missing KDoc",
@@ -341,7 +340,7 @@ fn walk_undocumented_shared(
         "property_declaration" => check_undoc(
             bytes,
             &n,
-            &mut v[2],
+            v[2],
             last_comment_end,
             "UndocumentedPublicProperty",
             "Public property is missing KDoc",
