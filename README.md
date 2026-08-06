@@ -26,7 +26,7 @@ Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms.
 
 ```bash
 # Preferred: cargo install from git (needs Rust toolchain)
-cargo install --git https://github.com/qdsfdhvh/ktlint-rs --tag v0.1.0 ktlint-rs
+cargo install --git https://github.com/qdsfdhvh/ktlint-rs --tag v0.1.7 ktlint-rs
 
 # Or: pre-built binary
 curl -fsSL https://github.com/qdsfdhvh/ktlint-rs/releases/latest/download/install.sh | bash
@@ -55,6 +55,13 @@ ktlint-rs --ruleset detekt
 
 # Spotless-style target/exclude globs (repeatable)
 ktlint-rs --include '**/src/**/*.kt' --exclude '**/generated/**' .
+
+# Lint / format source piped from stdin (editors, CI)
+ktlint-rs --stdin --stdin-path Foo.kt < Foo.kt
+ktlint-rs --stdin --stdin-path Foo.kt --format < Foo.kt > Foo.fmt.kt
+
+# No paths? ktlint-rs scans the current tree and warns on stderr —
+# pass --include/--exclude or explicit paths to limit scope.
 ```
 
 > Full CLI reference: **[docs/command.md](docs/command.md)**  
