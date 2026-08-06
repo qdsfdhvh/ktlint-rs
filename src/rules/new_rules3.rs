@@ -234,12 +234,54 @@ impl Rule for ThenSpacingRule {
     fn id(&self) -> &'static str {
         "standard:then-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
+    /// Mirrors ktlint 1.8 ThenSpacingRule: the then-block of an if expression
+    /// must be separated by whitespace — `if (x){` is reported.
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "if_expression" {
+                // The then branch is the first child that starts with `{`
+                // (or a statement). ktlint's THEN: whitespace before it.
+                let mut w = node.walk();
+                let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
+                for kid in kids {
+                    let t = &source[kid.start_byte()..kid.end_byte()];
+                    if t.trim_start().starts_with('{') {
+                        // `)` (or condition end) and `{` must have whitespace.
+                        let prev_end = kid
+                            .prev_sibling()
+                            .map(|p| p.end_byte())
+                            .unwrap_or(kid.start_byte());
+                        let between = &source[prev_end..kid.start_byte()];
+                        if !between.chars().any(|c| c == ' ' || c == '\t' || c == '\n') {
+                            let line = source[..kid.start_byte()]
+                                .bytes()
+                                .filter(|&b| b == b'\n')
+                                .count()
+                                + 1;
+                            let line_start =
+                                source[..kid.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+                            violations.push(Violation {
+                                file: String::new(),
+                                line,
+                                col: kid.start_byte() - line_start + 1,
+                                rule_id: self.id().into(),
+                                message: "Expected a whitespace before 'then' block".into(),
+                                auto_fixable: true,
+                            });
+                        }
+                        break;
+                    }
+                }
+            }
+            for i in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(i) {
+                    stack.push(child);
+                }
+            }
+        }
+        violations
     }
 }
 
