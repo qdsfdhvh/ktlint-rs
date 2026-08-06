@@ -97,12 +97,19 @@ impl Rule for TypeArgumentCommentRule {
     fn id(&self) -> &'static str {
         "standard:type-argument-comment"
     }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        // ktlint: a comment whose parent is a type_projection is disallowed;
+        // a comment directly inside a type_argument_list is only allowed on
+        // its own line.
+        check_comment_rule(
+            tree,
+            source,
+            &["type_projection"],
+            &["type_arguments"],
+            "A comment in a 'type_argument_list' is only allowed when placed on a separate line",
+            "A (block or EOL) comment inside or on same line after a 'type_projection' is not allowed. It may be placed on a separate line above.",
+            "standard:type-argument-comment",
+        )
     }
 }
 
@@ -111,12 +118,16 @@ impl Rule for TypeParameterCommentRule {
     fn id(&self) -> &'static str {
         "standard:type-parameter-comment"
     }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        check_comment_rule(
+            tree,
+            source,
+            &["type_parameter"],
+            &["type_parameters"],
+            "A comment in a 'type_parameter_list' is only allowed when placed on a separate line",
+            "A (block or EOL) comment inside or on same line after a 'type_parameter' is not allowed. It may be placed on a separate line above.",
+            "standard:type-parameter-comment",
+        )
     }
 }
 
@@ -125,12 +136,19 @@ impl Rule for ValueArgumentCommentRule {
     fn id(&self) -> &'static str {
         "standard:value-argument-comment"
     }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        // A trailing line comment after a value argument (`Color(0xFF), // pink`)
+        // has the list as parent and is allowed; only a comment *inside* a
+        // value_argument is reported.
+        check_comment_rule(
+            tree,
+            source,
+            &["value_argument"],
+            &[],
+            "A (block or EOL) comment inside or on same line after a 'value_argument' is not allowed. It may be placed on a separate line above.",
+            "A (block or EOL) comment inside or on same line after a 'value_argument' is not allowed. It may be placed on a separate line above.",
+            "standard:value-argument-comment",
+        )
     }
 }
 
@@ -139,22 +157,76 @@ impl Rule for ValueParameterCommentRule {
     fn id(&self) -> &'static str {
         "standard:value-parameter-comment"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("val ") && l.contains("/*") {
-                v.push(Violation {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        check_comment_rule(
+            tree,
+            source,
+            &["value_parameter", "class_parameter"],
+            &[],
+            "A comment inside or on same line after a 'value_parameter' is not allowed. It may be placed on a separate line above.",
+            "A comment inside or on same line after a 'value_parameter' is not allowed. It may be placed on a separate line above.",
+            "standard:value-parameter-comment",
+        )
+    }
+}
+
+/// Shared implementation mirroring ktlint's *-argument/parameter-comment
+/// rules:
+/// - a comment whose parent is one of `parent_kinds` (a single argument /
+///   parameter / type projection) is always reported;
+/// - a comment that is a direct child of one of `list_kinds` is reported only
+///   when it is not on a line by itself.
+fn check_comment_rule(
+    tree: &tree_sitter::Tree,
+    source: &str,
+    parent_kinds: &[&str],
+    list_kinds: &[&str],
+    message: &str,
+    parent_message: &str,
+    rule_id: &'static str,
+) -> Vec<Violation> {
+    let mut violations = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind().contains("comment") {
+            let on_own_line = {
+                let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+                source[line_start..node.start_byte()].trim().is_empty()
+            };
+            let parent_kind = node.parent().map(|p| p.kind());
+            let msg = if parent_kind.is_some_and(|k| parent_kinds.contains(&k)) {
+                Some(parent_message)
+            } else if on_own_line {
+                None
+            } else if parent_kind.is_some_and(|k| list_kinds.contains(&k)) {
+                Some(message)
+            } else {
+                None
+            };
+            if let Some(msg) = msg {
+                let line = source[..node.start_byte()]
+                    .bytes()
+                    .filter(|&b| b == b'\n')
+                    .count()
+                    + 1;
+                let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+                violations.push(Violation {
                     file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Value parameter comment should use KDoc".into(),
+                    line,
+                    col: node.start_byte() - line_start + 1,
+                    rule_id: rule_id.into(),
+                    message: msg.into(),
                     auto_fixable: false,
                 });
             }
         }
-        v
+        for i in (0..node.child_count()).rev() {
+            if let Some(child) = node.child(i) {
+                stack.push(child);
+            }
+        }
     }
+    violations
 }
 
 pub struct ThenSpacingRule;

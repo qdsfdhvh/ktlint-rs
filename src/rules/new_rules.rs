@@ -111,13 +111,92 @@ impl Rule for NoBlankLinesInChainedMethodCalls {
     fn id(&self) -> &'static str {
         "standard:no-blank-lines-in-chained-method-calls"
     }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
+    /// Mirrors ktlint 1.8: a blank line between two chained method calls
+    /// (foo() then a blank line then .bar()) is needless. Reported at the continuation line.
+    fn check(&self, _t: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let lines: Vec<&str> = source.lines().collect();
+        let mut in_block_comment = false;
+        let mut in_triple_string = false;
+        for (i, line) in lines.iter().enumerate() {
+            let t = line.trim();
+            // Multiline strings (`""" … """`): interior lines (including
+            // blank ones) are content, never chain separators.
+            if in_triple_string {
+                if t.contains("\"\"\"") {
+                    in_triple_string = false;
+                }
+                continue;
+            }
+            if t.contains("\"\"\"") {
+                let only = t.trim_end() == "\"\"\"";
+                let starts = t.starts_with("\"\"\"");
+                let ends = t.trim_end().ends_with("\"\"\"");
+                if only || starts != ends {
+                    in_triple_string = !in_triple_string;
+                }
+                continue;
+            }
+            // Track `/* … */` block comments: interior lines (including blank
+            // ones) are comment content, never chain separators.
+            if in_block_comment {
+                if t.contains("*/") {
+                    in_block_comment = false;
+                }
+                continue;
+            }
+            if t.starts_with("/*") {
+                if !t.contains("*/") {
+                    in_block_comment = true;
+                }
+                continue;
+            }
+            if t.starts_with("//") || t.starts_with('*') {
+                continue;
+            }
+            if !t.is_empty() {
+                continue;
+            }
+            // Skip continuation blank lines of a run (report once, at the
+            // first blank line — ktlint reports the whitespace start + 1).
+            if lines[..i]
+                .iter()
+                .rev()
+                .next()
+                .is_some_and(|l| l.trim().is_empty())
+            {
+                continue;
+            }
+            // Blank line: check the previous and next non-blank lines for a
+            // chain (`… .foo()` / `.foo()`), ignoring comment lines.
+            let prev = lines[..i].iter().rev().find(|l| !l.trim().is_empty());
+            let next = lines[i + 1..].iter().find(|l| !l.trim().is_empty());
+            let prev_chain = prev.is_some_and(|l| {
+                let lt = l.trim();
+                !is_comment_line(lt) && lt.ends_with('.')
+            });
+            let next_chain = next.is_some_and(|l| {
+                let lt = l.trim_start();
+                !is_comment_line(lt) && lt.starts_with('.')
+            });
+            if prev_chain || next_chain {
+                violations.push(Violation {
+                    file: String::new(),
+                    line: i + 1,
+                    col: 1,
+                    rule_id: self.id().into(),
+                    message: "Needless blank line(s)".into(),
+                    auto_fixable: true,
+                });
+            }
+        }
+        violations
     }
+}
+
+/// True for comment/KDoc lines (`//`, `/* … */`, `* …` KDoc body lines).
+fn is_comment_line(t: &str) -> bool {
+    t.starts_with("//") || t.starts_with("/*") || t.starts_with('*')
 }
 
 pub struct NoLineBreakAfterElse;
