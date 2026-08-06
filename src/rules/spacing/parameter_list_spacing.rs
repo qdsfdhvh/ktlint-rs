@@ -74,10 +74,7 @@ impl ParameterListSpacing {
                     if index > 1 {
                         if let Some(prev) = node.child(index - 1) {
                             let gap = &bytes[prev.end_byte()..start];
-                            if gap
-                                .iter()
-                                .any(|b| *b == b' ' && !gap.contains(&b'\n'))
-                            {
+                            if gap.iter().any(|b| *b == b' ' && !gap.contains(&b'\n')) {
                                 // space (not newline) before close paren
                                 violations.push(self.v(prev.end_byte(), start, bytes, source));
                             }

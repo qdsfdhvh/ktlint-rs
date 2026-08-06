@@ -80,8 +80,7 @@ impl FunctionSignatureSpacing {
                             .children(&mut node.walk())
                             .find(|c| c.kind() == "function_value_parameters");
                         let param_multiline = params_node.is_some_and(|p| {
-                            p.utf8_text(s.as_bytes())
-                                .is_ok_and(|t| t.contains('\n'))
+                            p.utf8_text(s.as_bytes()).is_ok_and(|t| t.contains('\n'))
                         });
                         let has_params = params_node.is_some_and(|p| {
                             let mut w = p.walk();

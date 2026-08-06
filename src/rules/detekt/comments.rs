@@ -180,16 +180,17 @@ impl Rule for KDocMissing {
                 || t.starts_with("open ")
                 || t.starts_with("internal ")
                 || t.starts_with("protected "))
-                && !prev_was_kdoc {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: "detekt:comments:KDocMissing".into(),
-                        message: "Public/internal declaration is missing KDoc".into(),
-                        auto_fixable: false,
-                    });
-                }
+                && !prev_was_kdoc
+            {
+                v.push(Violation {
+                    file: String::new(),
+                    line: i + 1,
+                    col: 1,
+                    rule_id: "detekt:comments:KDocMissing".into(),
+                    message: "Public/internal declaration is missing KDoc".into(),
+                    auto_fixable: false,
+                });
+            }
             prev_was_kdoc = false;
         }
         v

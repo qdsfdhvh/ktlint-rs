@@ -69,7 +69,11 @@ impl NoUnusedImports {
         }
 
         // Get the last segment
-        content.split('.').next_back().unwrap_or(&content).to_string()
+        content
+            .split('.')
+            .next_back()
+            .unwrap_or(&content)
+            .to_string()
     }
 
     fn collect_identifiers(&self, tree: &tree_sitter::Tree, source: &str) -> HashSet<String> {

@@ -908,78 +908,75 @@ fn fix_argument_list_wrapping(source: &str, indent_size: usize, max_line_length:
     let mut stack = vec![tree.root_node()];
     while let Some(node) = stack.pop() {
         if matches!(node.kind(), "value_arguments" | "function_value_parameters")
-            && node.start_position().row == node.end_position().row {
-                let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
-                let line_end = source[node.end_byte()..]
-                    .find('\n')
-                    .map_or(source.len(), |i| node.end_byte() + i);
-                if line_end - line_start > max_line_length {
-                    let line_text = &source[line_start..line_end];
-                    let indent = line_text.len() - line_text.trim_start().len();
-                    let arg_indent = indent + indent_size;
-                    let mut cw = node.walk();
-                    let children: Vec<tree_sitter::Node> = node.children(&mut cw).collect();
-                    let has_lambda = children.iter().any(|c| {
-                        let text = &source[c.start_byte()..c.end_byte()];
-                        text.trim_start().starts_with('{') || text.trim_end().ends_with('}')
-                    });
-                    if has_lambda {
-                        let mut w2 = node.walk();
-                        for c in node.children(&mut w2) {
-                            stack.push(c);
-                        }
+            && node.start_position().row == node.end_position().row
+        {
+            let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+            let line_end = source[node.end_byte()..]
+                .find('\n')
+                .map_or(source.len(), |i| node.end_byte() + i);
+            if line_end - line_start > max_line_length {
+                let line_text = &source[line_start..line_end];
+                let indent = line_text.len() - line_text.trim_start().len();
+                let arg_indent = indent + indent_size;
+                let mut cw = node.walk();
+                let children: Vec<tree_sitter::Node> = node.children(&mut cw).collect();
+                let has_lambda = children.iter().any(|c| {
+                    let text = &source[c.start_byte()..c.end_byte()];
+                    text.trim_start().starts_with('{') || text.trim_end().ends_with('}')
+                });
+                if has_lambda {
+                    let mut w2 = node.walk();
+                    for c in node.children(&mut w2) {
+                        stack.push(c);
+                    }
+                    continue;
+                }
+                let args: Vec<tree_sitter::Node> = children
+                    .iter()
+                    .copied()
+                    .filter(|c| !matches!(c.kind(), "(" | ")" | ","))
+                    .collect();
+                if args.is_empty() {
+                    let mut w2 = node.walk();
+                    for c in node.children(&mut w2) {
+                        stack.push(c);
+                    }
+                    continue;
+                }
+                for arg in &args {
+                    if source[arg.start_byte()..arg.end_byte()]
+                        .chars()
+                        .all(|c| c.is_whitespace())
+                    {
                         continue;
                     }
-                    let args: Vec<tree_sitter::Node> = children
-                        .iter()
-                        .copied()
-                        .filter(|c| !matches!(c.kind(), "(" | ")" | ","))
-                        .collect();
-                    if args.is_empty() {
-                        let mut w2 = node.walk();
-                        for c in node.children(&mut w2) {
-                            stack.push(c);
-                        }
-                        continue;
+                    let prev_end = arg
+                        .prev_sibling()
+                        .map_or(node.start_byte() + 1, |p| p.end_byte());
+                    if source[prev_end..arg.start_byte()]
+                        .chars()
+                        .all(|c| c.is_whitespace())
+                    {
+                        edits.push((
+                            prev_end,
+                            arg.start_byte(),
+                            format!("\n{}", " ".repeat(arg_indent)),
+                        ));
                     }
-                    for arg in &args {
-                        if source[arg.start_byte()..arg.end_byte()]
-                            .chars()
-                            .all(|c| c.is_whitespace())
-                        {
-                            continue;
-                        }
-                        let prev_end = arg
-                            .prev_sibling()
-                            .map_or(node.start_byte() + 1, |p| p.end_byte());
-                        if source[prev_end..arg.start_byte()]
-                            .chars()
-                            .all(|c| c.is_whitespace())
-                        {
-                            edits.push((
-                                prev_end,
-                                arg.start_byte(),
-                                format!("\n{}", " ".repeat(arg_indent)),
-                            ));
-                        }
-                    }
-                    if let Some(rp) = children.iter().find(|c| c.kind() == ")") {
-                        let prev = rp
-                            .prev_sibling()
-                            .map_or(node.start_byte() + 1, |p| p.end_byte());
-                        if source[prev..rp.start_byte()]
-                            .chars()
-                            .all(|c| c.is_whitespace())
-                        {
-                            edits.push((
-                                prev,
-                                rp.start_byte(),
-                                format!("\n{}", " ".repeat(indent)),
-                            ));
-                        }
+                }
+                if let Some(rp) = children.iter().find(|c| c.kind() == ")") {
+                    let prev = rp
+                        .prev_sibling()
+                        .map_or(node.start_byte() + 1, |p| p.end_byte());
+                    if source[prev..rp.start_byte()]
+                        .chars()
+                        .all(|c| c.is_whitespace())
+                    {
+                        edits.push((prev, rp.start_byte(), format!("\n{}", " ".repeat(indent))));
                     }
                 }
             }
+        }
         let mut w2 = node.walk();
         for c in node.children(&mut w2) {
             stack.push(c);
