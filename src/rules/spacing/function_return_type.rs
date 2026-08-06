@@ -50,7 +50,7 @@ impl FunctionReturnTypeSpacing {
                 }
                 if saw_parens && kind == ":" {
                     let pos = child.start_position();
-                    let start_byte = child.start_byte();
+                    let _start_byte = child.start_byte();
                     // Oracle: "Single space expected between colon and return type"
                     let end_byte = child.end_byte();
                     if end_byte < bytes.len() && bytes[end_byte] != b' ' && bytes[end_byte] != b'\n'

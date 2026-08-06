@@ -35,7 +35,7 @@ impl Rule for EnumEntry {
                         violations.push(Violation {
                             file: String::new(),
                             line: i + 1,
-                            col: brace_pos as usize + 2,
+                            col: brace_pos + 2,
                             rule_id: self.id().to_string(),
                             message: "Each enum entry should be on its own line".to_string(),
                             auto_fixable: true,

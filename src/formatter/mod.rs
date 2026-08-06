@@ -766,8 +766,8 @@ fn fix_function_body_merge(source: &str, max_line_length: usize) -> String {
                         if expr.start_position().row > eq.start_position().row
                             && node.start_position().row == eq.start_position().row
                             && &source[eq.start_byte()..eq.end_byte()] == "="
-                            && source[..eq.start_byte()].chars().next_back() != Some('=')
-                            && source[eq.end_byte()..].chars().next() != Some('=')
+                            && !source[..eq.start_byte()].ends_with('=')
+                            && !source[eq.end_byte()..].starts_with('=')
                             && expr.start_position().row == eq.start_position().row + 1
                         {
                             let func_start = node.start_byte();
@@ -907,8 +907,8 @@ fn fix_argument_list_wrapping(source: &str, indent_size: usize, max_line_length:
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     let mut stack = vec![tree.root_node()];
     while let Some(node) = stack.pop() {
-        if matches!(node.kind(), "value_arguments" | "function_value_parameters") {
-            if node.start_position().row == node.end_position().row {
+        if matches!(node.kind(), "value_arguments" | "function_value_parameters")
+            && node.start_position().row == node.end_position().row {
                 let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
                 let line_end = source[node.end_byte()..]
                     .find('\n')
@@ -980,7 +980,6 @@ fn fix_argument_list_wrapping(source: &str, indent_size: usize, max_line_length:
                     }
                 }
             }
-        }
         let mut w2 = node.walk();
         for c in node.children(&mut w2) {
             stack.push(c);
@@ -1170,7 +1169,7 @@ fn next_code_token_sw(source: &str, start: usize, end: usize) -> Option<(usize, 
 
 fn prev_code_token_sw(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
     let mut chars = source[start..end].char_indices().rev();
-    while let Some((rel, c)) = chars.next() {
+    for (rel, c) in chars {
         let i = start + rel;
         if c.is_whitespace() {
             continue;
@@ -1184,7 +1183,7 @@ fn prev_code_token_sw(source: &str, start: usize, end: usize) -> Option<(usize, 
 }
 
 /// `;` separating statements on one line → newline after the `;`.
-fn fix_semicolon_newlines(source: &str, indent_size: usize) -> String {
+fn fix_semicolon_newlines(source: &str, _indent_size: usize) -> String {
     let bytes = source.as_bytes();
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     let mut i = 0;
@@ -1519,7 +1518,7 @@ fn fix_operators_inner(source: &str) -> String {
                     // that operator's own iteration. Without this, the single-char
                     // `=` pass splits `==` into `= =` and `>=` loses its lead space.
                     let touches_op = is_op_char(chars[i - 1])
-                        || chars.get(i + op.len()).copied().map_or(false, is_op_char);
+                        || chars.get(i + op.len()).copied().is_some_and(is_op_char);
                     if !is_unary_minus && !touches_op {
                         positions.push(i);
                     }
@@ -1540,7 +1539,7 @@ fn fix_operators_inner(source: &str) -> String {
             }
             let byte_pos = cur_c2b[pos];
             let prev = cur[pos - 1];
-            let next = cur.get(pos + op.len()).copied().unwrap_or(' ');
+            let _next = cur.get(pos + op.len()).copied().unwrap_or(' ');
             if prev != ' ' && prev != '\n' && !is_op_char(prev) {
                 s.insert(byte_pos, ' ');
             }
@@ -2512,7 +2511,7 @@ fn fix_string_template(source: &str) -> String {
     let lines: Vec<&str> = source.lines().collect();
     let mut result = Vec::new();
     let mut in_multiline = false;
-    for (_i, line) in lines.iter().enumerate() {
+    for line in lines.iter() {
         let t = line.trim();
         if !in_multiline && t.contains("\"\"\"") && t.matches("\"\"\"").count() == 1 {
             in_multiline = true;

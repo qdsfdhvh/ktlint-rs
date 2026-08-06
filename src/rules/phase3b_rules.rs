@@ -81,7 +81,7 @@ impl FunctionSignatureSpacing {
                             .find(|c| c.kind() == "function_value_parameters");
                         let param_multiline = params_node.is_some_and(|p| {
                             p.utf8_text(s.as_bytes())
-                                .map_or(false, |t| t.contains('\n'))
+                                .is_ok_and(|t| t.contains('\n'))
                         });
                         let has_params = params_node.is_some_and(|p| {
                             let mut w = p.walk();
@@ -192,7 +192,7 @@ impl Rule for FunctionExpressionBody {
                         return_line = i;
                     } else if !body.is_empty() && !body.starts_with("//") && body != "}" {
                         // Check if it's a real statement (not just a closing brace line)
-                        if closes == 0 || body.trim_end_matches('}').trim().len() > 0 {
+                        if closes == 0 || !body.trim_end_matches('}').trim().is_empty() {
                             has_other_statements = true;
                         }
                     }
@@ -241,7 +241,7 @@ impl Rule for KeywordSpacing {
                     line: pos.row + 1,
                     col: pos.column + 3,
                     rule_id: self.id().into(),
-                    message: format!("Missing spacing after \"{}\"", node.kind()).into(),
+                    message: format!("Missing spacing after \"{}\"", node.kind()),
                     auto_fixable: true,
                 });
             }

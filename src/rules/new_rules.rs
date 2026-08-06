@@ -160,9 +160,7 @@ impl Rule for NoBlankLinesInChainedMethodCalls {
             // Skip continuation blank lines of a run (report once, at the
             // first blank line — ktlint reports the whitespace start + 1).
             if lines[..i]
-                .iter()
-                .rev()
-                .next()
+                .iter().next_back()
                 .is_some_and(|l| l.trim().is_empty())
             {
                 continue;

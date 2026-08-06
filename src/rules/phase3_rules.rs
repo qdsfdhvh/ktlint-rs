@@ -111,8 +111,8 @@ impl Rule for BlankLineBeforePackage {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
         for (i, ln) in l.iter().enumerate() {
-            if ln.trim() == "package" || ln.trim().starts_with("package ") {
-                if i > 0 && !l[i - 1].trim().is_empty() && !l[i - 1].trim().starts_with("//") {
+            if (ln.trim() == "package" || ln.trim().starts_with("package "))
+                && i > 0 && !l[i - 1].trim().is_empty() && !l[i - 1].trim().starts_with("//") {
                     v.push(Violation {
                         file: String::new(),
                         line: i + 1,
@@ -122,7 +122,6 @@ impl Rule for BlankLineBeforePackage {
                         auto_fixable: true,
                     });
                 }
-            }
         }
         v
     }

@@ -45,7 +45,7 @@ impl Rule for SpacingBetweenDeclarations {
             // Check if this line starts a declaration
             let is_decl = declaration_keywords
                 .iter()
-                .any(|kw| trimmed.starts_with(kw) || trimmed.starts_with(&format!("@Suppress")))
+                .any(|kw| trimmed.starts_with(kw) || trimmed.starts_with(&"@Suppress".to_string()))
                 || (trimmed.contains("fun ") && !trimmed.contains("\"") && !trimmed.contains("//"));
 
             // More precise: check for top-level declarations (not inside blocks)

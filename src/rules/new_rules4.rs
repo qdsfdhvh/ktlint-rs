@@ -190,7 +190,7 @@ impl StatementWrappingRule {
         // enum class body (`enum class E { A; }`).
         let bytes = source.as_bytes();
         let mut i = 0;
-        let mut in_enum_tail = false;
+        let in_enum_tail = false;
         let mut enum_lines: Vec<usize> = Vec::new();
         // Identify enum class bodies (their trailing `;` is allowed).
         let mut stack = vec![tree.root_node()];
@@ -373,7 +373,7 @@ impl StatementWrappingRule {
         // The first code token after `{` — ktlint's `nextCodeLeaf` (skips
         // whitespace and comments).
         if let Some(next) = next_code_token(source, lbrace + 1, rbrace) {
-            if source[lbrace..next.0].contains('\n') == false
+            if !source[lbrace..next.0].contains('\n')
                 && node.start_position().row == source[..next.0].matches('\n').count()
             {
                 // `{` and the first statement share a line.
@@ -382,7 +382,7 @@ impl StatementWrappingRule {
         }
         // The last code token before `}`.
         if let Some(prev) = prev_code_token(source, lbrace + 1, rbrace) {
-            if source[prev.1..rbrace].contains('\n') == false {
+            if !source[prev.1..rbrace].contains('\n') {
                 violations.push(self.v(rbrace, source, "Missing newline before '}'"));
             }
         }
@@ -429,7 +429,7 @@ fn next_code_token(source: &str, start: usize, end: usize) -> Option<(usize, usi
 /// Byte range of the last non-whitespace, non-comment token in `[start, end)`.
 fn prev_code_token(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
     let mut chars = source[start..end].char_indices().rev();
-    while let Some((rel, c)) = chars.next() {
+    for (rel, c) in chars {
         let i = start + rel;
         if c.is_whitespace() {
             continue;

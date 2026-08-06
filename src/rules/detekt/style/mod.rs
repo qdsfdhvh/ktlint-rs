@@ -255,7 +255,7 @@ impl Rule for MagicNumber {
                 let t = l.trim();
                 let has_magic = t.split_whitespace().any(|w| {
                     w.parse::<i64>()
-                        .map_or(false, |n| n != 0 && n != 1 && n != -1)
+                        .is_ok_and(|n| n != 0 && n != 1 && n != -1)
                         && !w.contains('.')
                         && !w.contains('x')
                         && !w.contains('f')
@@ -1369,7 +1369,7 @@ impl Rule for VarCouldBeVal {
             // Extract var name
             let rest = &t[4..]; // skip "var "
             let name = rest
-                .split(|c: char| c == ':' || c == '=' || c == ' ' || c == '\n')
+                .split([':', '=', ' ', '\n'])
                 .next()
                 .unwrap_or("");
             if name.is_empty() {

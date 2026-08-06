@@ -43,7 +43,7 @@ impl Rule for ExplicitApiVisibility {
             }
             // Skip if it's inside a function body (local declarations don't need visibility)
             let scope = &table.scopes[sym.scope_id];
-            if scope.parent_id.map_or(false, |pid| {
+            if scope.parent_id.is_some_and(|pid| {
                 table.scopes[pid].parent_id.is_some() // nested deeper than class level
             }) {
                 continue;

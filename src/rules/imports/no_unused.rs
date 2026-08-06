@@ -33,7 +33,7 @@ impl Rule for NoUnusedImports {
             // Extension/function imports (`import org.khronos.webgl.get`) use a
             // lowercase member name that identifier collection cannot reliably
             // match; skip lowercase last segments to avoid false positives.
-            let last_segment = import_name.split('.').last().unwrap_or("");
+            let last_segment = import_name.split('.').next_back().unwrap_or("");
             let lowercase_import = last_segment
                 .chars()
                 .next()
@@ -69,7 +69,7 @@ impl NoUnusedImports {
         }
 
         // Get the last segment
-        content.split('.').last().unwrap_or(&content).to_string()
+        content.split('.').next_back().unwrap_or(&content).to_string()
     }
 
     fn collect_identifiers(&self, tree: &tree_sitter::Tree, source: &str) -> HashSet<String> {

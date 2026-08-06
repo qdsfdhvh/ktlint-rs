@@ -73,7 +73,7 @@ fn resolve_rule_id(name: &str) -> String {
     // Check if name is a known detekt short name
     // For now, heuristic: if it looks like a detekt rule name (PascalCase, contains certain patterns)
     // then prefix with detekt: otherwise standard:
-    let looks_like_detekt = name.chars().next().map_or(false, |c| c.is_uppercase())
+    let looks_like_detekt = name.chars().next().is_some_and(|c| c.is_uppercase())
         && (name.contains("Method")
             || name.contains("Class")
             || name.contains("Function")

@@ -134,7 +134,7 @@ fn parse_function_return(line: &str) -> Option<(String, String)> {
     let after = &after_open[close + 1..];
     let ret = after.trim().trim_start_matches(':').trim();
     let ret = ret
-        .split(|c: char| c == ' ' || c == '{')
+        .split([' ', '{'])
         .next()
         .unwrap_or(ret)
         .trim();

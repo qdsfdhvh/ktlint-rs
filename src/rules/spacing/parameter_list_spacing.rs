@@ -61,7 +61,7 @@ impl ParameterListSpacing {
                             if next.kind() == ")" && end < bytes.len() {
                                 // `( )` — whitespace inside empty list
                                 let gap = &bytes[end..next.start_byte()];
-                                if gap.iter().any(|b| *b == b' ') {
+                                if gap.contains(&b' ') {
                                     violations.push(self.v(start, end, bytes, source));
                                 }
                             }
@@ -76,7 +76,7 @@ impl ParameterListSpacing {
                             let gap = &bytes[prev.end_byte()..start];
                             if gap
                                 .iter()
-                                .any(|b| *b == b' ' && !gap.iter().any(|b| *b == b'\n'))
+                                .any(|b| *b == b' ' && !gap.contains(&b'\n'))
                             {
                                 // space (not newline) before close paren
                                 violations.push(self.v(prev.end_byte(), start, bytes, source));
@@ -91,7 +91,7 @@ impl ParameterListSpacing {
                             let before = &bytes[prev.end_byte()..start];
                             if before
                                 .iter()
-                                .any(|b| *b == b' ' && !before.iter().any(|b| *b == b'\n'))
+                                .any(|b| *b == b' ' && !before.contains(&b'\n'))
                             {
                                 violations.push(self.v(prev.end_byte(), start, bytes, source));
                             }

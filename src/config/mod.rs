@@ -49,8 +49,8 @@ pub enum RuleSet {
 impl RuleSet {
     pub fn from_str(s: &str) -> Self {
         let parts: Vec<&str> = s.split(',').map(|p| p.trim()).collect();
-        let has_ktlint = parts.iter().any(|p| *p == "ktlint");
-        let has_detekt = parts.iter().any(|p| *p == "detekt");
+        let has_ktlint = parts.contains(&"ktlint");
+        let has_detekt = parts.contains(&"detekt");
         match (has_ktlint, has_detekt) {
             (true, true) => RuleSet::Both,
             (false, true) => RuleSet::DetektOnly,
@@ -178,7 +178,7 @@ fn parse_ktlint_properties(ec_path: &Path, file_path: &Path) -> HashMap<String, 
             let section = &trimmed[1..trimmed.len() - 1];
             // Match: * or *.kt or *.{kt,kts} or {*.kt,*.kts}
             in_section = section == "*"
-                || section == &format!("*.{}", ext)
+                || section == format!("*.{}", ext)
                 || section.contains(&format!("{{{},", ext))
                 || section.contains(&format!(",{}}}", ext))
                 || section.contains(&format!("{{*.{},", ext))

@@ -115,7 +115,7 @@ impl SpacingAroundAngleBrackets {
         }
     }
     fn in_generics_ctx(node: &tree_sitter::Node) -> bool {
-        node.parent().map_or(false, |p| {
+        node.parent().is_some_and(|p| {
             matches!(
                 p.kind(),
                 "type_arguments" | "type_parameters" | "type_projection"

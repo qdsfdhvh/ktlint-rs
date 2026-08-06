@@ -101,7 +101,7 @@ impl Rule for KtlintFilename {
                     .split(|c: char| !c.is_alphanumeric())
                     .next()
                     .unwrap_or("");
-                if name.chars().next().map_or(false, |c| c.is_lowercase()) {
+                if name.chars().next().is_some_and(|c| c.is_lowercase()) {
                     return vec![Violation {
                         file: String::new(),
                         line: i + 1,

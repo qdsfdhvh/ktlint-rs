@@ -22,8 +22,7 @@ impl Rule for BlockCommentStar {
                 && trimmed.starts_with('*')
                 && !trimmed.starts_with("*/")
                 && !trimmed.starts_with("/**")
-            {
-                if !trimmed.starts_with("* ") && trimmed.len() > 1 {
+                && !trimmed.starts_with("* ") && trimmed.len() > 1 {
                     violations.push(Violation {
                         file: String::new(),
                         line: i + 1,
@@ -33,7 +32,6 @@ impl Rule for BlockCommentStar {
                         auto_fixable: true,
                     });
                 }
-            }
             if trimmed.ends_with("*/") {
                 in_block = false;
             }

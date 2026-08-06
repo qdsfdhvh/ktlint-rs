@@ -20,14 +20,13 @@ impl Rule for OperatorSpacing {
 impl OperatorSpacing {
     fn walk(node: tree_sitter::Node, bytes: &[u8], v: &mut Vec<Violation>) {
         let kind = node.kind();
-        if OPERATORS.contains(&kind) {
-            if !Self::in_comment(&node)
+        if OPERATORS.contains(&kind)
+            && !Self::in_comment(&node)
                 && !(matches!(kind, "<" | ">" | "*") && Self::is_generic(&node, bytes))
                 && !(kind == "*" && Self::is_spread_operator(&node))
             {
                 Self::check_op(&node, bytes, v);
             }
-        }
         for i in 0..node.child_count() {
             if let Some(c) = node.child(i) {
                 Self::walk(c, bytes, v);
@@ -104,7 +103,7 @@ impl OperatorSpacing {
         if node.kind() == "-"
             && node
                 .parent()
-                .map_or(false, |p| p.kind() == "unary_expression")
+                .is_some_and(|p| p.kind() == "unary_expression")
         {
             return;
         }
