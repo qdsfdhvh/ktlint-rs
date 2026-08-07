@@ -13,7 +13,7 @@ impl Rule for NoBlankBeforeListClose {
     }
 }
 impl NoBlankBeforeListClose {
-    fn walk(node: tree_sitter::Node, source: &str, v: &mut Vec<Violation>) {
+    fn walk(node: tree_sitter::Node, _source: &str, v: &mut Vec<Violation>) {
         let k = node.kind();
         if k == "value_arguments" || k == "function_value_parameters" {
             let c = node.child_count();
@@ -48,7 +48,7 @@ impl NoBlankBeforeListClose {
         }
         for i in 0..node.child_count() {
             if let Some(c) = node.child(i) {
-                Self::walk(c, source, v);
+                Self::walk(c, _source, v);
             }
         }
     }

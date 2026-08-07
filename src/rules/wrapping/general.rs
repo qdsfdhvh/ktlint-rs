@@ -22,8 +22,11 @@ impl Rule for GeneralWrapping {
             // Check `when` entries — `1, 2 ->` on same line is wrong for multiline when
             if trimmed.starts_with("when ") && i + 1 < lines.len() {
                 let mut prev_line_was_entry = false;
-                for j in (i + 1)..lines.len().min(i + 50) {
-                    let t = lines[j].trim();
+                for t in lines[i + 1..]
+                    .iter()
+                    .take(lines.len().min(i + 50).saturating_sub(i + 1))
+                    .map(|l| l.trim())
+                {
                     if t == "}" || t == "})" || t == ")." {
                         break;
                     }

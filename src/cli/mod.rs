@@ -23,6 +23,8 @@ pub struct Cli {
     pub stdin_path: String,
 
     #[arg(skip)]
+    /// (reserved) file patterns read from stdin
+    #[allow(dead_code)]
     pub patterns_from_stdin: Vec<String>,
 
     /// Path to the default .editorconfig

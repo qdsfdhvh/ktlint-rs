@@ -1,19 +1,6 @@
 //! Batch 2: ktlint parity rules (wrapping, declaration, spacing, comment)
 use crate::rules::{Rule, Violation};
 
-pub struct AnnotationRule;
-impl Rule for AnnotationRule {
-    fn id(&self) -> &'static str {
-        "standard:annotation"
-    }
-    fn auto_fixable(&self) -> bool {
-        false
-    }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        vec![]
-    } // disabled — too noisy
-}
-
 pub struct FunctionLiteralRule;
 impl Rule for FunctionLiteralRule {
     fn id(&self) -> &'static str {
@@ -110,73 +97,6 @@ impl Rule for NoSingleLineBlockCommentRule {
     }
 }
 
-pub struct BlankLineBeforeDeclarationRule;
-impl Rule for BlankLineBeforeDeclarationRule {
-    fn id(&self) -> &'static str {
-        "standard:blank-line-before-declaration"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for i in 1..l.len() {
-            let t = l[i].trim();
-            if t.starts_with("fun ")
-                || t.starts_with("class ")
-                || t.starts_with("val ")
-                || t.starts_with("var ")
-            {
-                let prev = l[i - 1].trim();
-                if !prev.is_empty() && !prev.starts_with("//") && !prev.starts_with("@") {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: self.id().into(),
-                        message: "Blank line required before declaration".into(),
-                        auto_fixable: true,
-                    });
-                }
-            }
-        }
-        v
-    }
-}
-
-pub struct SpacingAroundAngleBracketsRule;
-impl Rule for SpacingAroundAngleBracketsRule {
-    fn id(&self) -> &'static str {
-        "standard:spacing-around-angle-brackets"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let _bytes = s.as_bytes();
-        for (i, l) in s.lines().enumerate() {
-            let t = l.trim();
-            if t.contains("< ") && !t.contains("<<") && !t.contains("\"") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "No space after \"<\" in type arguments".into(),
-                    auto_fixable: true,
-                });
-            }
-            if t.contains(" >") && !t.contains(">>") && !t.contains("->") && !t.contains("\"") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "No space before \">\" in type arguments".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
-    }
-}
-
 pub struct SpacingAroundUnaryOperatorRule;
 impl Rule for SpacingAroundUnaryOperatorRule {
     fn id(&self) -> &'static str {
@@ -227,43 +147,6 @@ impl Rule for FunKeywordSpacingRule {
                         auto_fixable: true,
                     });
                 }
-            }
-        }
-        v
-    }
-}
-
-pub struct PackageImportSpacingRule;
-impl Rule for PackageImportSpacingRule {
-    fn id(&self) -> &'static str {
-        "standard:package-import-spacing"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        let mut saw_package = false;
-        let mut saw_import = false;
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if t.starts_with("package ") {
-                saw_package = true;
-            }
-            if t.starts_with("import ") && saw_package && !saw_import {
-                saw_import = true;
-            }
-            if saw_import
-                && t.is_empty()
-                && i + 1 < l.len()
-                && l[i + 1].trim().starts_with("import ")
-            {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 2,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "No blank line between package and imports".into(),
-                    auto_fixable: true,
-                });
             }
         }
         v

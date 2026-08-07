@@ -57,8 +57,8 @@ impl<'a> DiagnosticReporter<'a> {
             }
             if path.starts_with(&self.cwd) && path.len() > self.cwd.len() {
                 let rest = &path[self.cwd.len()..];
-                if rest.starts_with('/') {
-                    return rest[1..].to_string();
+                if let Some(stripped) = rest.strip_prefix('/') {
+                    return stripped.to_string();
                 }
             }
         }
@@ -206,7 +206,7 @@ impl<'a> DiagnosticReporter<'a> {
             *counts.entry(&v.rule_id).or_default() += 1;
         }
         let mut sorted: Vec<_> = counts.into_iter().collect();
-        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         eprintln!("\nSummary error count (descending) by rule:");
         for (rule, count) in &sorted {
@@ -238,7 +238,7 @@ impl<'a> DiagnosticReporter<'a> {
                 *counts.entry(&v.rule_id).or_default() += 1;
             }
             let mut sorted: Vec<_> = counts.into_iter().collect();
-            sorted.sort_by(|a, b| b.1.cmp(&a.1));
+            sorted.sort_by_key(|b| std::cmp::Reverse(b.1));
             html.push_str("<table class=\"summary\"><tr><th>Rule</th><th>Count</th></tr>\n");
             for (rule, count) in &sorted {
                 html.push_str(&format!("<tr><td>{}</td><td>{}</td></tr>\n", rule, count));
@@ -327,7 +327,7 @@ impl<'a> DiagnosticReporter<'a> {
                 *counts.entry(&v.rule_id).or_default() += 1;
             }
             let mut sorted: Vec<_> = counts.into_iter().collect();
-            sorted.sort_by(|a, b| b.1.cmp(&a.1));
+            sorted.sort_by_key(|b| std::cmp::Reverse(b.1));
             for (rule, count) in &sorted {
                 md.push_str(&format!("| {} | {} |\n", rule, count));
             }

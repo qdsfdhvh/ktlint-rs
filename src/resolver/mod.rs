@@ -41,6 +41,7 @@ pub enum Visibility {
 /// A scope (file-level, class body, function body, etc.).
 #[derive(Debug, Clone)]
 pub struct Scope {
+    #[allow(dead_code)]
     pub id: usize,
     pub parent_id: Option<usize>,
     pub symbols: Vec<usize>,
@@ -59,12 +60,11 @@ pub struct SymbolTable {
 
 impl SymbolTable {
     pub fn new() -> Self {
-        let mut scopes = Vec::new();
-        scopes.push(Scope {
+        let scopes = vec![Scope {
             id: 0,
             parent_id: None,
             symbols: Vec::new(),
-        });
+        }];
         Self {
             symbols: Vec::new(),
             scopes,
@@ -118,6 +118,7 @@ impl SymbolTable {
     }
 
     /// Find a symbol by name in the visible scopes (scope chain walking).
+    #[allow(dead_code)]
     pub fn resolve(&self, name: &str, from_scope_id: usize) -> Option<&Symbol> {
         let mut scope_id = Some(from_scope_id);
         while let Some(sid) = scope_id {
@@ -151,6 +152,7 @@ impl SymbolTable {
     }
 
     /// Find all symbols of a given kind that are private and unused.
+    #[allow(dead_code)]
     pub fn private_symbols(&self) -> Vec<&Symbol> {
         self.symbols
             .iter()

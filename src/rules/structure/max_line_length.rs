@@ -38,8 +38,13 @@ impl Rule for MaxLineLength {
                     return false;
                 }
                 let trimmed = line.trim_start();
-                let only_string =
-                    trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() > 2;
+                // ktlint exempts a line holding only a single string template
+                // (and optionally a trailing comma) — e.g. long string
+                // literals, base64/SVG payloads. Verified against ktlint 1.8.
+                let only_string = {
+                    let body = trimmed.trim_end_matches(',');
+                    body.starts_with('"') && body.ends_with('"') && body.len() > 2
+                };
                 line.chars().count() > max_length
                     && !only_string
                     && !trimmed.starts_with("package ")

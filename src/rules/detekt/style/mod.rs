@@ -106,7 +106,7 @@ impl Rule for MandatoryBracesIfElse {
     }
     fn check(&self, tree: &Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        fn walk(n: tree_sitter::Node, bytes: &[u8], v: &mut Vec<Violation>) {
+        fn walk(n: tree_sitter::Node, _bytes: &[u8], v: &mut Vec<Violation>) {
             if n.kind() == "if_expression" {
                 let mut has_body = false;
                 for i in 0..n.child_count() {
@@ -131,7 +131,7 @@ impl Rule for MandatoryBracesIfElse {
             }
             for i in 0..n.child_count() {
                 if let Some(c) = n.child(i) {
-                    walk(c, bytes, v);
+                    walk(c, _bytes, v);
                 }
             }
         }
@@ -1036,54 +1036,6 @@ impl Rule for OptionalAbstractKeyword {
 }
 
 // ── 31-43: Final batch ──
-pub struct FunctionOnlyReturningConstant;
-impl Rule for FunctionOnlyReturningConstant {
-    fn id(&self) -> &'static str {
-        "detekt:style:FunctionOnlyReturningConstant"
-    }
-    fn auto_fixable(&self) -> bool {
-        false
-    }
-    fn check(&self, _tree: &Tree, source: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let mut inf = false;
-        let mut fl = 0usize;
-        let mut rv = String::new();
-        let mut bl = 0u32;
-        for (i, line) in source.lines().enumerate() {
-            let t = line.trim();
-            if t.starts_with("fun ") && !inf {
-                inf = true;
-                fl = i;
-                bl = 0;
-                rv.clear();
-            }
-            if inf && t.starts_with("{") {
-                bl += 1;
-            }
-            if inf && t.starts_with("return ") {
-                rv = t[7..].trim().to_string();
-            }
-            if inf && t == "}" {
-                if bl <= 3 && !rv.is_empty() {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: fl + 1,
-                        col: 1,
-                        rule_id: "detekt:style:FunctionOnlyReturningConstant".into(),
-                        message:
-                            "Function only returns a constant — consider val or expression body"
-                                .into(),
-                        auto_fixable: false,
-                    });
-                }
-                inf = false;
-            }
-        }
-        v
-    }
-}
-
 pub struct BracesOnIfStatements;
 impl Rule for BracesOnIfStatements {
     fn id(&self) -> &'static str {
@@ -1727,10 +1679,6 @@ mod tests {
         assert!(!c(&OptionalAbstractKeyword, "abstract fun f()\n").is_empty());
     }
 
-    #[test]
-    fn fn_only_const() {
-        assert!(!c(&FunctionOnlyReturningConstant, "fun f() {\nreturn 42\n}\n").is_empty());
-    }
     #[test]
     fn braces_if_bad() {
         assert!(!c(&BracesOnIfStatements, "if (x)\n  return\n").is_empty());

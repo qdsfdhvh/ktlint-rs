@@ -4,6 +4,7 @@ use crate::resolver::type_bridge::TypeInfo;
 use crate::rules::{Rule, Violation};
 use tree_sitter::Tree;
 
+#[allow(dead_code)]
 fn walk_node(
     n: tree_sitter::Node,
     bytes: &[u8],

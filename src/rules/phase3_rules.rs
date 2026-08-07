@@ -1,34 +1,6 @@
 //! Phase 3.3 batch: no-empty-class-body, string-template, if-else-bracing
 use crate::rules::{Rule, Violation};
 
-pub struct NoEmptyClassBody;
-impl Rule for NoEmptyClassBody {
-    fn id(&self) -> &'static str {
-        "standard:no-empty-class-body"
-    }
-    fn auto_fixable(&self) -> bool {
-        false
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        s.lines()
-            .enumerate()
-            .filter(|(_, l)| {
-                let t = l.trim();
-                (t.ends_with("{}") || t.ends_with("{ }"))
-                    && (t.contains("class ") || t.contains("interface ") || t.contains("object "))
-            })
-            .map(|(i, _)| Violation {
-                file: String::new(),
-                line: i + 1,
-                col: 1,
-                rule_id: self.id().into(),
-                message: "Empty class body is unnecessary".into(),
-                auto_fixable: false,
-            })
-            .collect()
-    }
-}
-
 pub struct StringTemplateRule;
 impl Rule for StringTemplateRule {
     fn id(&self) -> &'static str {
@@ -72,58 +44,6 @@ impl Rule for IfElseBracingRule {
                         auto_fixable: true,
                     });
                 }
-            }
-        }
-        v
-    }
-}
-
-pub struct BlankLineBeforeFileAnnotation;
-impl Rule for BlankLineBeforeFileAnnotation {
-    fn id(&self) -> &'static str {
-        "standard:blank-line-before-file-annotation"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            if ln.trim().starts_with("@file:") && i > 0 && !l[i - 1].trim().is_empty() {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Blank line required before @file annotation".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
-    }
-}
-
-pub struct BlankLineBeforePackage;
-impl Rule for BlankLineBeforePackage {
-    fn id(&self) -> &'static str {
-        "standard:blank-line-before-package"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            if (ln.trim() == "package" || ln.trim().starts_with("package "))
-                && i > 0
-                && !l[i - 1].trim().is_empty()
-                && !l[i - 1].trim().starts_with("//")
-            {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "File annotations must be placed before package".into(),
-                    auto_fixable: true,
-                });
             }
         }
         v

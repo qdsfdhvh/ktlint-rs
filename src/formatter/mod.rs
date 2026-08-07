@@ -403,7 +403,8 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
-        let passes: [(&'static str, fn(&str) -> String); 30] = [
+        type Pass = (&'static str, fn(&str) -> String);
+        let passes: [Pass; 30] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -1165,7 +1166,7 @@ fn next_code_token_sw(source: &str, start: usize, end: usize) -> Option<(usize, 
 }
 
 fn prev_code_token_sw(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
-    let mut chars = source[start..end].char_indices().rev();
+    let chars = source[start..end].char_indices().rev();
     for (rel, c) in chars {
         let i = start + rel;
         if c.is_whitespace() {
@@ -2349,6 +2350,7 @@ fn fix_double_spaces(source: &str) -> String {
 
 // ── Wrapping helper ──
 
+#[allow(dead_code)]
 fn fix_multiline_if_else(source: &str) -> String {
     // if (cond)\n    stmt → if (cond) stmt (single-line when short)
     let mut result = source.to_string();
@@ -2370,6 +2372,7 @@ fn fix_multiline_if_else(source: &str) -> String {
 
 // ── Chain wrapping ──
 
+#[allow(dead_code)]
 fn fix_chain_wrapping(source: &str) -> String {
     // Disabled: this line-rebuilder forced every `.call` to a hardcoded 4-space
     // indent (destroying real indentation) and, worse, merged unrelated lines while
@@ -2380,6 +2383,7 @@ fn fix_chain_wrapping(source: &str) -> String {
 
 // ── When expression break ──
 
+#[allow(dead_code)]
 fn fix_when_expression_break(source: &str) -> String {
     // Ensure when branches are consistently single-line or multiline.
     // If any branch uses braces, convert all single-line branches
@@ -2475,6 +2479,7 @@ fn fix_try_catch(source: &str) -> String {
 
 // ── When entry bracing ──
 
+#[allow(dead_code)]
 fn fix_when_entry_bracing(source: &str) -> String {
     let lines: Vec<&str> = source.lines().collect();
     let mut result = Vec::new();
@@ -2503,6 +2508,7 @@ fn fix_when_entry_bracing(source: &str) -> String {
 
 // ── String template indent ──
 
+#[allow(dead_code)]
 fn fix_string_template(source: &str) -> String {
     // Add .trimIndent() to multiline string literals that lack it
     let lines: Vec<&str> = source.lines().collect();

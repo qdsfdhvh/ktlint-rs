@@ -90,8 +90,7 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
         && before
             .iter()
             .copied()
-            .skip_while(|byte| byte.is_ascii_whitespace())
-            .next()
+            .find(|byte| !byte.is_ascii_whitespace())
             == Some(b'@');
 
     let mut prev_was_code = false;
@@ -125,8 +124,8 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
 
 fn check_top_level_annotation_groups(source: &str, violations: &mut Vec<Violation>) {
     for (line_index, line) in source.lines().enumerate() {
-        if line.starts_with('@') {
-            if let Some(second) = line[1..].find('@') {
+        if let Some(rest) = line.strip_prefix('@') {
+            if let Some(second) = rest.find('@') {
                 violations.push(Violation {
                     file: String::new(),
                     line: line_index + 1,

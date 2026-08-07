@@ -246,30 +246,6 @@ impl Rule for NoLineBreakBeforeAssignment {
     }
 }
 
-pub struct NoConsecutiveComments;
-impl Rule for NoConsecutiveComments {
-    fn id(&self) -> &'static str {
-        "standard:no-consecutive-comments"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for i in 0..l.len().saturating_sub(1) {
-            if l[i].trim().starts_with("//") && l[i + 1].trim().starts_with("//") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 2,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Consecutive comments should be combined".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
-    }
-}
-
 pub struct NullableTypeSpacing;
 impl Rule for NullableTypeSpacing {
     fn id(&self) -> &'static str {

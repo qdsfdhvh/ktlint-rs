@@ -12,6 +12,7 @@ use std::path::Path;
 mod node_types_test;
 
 /// A parsed Kotlin file.
+#[allow(dead_code)]
 pub struct ParsedFile {
     pub path: Option<String>,
     pub source: String,
@@ -42,6 +43,7 @@ impl KotlinParser {
             .expect("Failed to parse Kotlin source")
     }
 
+    #[allow(dead_code)]
     pub fn parse_file(&mut self, path: &Path) -> anyhow::Result<ParsedFile> {
         let source = std::fs::read_to_string(path)?;
         let tree = self.parse(&source);

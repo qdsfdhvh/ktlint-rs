@@ -31,59 +31,6 @@ impl Rule for KdocWrappingRule {
 
 // FunctionExpressionBodyRule removed — dead duplicate of phase3b_rules::FunctionExpressionBody
 
-pub struct CallExpressionWrappingRule;
-impl Rule for CallExpressionWrappingRule {
-    fn id(&self) -> &'static str {
-        "standard:call-expression-wrapping"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if t.contains("(") && t.len() > 100 && i + 1 < l.len() {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Long call expression should be wrapped".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
-    }
-}
-
-pub struct BinaryExpressionWrappingRule;
-impl Rule for BinaryExpressionWrappingRule {
-    fn id(&self) -> &'static str {
-        "standard:binary-expression-wrapping"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
-    }
-}
-
-pub struct PropertyWrappingRule;
-impl Rule for PropertyWrappingRule {
-    fn id(&self) -> &'static str {
-        "standard:property-wrapping"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
-    }
-}
-
 pub struct ParameterWrappingRule;
 impl Rule for ParameterWrappingRule {
     fn id(&self) -> &'static str {
@@ -428,7 +375,7 @@ fn next_code_token(source: &str, start: usize, end: usize) -> Option<(usize, usi
 
 /// Byte range of the last non-whitespace, non-comment token in `[start, end)`.
 fn prev_code_token(source: &str, start: usize, end: usize) -> Option<(usize, usize)> {
-    let mut chars = source[start..end].char_indices().rev();
+    let chars = source[start..end].char_indices().rev();
     for (rel, c) in chars {
         let i = start + rel;
         if c.is_whitespace() {
