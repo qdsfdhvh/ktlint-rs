@@ -44,7 +44,7 @@ impl ClassSignatureSpacing {
                     saw_class_keyword = true;
                 }
                 // After class name and optional constructor, check `:` for super types
-                
+
                 // : in super type delegation
                 if saw_class_keyword && kind == ":" {
                     // This `:` is in the delegation specifier (super type list)
