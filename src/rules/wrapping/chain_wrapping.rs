@@ -21,7 +21,6 @@ impl Rule for ChainWrapping {
         let violations = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
-        let mut prev_dot_call_line: Option<usize> = None;
         let mut chain_started = false;
 
         for (i, line) in lines.iter().enumerate() {
@@ -31,7 +30,6 @@ impl Rule for ChainWrapping {
             if !chain_started {
                 if trimmed.starts_with('.') {
                     chain_started = true;
-                    prev_dot_call_line = Some(i);
                     continue;
                 }
                 // Check if this line starts a chain (has a dot call)
@@ -41,7 +39,6 @@ impl Rule for ChainWrapping {
                         // Multi-line chain detection: next line starts with .
                         if i + 1 < lines.len() && lines[i + 1].trim().starts_with('.') {
                             chain_started = true;
-                            prev_dot_call_line = Some(i);
                             continue;
                         }
                     }
@@ -56,11 +53,9 @@ impl Rule for ChainWrapping {
                     if indent == 0 {
                         // Not indented — for chains starting at column 0, this is fine
                     }
-                    prev_dot_call_line = Some(i);
                 } else {
                     // Chain ended (non-dot line)
                     chain_started = false;
-                    prev_dot_call_line = None;
                 }
             }
         }

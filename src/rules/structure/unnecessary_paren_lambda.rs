@@ -81,6 +81,7 @@ impl Rule for UnnecessaryParenBeforeLambda {
     }
 }
 
+#[allow(dead_code)]
 fn has_empty_parens_before_lambda(line: &str) -> bool {
     let bytes = line.as_bytes();
     let mut quote = None;

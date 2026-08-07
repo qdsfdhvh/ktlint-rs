@@ -340,8 +340,8 @@ impl Rule for PackageNaming {
             .enumerate()
             .filter_map(|(i, line)| {
                 let t = line.trim();
-                if t.starts_with("package ") {
-                    let pkg = &t[8..].trim();
+                if let Some(rest) = t.strip_prefix("package ") {
+                    let pkg = rest.trim();
                     if pkg.contains('_') || pkg.chars().any(|c| c.is_uppercase()) {
                         return Some(Violation {
                             file: String::new(),
@@ -662,8 +662,8 @@ impl Rule for InvalidPackageDeclaration {
             .enumerate()
             .filter_map(|(i, line)| {
                 let t = line.trim();
-                if t.starts_with("package ") {
-                    let pkg = &t[8..].trim();
+                if let Some(rest) = t.strip_prefix("package ") {
+                    let pkg = rest.trim();
                     if pkg.starts_with('.') || pkg.ends_with('.') || pkg.contains("..") {
                         return Some(Violation {
                             file: String::new(),

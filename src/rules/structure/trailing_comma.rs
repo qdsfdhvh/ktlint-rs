@@ -59,7 +59,7 @@ impl TrailingComma {
         if let Some((ci, cp_byte)) = close_paren_pos {
             if ci > 0 {
                 // Check if there's content on a different line before `)`
-                let mut prev_line = None;
+
                 for i in (0..ci).rev() {
                     if let Some(child) = node.child(i) {
                         let child_line = child.start_position().row;
@@ -87,7 +87,6 @@ impl TrailingComma {
                             }
                             break;
                         }
-                        prev_line = Some(child_line);
                     }
                 }
             }

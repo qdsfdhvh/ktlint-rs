@@ -72,8 +72,8 @@ impl Rule for ClassNaming {
 
 fn declaration_name(input: &str) -> Option<(&str, &str)> {
     let input = input.trim_start();
-    if input.starts_with('`') {
-        let end = input[1..].find('`')? + 2;
+    if let Some(rest) = input.strip_prefix('`') {
+        let end = rest.find('`')? + 2;
         return Some((&input[1..end - 1], &input[..end]));
     }
     let end = input

@@ -8,6 +8,7 @@ use std::collections::HashMap;
 pub struct DeclType {
     pub type_name: String,
     pub is_nullable: bool,
+    #[allow(dead_code)]
     pub line: usize,
 }
 
@@ -75,6 +76,7 @@ impl TypeInfo {
     }
 
     /// Check if a declared type is iterable (List, Set, Array, Iterable, etc.)
+    #[allow(dead_code)]
     pub fn is_iterable(&self, name: &str) -> bool {
         self.type_of(name)
             .map(|dt| {
@@ -104,6 +106,7 @@ impl TypeInfo {
     }
 
     /// Check if a declared type is nullable
+    #[allow(dead_code)]
     pub fn is_nullable(&self, name: &str) -> bool {
         self.type_of(name).map(|dt| dt.is_nullable).unwrap_or(false)
     }

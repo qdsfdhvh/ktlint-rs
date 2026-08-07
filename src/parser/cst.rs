@@ -10,17 +10,20 @@ use tree_sitter::Node;
 
 /// A position in source code: 1-based line and 1-based column.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub struct SourcePosition {
     pub line: usize,
     pub col: usize,
 }
 
 /// Context passed to every rule check, wrapping the source text and parsed tree.
+#[allow(dead_code)]
 pub struct CheckContext<'a> {
     pub source: &'a str,
     pub tree: &'a tree_sitter::Tree,
 }
 
+#[allow(dead_code)]
 impl<'a> CheckContext<'a> {
     pub fn new(source: &'a str, tree: &'a tree_sitter::Tree) -> Self {
         Self { source, tree }

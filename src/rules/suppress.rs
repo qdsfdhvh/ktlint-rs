@@ -13,6 +13,7 @@ use std::collections::HashSet;
 ///
 /// Returns vec of (line, rule_id) pairs where the rule is suppressed.
 /// If `rule_id` is empty string, ALL rules are suppressed on that line.
+#[allow(dead_code)]
 pub fn parse_suppress_annotations(source: &str) -> Vec<(usize, String)> {
     let mut results = Vec::new();
     let lines: Vec<&str> = source.lines().collect();
@@ -46,6 +47,7 @@ pub fn parse_suppress_annotations(source: &str) -> Vec<(usize, String)> {
 }
 
 /// Filter out violations that are suppressed by @Suppress annotations.
+#[allow(dead_code)]
 pub fn filter_suppressed(
     violations: Vec<crate::rules::Violation>,
     source: &str,

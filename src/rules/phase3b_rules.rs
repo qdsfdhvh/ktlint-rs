@@ -1,30 +1,6 @@
 //! Phase 3.3 semantics: no-empty-file, indent, max-line, kdoc, function-signature
 use crate::rules::{Rule, Violation};
 
-pub struct NoEmptyFile;
-impl Rule for NoEmptyFile {
-    fn id(&self) -> &'static str {
-        "standard:no-empty-file"
-    }
-    fn auto_fixable(&self) -> bool {
-        false
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        if s.trim().is_empty() {
-            vec![Violation {
-                file: String::new(),
-                line: 1,
-                col: 1,
-                rule_id: self.id().into(),
-                message: "File must not be empty".into(),
-                auto_fixable: false,
-            }]
-        } else {
-            vec![]
-        }
-    }
-}
-
 pub struct FunctionSignatureSpacing {
     max_length: usize,
 }
@@ -251,29 +227,6 @@ impl Rule for KeywordSpacing {
             }
         }
         violations
-    }
-}
-
-pub struct ParameterListSpacingRule;
-impl Rule for ParameterListSpacingRule {
-    fn id(&self) -> &'static str {
-        "standard:parameter-list-spacing"
-    }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains(" ,") || l.contains(",  ") {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Whitespace around comma is inconsistent".into(),
-                    auto_fixable: true,
-                });
-            }
-        }
-        v
     }
 }
 

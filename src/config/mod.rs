@@ -19,6 +19,7 @@ const DEFAULT_DISABLED_RULES: &[&str] = &["standard:expression-operand-wrapping"
 /// ktlint configuration.
 #[derive(Debug, Clone)]
 pub struct KtlintConfig {
+    #[allow(dead_code)]
     pub editorconfig_path: Option<PathBuf>,
     pub code_style: CodeStyle,
     pub baseline: Option<PathBuf>,
@@ -284,6 +285,7 @@ impl KtlintConfig {
         Ok(config)
     }
 
+    #[allow(dead_code)]
     pub fn load_for_file(file_path: &Path) -> anyhow::Result<Self> {
         let mut config = Self::default();
         // Ensure absolute path so editorconfig::get_config resolves correctly.
@@ -403,6 +405,7 @@ impl KtlintConfig {
         true
     }
 
+    #[allow(dead_code)]
     pub fn indent_string(&self) -> String {
         match self.indent_style {
             IndentStyle::Space => " ".repeat(self.indent_size),

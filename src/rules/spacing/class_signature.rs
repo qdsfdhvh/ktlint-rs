@@ -36,7 +36,6 @@ impl ClassSignatureSpacing {
 
     fn check_class(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
         let mut saw_class_keyword = false;
-        let mut saw_constructor_or_body = false;
 
         for i in 0..node.child_count() {
             if let Some(child) = node.child(i) {
@@ -45,9 +44,7 @@ impl ClassSignatureSpacing {
                     saw_class_keyword = true;
                 }
                 // After class name and optional constructor, check `:` for super types
-                if kind == "primary_constructor" || kind == "class_body" {
-                    saw_constructor_or_body = true;
-                }
+                
                 // : in super type delegation
                 if saw_class_keyword && kind == ":" {
                     // This `:` is in the delegation specifier (super type list)

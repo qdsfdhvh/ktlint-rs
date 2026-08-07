@@ -126,7 +126,7 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
         // block delimiters and would inflate the depth.
         let mut in_string = false;
         let mut cleaned = String::with_capacity(t.len());
-        let mut chars = t.chars().peekable();
+        let chars = t.chars().peekable();
         for c in chars {
             if c == '"' {
                 in_string = !in_string;
