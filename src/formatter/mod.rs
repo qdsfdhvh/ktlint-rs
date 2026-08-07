@@ -1294,7 +1294,14 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
         }
         let current = line.len() - trimmed.len();
         if let Some(&want) = expected.get(&row) {
-            if current < want && current < want.saturating_sub(indent_size).max(1) {
+            // Raise clearly-too-shallow lines: either the indent is not a
+            // multiple of indent_size (explicitly wrong — matches the rule's
+            // "should be multiple of N" report), or it is a full level short
+            // of the expected indent. Continuation lines that are a multiple
+            // but only slightly shallow are left alone.
+            let non_multiple = current % indent_size != 0;
+            let full_level_short = current < want.saturating_sub(indent_size).max(1);
+            if current < want && (non_multiple || full_level_short) {
                 let has_nl = line.ends_with('\n');
                 output.push_str(&" ".repeat(want));
                 output.push_str(trimmed.trim_end_matches('\n'));
