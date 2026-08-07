@@ -6,12 +6,55 @@ impl Rule for CommentWrappingRule {
     fn id(&self) -> &'static str {
         "standard:comment-wrapping"
     }
-    fn check(&self, _t: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
-        // Fail closed: the previous line-scan heuristic produced mass false
-        // positives on real projects (verified against a live Spotless 8.8.0 +
-        // ktlint 1.8.0 oracle with zero violations). A CST-aware implementation
-        // must replace this before the rule can be re-enabled.
-        Vec::new()
+    /// Mirrors ktlint 1.8 CommentWrappingRule (main case): a block comment
+    /// with code both before and after it on the same line is disallowed.
+    /// `{ /* no-op */ }` is allowed.
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind().contains("comment") {
+                let text = &source[node.start_byte()..node.end_byte()];
+                if !text.starts_with("/*") {
+                    let mut w = node.walk();
+                    for c in node.children(&mut w) {
+                        stack.push(c);
+                    }
+                    continue;
+                }
+                // Line of the comment; code before and after on the same line.
+                let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+                let line_end = source[node.end_byte()..]
+                    .find('\n')
+                    .map_or(source.len(), |i| node.end_byte() + i);
+                let before = source[line_start..node.start_byte()].trim();
+                let after = source[node.end_byte()..line_end].trim();
+                let code_before = !before.is_empty();
+                let code_after = !after.is_empty();
+                // `{ /* no-op */ }` allowed.
+                let lbrace_rbrace = before.ends_with('{') && after.starts_with('}');
+                if (code_before && code_after) && !lbrace_rbrace {
+                    let line = source[..node.start_byte()]
+                        .bytes()
+                        .filter(|&b| b == b'\n')
+                        .count()
+                        + 1;
+                    violations.push(Violation {
+                        file: String::new(),
+                        line,
+                        col: node.start_byte() - line_start + 1,
+                        rule_id: self.id().into(),
+                        message: "A block comment in between other elements on the same line is disallowed".into(),
+                        auto_fixable: false,
+                    });
+                }
+            }
+            let mut w = node.walk();
+            for c in node.children(&mut w) {
+                stack.push(c);
+            }
+        }
+        violations
     }
 }
 
