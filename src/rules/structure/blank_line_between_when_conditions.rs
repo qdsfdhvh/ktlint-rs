@@ -1,9 +1,8 @@
 //! standard:blank-line-between-when-conditions
 //!
-//! ktlint separates a when-branch whose body is a block (`{ ... }`) from the
-//! previous branch with a blank line. Branches with simple-expression bodies
-//! may sit adjacent. Mirrors ktlint 1.8 behavior verified against the live
-//! Spotless oracle.
+//! ktlint 1.8: when at least one when-condition is multiline (or a branch is
+//! preceded by a comment), a blank line is required between every
+//! when-condition. Otherwise branches sit adjacent.
 use crate::rules::{Rule, Violation};
 
 pub struct BlankLineBetweenWhenConditions;
@@ -12,47 +11,69 @@ impl Rule for BlankLineBetweenWhenConditions {
     fn id(&self) -> &'static str {
         "standard:blank-line-between-when-conditions"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        let mut in_when = false;
-        let mut prev_is_block = false;
-        for i in 0..l.len() {
-            let t = l[i].trim();
-            if !in_when {
-                // `when` can sit mid-expression (`val x = when(x) {`); detect by
-                // word boundary to avoid `somewhen` false positives.
-                let has_when = t
-                    .split(|c: char| !c.is_alphanumeric() && c != '_')
-                    .any(|w| w == "when");
-                if has_when && t.contains('{') && !t.contains('}') {
-                    in_when = true;
-                    prev_is_block = false;
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "when_expression" {
+                // Direct when-entry children (skip nested whens inside bodies).
+                let entries: Vec<tree_sitter::Node> = {
+                    let mut w = node.walk();
+                    node.children(&mut w)
+                        .filter(|c| c.kind() == "when_entry")
+                        .collect()
+                };
+                if entries.len() < 2 {
+                    let mut w = node.walk();
+                    for c in node.children(&mut w) {
+                        stack.push(c);
+                    }
+                    continue;
                 }
-                continue;
-            }
-            if t == "}" {
-                in_when = false;
-                continue;
-            }
-            if t.contains("->") {
-                let this_is_block = t.ends_with('{');
-                // A block-body branch is separated from any previous branch;
-                // the first branch after `when {` needs no separator.
-                let has_prev_branch = i > 1 && (prev_is_block || l[i - 1].trim().contains("->"));
-                if this_is_block && has_prev_branch && !l[i - 1].trim().is_empty() {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 1,
-                        col: 1,
-                        rule_id: self.id().into(),
-                        message: "Consider blank line between when conditions".into(),
-                        auto_fixable: true,
-                    });
+                // A condition is multiline when the text before `->` (or the
+                // whole entry, when there is no arrow at the top level) spans
+                // more than one line.
+                let has_multiline = entries.iter().any(|e| {
+                    let text = &s[e.start_byte()..e.end_byte()];
+                    match text.find("->") {
+                        Some(arrow) => {
+                            let cond = &text[..arrow];
+                            cond.contains('\n')
+                        }
+                        None => e.start_position().row != e.end_position().row,
+                    }
+                });
+                if has_multiline {
+                    for k in 1..entries.len() {
+                        let prev = entries[k - 1];
+                        let cur = entries[k];
+                        // Whitespace between the previous entry's end and this
+                        // entry's start must contain a blank line.
+                        let gap = &s[prev.end_byte()..cur.start_byte()];
+                        let blank_count = gap.matches('\n').count();
+                        if blank_count < 2 {
+                            let line = s[..cur.start_byte()]
+                                .bytes()
+                                .filter(|&b| b == b'\n')
+                                .count()
+                                + 1;
+                            v.push(Violation {
+                                file: String::new(),
+                                line,
+                                col: 1,
+                                rule_id: self.id().into(),
+                                message:
+                                    "Add a blank line between all when-conditions in case at least one multiline when-condition is found in the statement"
+                                        .into(),
+                                auto_fixable: true,
+                            });
+                        }
+                    }
                 }
-                prev_is_block = this_is_block;
-            } else if !t.is_empty() {
-                // Inside a branch block body; prev branch was a block.
+            }
+            let mut w = node.walk();
+            for c in node.children(&mut w) {
+                stack.push(c);
             }
         }
         v

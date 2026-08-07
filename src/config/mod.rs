@@ -105,14 +105,12 @@ impl CodeStyle {
             Self::AndroidStudio => matches!(
                 rule_id,
                 "standard:no-wildcard-imports"
-                    | "standard:import-ordering"
                     | "standard:trailing-comma"
                     | "standard:no-unused-imports"
                     | "standard:multiline-expression-wrapping"
                     | "standard:no-empty-first-line-in-class-body"
                     | "standard:argument-list-wrapping"
                     | "standard:no-consecutive-comments"
-                    | "standard:blank-line-between-when-conditions"
                     | "standard:when-entry-bracing"
             ),
             Self::IntelliJIdea => matches!(
