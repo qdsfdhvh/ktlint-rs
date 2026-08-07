@@ -6,11 +6,77 @@ impl Rule for FunctionLiteralRule {
     fn id(&self) -> &'static str {
         "standard:function-literal"
     }
-    fn check(&self, _tree: &tree_sitter::Tree, _source: &str) -> Vec<Violation> {
-        // The real ktlint rule formats lambda parameter lists and arrows. The old
-        // line heuristic flagged every `val x: () -> Unit = {}` declaration, so
-        // remain fail-closed until the CST implementation is ported and verified.
-        Vec::new()
+    /// Mirrors ktlint 1.8 FunctionLiteralRule (report half):
+    /// - `{ a\n    -> … }` — a single parameter and its arrow must stay on
+    ///   one line ("No newline expected after parameter").
+    /// - `{\n    a, b -> … }` — parameters must stay on the `{` line
+    ///   ("No newline expected before parameter").
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let mut violations = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "lambda_literal" {
+                // Only lambdas with an explicit parameter list are relevant —
+                // `buildList { … }` (no parameters) is fine.
+                let has_params = {
+                    let mut w = node.walk();
+                    let kids: Vec<String> = node
+                        .children(&mut w)
+                        .map(|c| c.kind().to_string())
+                        .collect();
+                    kids.iter().any(|k| k == "lambda_parameters")
+                };
+                let text = &source[node.start_byte()..node.end_byte()];
+                let lbrace = text.find('{');
+                let arrow = text.find("->");
+
+                if has_params {
+                    if let (Some(lbrace), Some(arrow)) = (lbrace, arrow) {
+                        // `{` directly followed by a newline before the parameter
+                        // list — parameters must stay on the `{` line.
+                        let after_lbrace = &text[lbrace + 1..];
+                        let after_ws =
+                            after_lbrace.trim_start_matches(|c: char| c == ' ' || c == '\t');
+                        if after_ws.starts_with('\n') {
+                            let pos = node.start_byte() + lbrace + 1;
+                            let line = source[..pos].bytes().filter(|&b| b == b'\n').count() + 1;
+                            let line_start = source[..pos].rfind('\n').map_or(0, |i| i + 1);
+                            violations.push(Violation {
+                                file: String::new(),
+                                line,
+                                col: pos - line_start + 1,
+                                rule_id: self.id().into(),
+                                message: "No newline expected before parameter".into(),
+                                auto_fixable: true,
+                            });
+                        }
+                        // A newline directly before `->` with a single parameter —
+                        // parameter and arrow must stay together.
+                        let params = &text[lbrace + 1..arrow];
+                        // Single parameter followed by a newline before `->`.
+                        if params.contains('\n') && !params.contains(',') {
+                            let pos = node.start_byte() + arrow;
+                            let line = source[..pos].bytes().filter(|&b| b == b'\n').count() + 1;
+                            let line_start = source[..pos].rfind('\n').map_or(0, |i| i + 1);
+                            violations.push(Violation {
+                                file: String::new(),
+                                line,
+                                col: pos - line_start + 1,
+                                rule_id: self.id().into(),
+                                message: "No newline expected after parameter".into(),
+                                auto_fixable: true,
+                            });
+                        }
+                    }
+                }
+            }
+            for i in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(i) {
+                    stack.push(child);
+                }
+            }
+        }
+        violations
     }
 }
 
