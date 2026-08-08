@@ -52,6 +52,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ inputs.tag || github.ref_name }}" \
-            "target/${{ matrix.target }}/release/ktlint-rs${{ matrix.suffix == 'windows-x86_64.exe' && '.exe' || '' }}" \
-            --clobber
+          SRC="target/${{ matrix.target }}/release/ktlint-rs${{ matrix.suffix == 'windows-x86_64.exe' && '.exe' || '' }}"
+          # Upload with a platform-suffixed asset name so linux/macOS
+          # binaries don't clobber each other (bare `ktlint-rs`).
+          gh release upload "${{ inputs.tag || github.ref_name }}" "$SRC#ktlint-rs-${{ matrix.suffix }}" --clobber
