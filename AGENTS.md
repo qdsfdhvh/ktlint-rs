@@ -4,6 +4,17 @@
 > **Core principles**: Pure Rust, zero JVM, <1s scan
 > **Details**: see [docs/DESIGN.md](docs/DESIGN.md)
 
+## Rules — read before acting
+
+At task start, scan [`.agents/rules/INDEX.md`](.agents/rules/INDEX.md) — the
+fact-pattern → rule file table. If a row matches, **STOP and read that rule
+file before coding**. In particular:
+
+- **Any git write** (commit/push/branch/merge/PR) → `git-workflow/RULE.md` first.
+- **Installing/updating the local `ktlint-rs` binary or releasing** →
+  `local-install/RULE.md` first (local install must come from a GitHub
+  release, never a local build copy).
+
 ## Project Overview
 
 **ktlint-rs** is a pure-Rust rewrite of Pinterest ktlint and detekt.
@@ -89,18 +100,3 @@ Pure Rust type resolution via CST heuristics (`src/resolver/type_bridge.rs`):
 - **Memory release**: Immediate release after lint completes
 - **No daemon**: Process must have clear exit point
 
-## Local install discipline (hard rule)
-
-The local `ktlint-rs` on PATH (`~/.cargo/bin/ktlint-rs`) must be installed
-**only from a GitHub release** — never by copying a local build
-(`target/release/ktlint-rs`) or by `cargo install` from a working tree.
-
-- Official install: `scripts/install-release.sh [tag] [install-dir]` (downloads
-  the per-platform asset from `github.com/qdsfdhvh/ktlint-rs/releases`).
-- Before tagging: bump `Cargo.toml`/`Cargo.lock`, merge the version PR with a
-  green CI (including perf + mutation gates), then `git tag vX.Y.Z` and
-  `gh release create` — the release workflow uploads linux/macOS/Windows
-  binaries automatically.
-- Local `target/release` builds are for development/testing only and must
-  never replace the PATH binary.
-- Verify after install: `ktlint-rs --version` must equal the released tag.
