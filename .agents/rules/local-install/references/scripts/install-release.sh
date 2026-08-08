@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Official install: fetch a ktlint-rs binary from the GitHub release (never
 # from a local build). Usage:
-#   ./scripts/install-release.sh [tag] [install-dir]
+#   references/scripts/install-release.sh [tag] [install-dir]
 # tag defaults to latest; install-dir defaults to ~/.cargo/bin.
 set -euo pipefail
 

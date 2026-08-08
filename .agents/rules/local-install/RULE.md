@@ -8,7 +8,7 @@ The local `ktlint-rs` on PATH (`~/.cargo/bin/ktlint-rs`) must be installed
 **only from a GitHub release** — never by copying a local build
 (`target/release/ktlint-rs`) and never `cargo install` from a working tree.
 
-- Official install: `scripts/install-release.sh [tag] [install-dir]`
+- Official install: `references/scripts/install-release.sh [tag] [install-dir]`
   (downloads the per-platform asset from
   `github.com/qdsfdhvh/ktlint-rs/releases/download/<tag>/`).
 - Local `target/release` builds are for development/testing only and must
@@ -25,4 +25,4 @@ The local `ktlint-rs` on PATH (`~/.cargo/bin/ktlint-rs`) must be installed
    (`.github/workflows/release.yml`) builds and uploads linux/macOS/Windows
    binaries.
 4. `gh release create vX.Y.Z --title ... --notes ...` if not auto-created.
-5. Install locally via `scripts/install-release.sh vX.Y.Z`.
+5. Install locally via `references/scripts/install-release.sh vX.Y.Z`.
