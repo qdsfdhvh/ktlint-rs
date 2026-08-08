@@ -18,11 +18,63 @@ impl Rule for ClassSignatureSpacing {
         let mut violations = Vec::new();
         let bytes = source.as_bytes();
         self.walk(tree.root_node(), bytes, &mut violations);
+        self.check_signature_collapse(tree, source, &mut violations);
         violations
     }
 }
 
 impl ClassSignatureSpacing {
+    /// A multiline class signature that fits on one line must collapse —
+    /// ktlint ClassSignatureRule ("No whitespace expected between opening
+    /// parenthesis and first parameter name"). Classes only — function
+    /// signatures are handled by FunctionSignatureRule, which conflicts with
+    /// parameter-list-wrapping on the oracle fixture corpus.
+    fn check_signature_collapse(&self, tree: &tree_sitter::Tree, s: &str, v: &mut Vec<Violation>) {
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "class_declaration" {
+                let params = {
+                    let mut w = node.walk();
+                    let mut found = None;
+                    for c in node.children(&mut w) {
+                        if c.kind() == "class_parameters" || c.kind() == "primary_constructor" {
+                            found = Some(c);
+                            break;
+                        }
+                    }
+                    found
+                };
+                if let Some(p) = params {
+                    if p.start_position().row != p.end_position().row {
+                        let text = &s[node.start_byte()..node.end_byte()];
+                        let single: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+                        let ls = s[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+                        let indent = s[ls..node.start_byte()].len();
+                        if indent + single.len() <= 120 {
+                            let pos = p.start_byte() + 1;
+                            let line = s[..pos].bytes().filter(|&b| b == b'\n').count() + 1;
+                            let line_start = s[..pos].rfind('\n').map_or(0, |i| i + 1);
+                            v.push(Violation {
+                                file: String::new(),
+                                line,
+                                col: pos - line_start + 1,
+                                rule_id: self.id().into(),
+                                message:
+                                    "No whitespace expected between opening parenthesis and first parameter name"
+                                        .into(),
+                                auto_fixable: true,
+                            });
+                        }
+                    }
+                }
+            }
+            let mut w = node.walk();
+            for c in node.children(&mut w) {
+                stack.push(c);
+            }
+        }
+    }
+
     fn walk(&self, node: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
         if node.kind() == "class_declaration" {
             self.check_class(&node, bytes, violations);
