@@ -27,16 +27,44 @@ impl Rule for Indentation {
         let mut in_block_comment = false;
         let mut in_raw_string = false;
 
-        // Detect KTS files: if no class/fun/object declarations, skip indent
+        // Detect KTS files: if no class/fun/object declarations, skip indent.
+        // Skip leading modifiers (public/private/sealed/data/...) before
+        // checking the first keyword — `public sealed interface` must count.
         let is_kts = !lines.iter().any(|l| {
             let t = l.trim();
-            let kw = t.split_whitespace().next().unwrap_or("");
+            if t.is_empty() || t.starts_with("//") || t.starts_with("/*") || t.starts_with("*") {
+                return false;
+            }
+            let mut words = t.split_whitespace();
+            let mut kw = words.next().unwrap_or("");
+            while matches!(
+                kw,
+                "public"
+                    | "private"
+                    | "protected"
+                    | "internal"
+                    | "open"
+                    | "abstract"
+                    | "final"
+                    | "sealed"
+                    | "data"
+                    | "inline"
+                    | "external"
+                    | "const"
+                    | "suspend"
+                    | "override"
+                    | "companion"
+                    | "annotation"
+                    | "value"
+                    | "expect"
+                    | "actual"
+            ) {
+                kw = words.next().unwrap_or("");
+            }
             matches!(
                 kw,
                 "class" | "fun" | "object" | "interface" | "enum" | "data"
-            ) && !t.starts_with("//")
-                && !t.starts_with("/*")
-                && !t.starts_with("*")
+            )
         });
         if is_kts {
             return violations;
@@ -133,14 +161,53 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
             break;
         }
         let t = line.trim();
-        // Skip string content: `{`/`}` inside quotes (or raw strings) are not
-        // block delimiters and would inflate the depth.
+        // Skip string content and comments: `{`/`}` inside quotes (or raw
+        // strings), escaped quotes (`\"`), and comments are not block
+        // delimiters and would inflate the depth.
         let mut in_string = false;
+        let mut in_block_comment = false;
         let mut cleaned = String::with_capacity(t.len());
-        let chars = t.chars().peekable();
-        for c in chars {
+        let mut chars = t.chars().peekable();
+        while let Some(c) = chars.next() {
+            if !in_string && !in_block_comment {
+                if c == '/' && chars.peek() == Some(&'/') {
+                    // line comment: skip to end of line
+                    break;
+                }
+                if c == '/' && chars.peek() == Some(&'*') {
+                    in_block_comment = true;
+                    chars.next();
+                    continue;
+                }
+            }
+            if in_block_comment {
+                if c == '*' && chars.peek() == Some(&'/') {
+                    in_block_comment = false;
+                    chars.next();
+                }
+                continue;
+            }
+            if c == '\\' {
+                // escape: `\"` inside a string must not toggle in_string
+                chars.next();
+                continue;
+            }
+            if c == '\'' && !in_string {
+                // character literal `'{'` — its interior is not code
+                loop {
+                    match chars.next() {
+                        Some('\\') => {
+                            chars.next();
+                        }
+                        Some('\'') | None => break,
+                        _ => {}
+                    }
+                }
+                continue;
+            }
             if c == '"' {
                 in_string = !in_string;
+                continue;
             }
             if in_string && (c == '{' || c == '}') {
                 continue;
@@ -235,6 +302,36 @@ mod tests {
     #[test]
     fn kts_ignored() {
         let src = "plugins {\n    id(\"com.android\")\n}\n";
+        assert!(check(src, 4).is_empty());
+    }
+
+    #[test]
+    fn modifier_prefixed_declarations_not_treated_as_kts() {
+        // Issue #152: `public sealed interface` starts with a modifier, so the
+        // old first-keyword KTS test skipped indentation entirely.
+        let src =
+            "public sealed interface Action {\n    public data object Open :\n      Action\n}\n";
+        assert!(!check(src, 4).is_empty());
+    }
+
+    #[test]
+    fn escaped_quote_in_string_does_not_inflate_depth() {
+        // `\"{some_name\"` — the escaped quote must not end the string, so
+        // `{` stays inside it and does not raise the expected depth.
+        let src = "class A {\n    fun f() {\n        assertEquals(\n            \"a \\\"{x}\\\" b\",\n            y\n        )\n    }\n}\n";
+        assert!(check(src, 4).is_empty());
+    }
+
+    #[test]
+    fn char_literal_brace_does_not_inflate_depth() {
+        let src = "class A {\n    fun f() {\n        val i = value.indexOf('{')\n        val p = value.substringBefore('{', \"\")\n        foo()\n    }\n}\n";
+        assert!(check(src, 4).is_empty());
+    }
+
+    #[test]
+    fn apostrophe_inside_string_is_not_char_literal() {
+        // `shouldn't` inside a string — the `'` must not start a char literal.
+        let src = "class A {\n    fun f() {\n        require(length > 0) { \"range shouldn't be empty\" }\n        parts.add(x)\n    }\n}\n";
         assert!(check(src, 4).is_empty());
     }
 }
