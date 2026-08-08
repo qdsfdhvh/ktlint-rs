@@ -79,32 +79,43 @@ impl Rule for Indentation {
                 continue;
             }
 
-            // Core JVM logic: indent must be a multiple of indent_size.
+            // Core JVM logic: indent must be a multiple of indent_size, and
+            // must also match the nesting depth — a body one level shallower
+            // than its block (e.g. 4 spaces where 8 are required) is wrong
+            // even though 4 is a multiple. ktlint 1.8 reports both.
             let mut too_shallow = false;
+            let mut expected_indent: Option<usize> = None;
             if spaces % is != 0 {
                 too_shallow = true;
             }
-            // Also flag code that sits at the top level of a block but has no
-            // indentation at all (`class Foo {\nval x`): clearly unformatted
-            // new code that the formatter should fix. Closing braces and
-            // continuation lines are skipped.
-            if !too_shallow
-                && spaces == 0
-                && !trimmed.starts_with('}')
-                && expected_depth(&lines, i) > 0
-            {
-                too_shallow = true;
+            // Nesting-depth check. Closing braces and continuation lines
+            // (lines whose expected depth is unchanged but whose indent is a
+            // continuation alignment) are skipped conservatively: only a line
+            // a full level short of its brace depth is reported.
+            let depth = expected_depth(&lines, i);
+            if !too_shallow && !trimmed.starts_with('}') {
+                let expected = depth * is;
+                if expected > 0 && spaces < expected && expected - spaces >= is {
+                    too_shallow = true;
+                    expected_indent = Some(expected);
+                }
             }
             if too_shallow {
+                let message = match expected_indent {
+                    Some(want) => {
+                        format!("Unexpected indentation ({}) (should be {})", spaces, want)
+                    }
+                    None => format!(
+                        "Unexpected indentation ({}) (should be multiple of {})",
+                        spaces, is
+                    ),
+                };
                 violations.push(Violation {
                     file: String::new(),
                     line: i + 1,
                     col: 1,
                     rule_id: self.id().into(),
-                    message: format!(
-                        "Unexpected indentation ({}) (should be multiple of {})",
-                        spaces, is
-                    ),
+                    message,
                     auto_fixable: true,
                 });
             }
