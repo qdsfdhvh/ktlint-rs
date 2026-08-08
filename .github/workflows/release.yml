@@ -3,6 +3,12 @@ name: Release binaries
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to upload release assets for'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -37,13 +43,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 \
-            || gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}"
+          TAG="${{ inputs.tag || github.ref_name }}"
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" --title "$TAG"
       - name: Upload asset
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ github.ref_name }}" \
+          gh release upload "${{ inputs.tag || github.ref_name }}" \
             "target/${{ matrix.target }}/release/ktlint-rs${{ matrix.suffix == 'windows-x86_64.exe' && '.exe' || '' }}" \
             --clobber
