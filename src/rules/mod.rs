@@ -114,6 +114,22 @@ impl RuleEngine {
     }
 
     pub fn check(&self, path: &str, tree: &Tree, source: &str) -> Vec<Violation> {
+        // Issue #153: structurally invalid Kotlin (unbalanced braces, garbage
+        // tokens, unterminated string literals) must fail the gate, matching
+        // ktlint's "Not a valid Kotlin file". tree-sitter recovers from many
+        // of these, so detection is a conservative heuristic — see
+        // `parser::structural_invalid`. Reported as a non-fixable violation so
+        // `--format` never claims it can repair the file.
+        if let Some((line, col)) = crate::parser::structural_invalid(source, tree) {
+            return vec![Violation {
+                file: path.to_string(),
+                line,
+                col,
+                rule_id: "standard:parse-error".into(),
+                message: "Not a valid Kotlin file".into(),
+                auto_fixable: false,
+            }];
+        }
         // Build SymbolTable once per file — 11 L1 rules share it.
         let sym_table = build_symbol_table(source, tree.root_node());
 
