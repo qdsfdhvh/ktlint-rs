@@ -88,3 +88,19 @@ Pure Rust type resolution via CST heuristics (`src/resolver/type_bridge.rs`):
 - **Startup < 50ms**: No daemon / rayon pool warmup
 - **Memory release**: Immediate release after lint completes
 - **No daemon**: Process must have clear exit point
+
+## Local install discipline (hard rule)
+
+The local `ktlint-rs` on PATH (`~/.cargo/bin/ktlint-rs`) must be installed
+**only from a GitHub release** — never by copying a local build
+(`target/release/ktlint-rs`) or by `cargo install` from a working tree.
+
+- Official install: `scripts/install-release.sh [tag] [install-dir]` (downloads
+  the per-platform asset from `github.com/qdsfdhvh/ktlint-rs/releases`).
+- Before tagging: bump `Cargo.toml`/`Cargo.lock`, merge the version PR with a
+  green CI (including perf + mutation gates), then `git tag vX.Y.Z` and
+  `gh release create` — the release workflow uploads linux/macOS/Windows
+  binaries automatically.
+- Local `target/release` builds are for development/testing only and must
+  never replace the PATH binary.
+- Verify after install: `ktlint-rs --version` must equal the released tag.
