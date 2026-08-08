@@ -1,6 +1,6 @@
 [package]
 name = "ktlint-rs"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 description = "A fast Kotlin linter and formatter written in Rust"
 license = "MIT"
