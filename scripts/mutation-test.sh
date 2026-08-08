@@ -13,7 +13,16 @@ MAX_FILES="${3:-40}"
 SEED=42
 
 [ -x "$BIN" ] || { echo "binary not found: $BIN" >&2; exit 1; }
-[ -d "$CORPUS" ] || { echo "corpus not found: $CORPUS" >&2; exit 1; }
+# Large fixtures (ktor, nowinandroid, …) are gitignored and need
+# scripts/setup-fixtures.sh. Fall back to the committed parity fixture; if
+# nothing is available (CI checkout without fixtures), skip the gate.
+if [ ! -d "$CORPUS" ]; then
+    CORPUS="tests/fixtures/spotless-parity"
+fi
+if [ ! -d "$CORPUS" ]; then
+    echo "no corpus available (skip mutation gate)"
+    exit 0
+fi
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
