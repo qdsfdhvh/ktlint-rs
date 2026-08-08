@@ -1296,11 +1296,13 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
         if let Some(&want) = expected.get(&row) {
             // Raise clearly-too-shallow lines: either the indent is not a
             // multiple of indent_size (explicitly wrong — matches the rule's
-            // "should be multiple of N" report), or it is a full level short
-            // of the expected indent. Continuation lines that are a multiple
-            // but only slightly shallow are left alone.
+            // "should be multiple of N" report), or it is at least a full
+            // level short of the expected indent (mirrors the check rule's
+            // `expected - spaces >= indent_size` condition, which fires at
+            // exactly one level short too). Continuation lines that are a
+            // multiple but only slightly shallow are left alone.
             let non_multiple = current % indent_size != 0;
-            let full_level_short = current < want.saturating_sub(indent_size).max(1);
+            let full_level_short = current.saturating_add(indent_size) <= want;
             if current < want && (non_multiple || full_level_short) {
                 let has_nl = line.ends_with('\n');
                 output.push_str(&" ".repeat(want));
@@ -2793,9 +2795,22 @@ mod tests {
         assert_eq!(fix_expression_operand_wrapping(end_op), end_op);
     }
 
+    #[test]
     fn fix_indent() {
         let src = "class Foo {\nval x = 1\n}";
         assert_eq!(fix_indentation(src, 4), "class Foo {\n    val x = 1\n}");
+    }
+    #[test]
+    fn fix_indent_exactly_one_level_short() {
+        // Regression for #148: a line at exactly one full level short of its
+        // block (8 spaces where 12 are expected) was reported by the check rule
+        // (expected - spaces >= indent_size) but never raised by the fixer
+        // (old condition required current < want - indent_size, missing ==).
+        let src = "class Indent {\n    fun run() {\n        listOf(1, 2, 3).forEach {\n        println(it)\n        }\n    }\n}\n";
+        let want = "class Indent {\n    fun run() {\n        listOf(1, 2, 3).forEach {\n            println(it)\n        }\n    }\n}\n";
+        assert_eq!(fix_indentation(src, 4), want);
+        // Idempotent: a second pass is a no-op.
+        assert_eq!(fix_indentation(want, 4), want);
     }
     #[test]
     fn fix_chain_wrap() {
