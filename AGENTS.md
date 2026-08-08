@@ -4,31 +4,23 @@
 > **Core principles**: Pure Rust, zero JVM, <1s scan
 > **Details**: see [docs/DESIGN.md](docs/DESIGN.md)
 
-## Rules — read before acting
+## Rules — STOP and read before acting
 
-At task start, scan [`.agents/rules/INDEX.md`](.agents/rules/INDEX.md) — the
-fact-pattern → rule file table. If a row matches, **STOP and read that rule
-file before coding**. In particular:
+Scan [`.agents/rules/INDEX.md`](.agents/rules/INDEX.md) at task start. If a
+row matches, **read that rule file before coding**. The non-negotiable ones:
 
-- **Any git write** (commit/push/branch/merge/PR) → `git-workflow/RULE.md` first.
-- **Installing/updating the local `ktlint-rs` binary or releasing** →
-  `local-install/RULE.md` first (local install must come from a GitHub
-  release, never a local build copy).
+- **Any git write** → `git-workflow/RULE.md`
+- **Installing/updating the local binary or releasing** → `local-install/RULE.md` (release-only installs)
+- **Rule/formatter changes** → `parity/RULE.md` (oracle + consumer-corpus gates)
+- **Hot-path changes** → `performance/RULE.md` (perf gates)
+- **Touching a consumer project** (kataris-app, ktor, …) → `scope/RULE.md` (validation only)
 
-## Project Overview
+## Project
 
-**ktlint-rs** is a pure-Rust rewrite of Pinterest ktlint and detekt.
-It aims for drop-in CLI compatibility and `.editorconfig` support,
-with startup under 50ms and per-file lint under 5ms.
-
-**Performance Constraints (hard requirements):**
-- **Low memory**: Free memory immediately after linting. No caching of file contents.
-- **Low CPU**: CPU usage drops to zero after lint completes. No background threads/rayon pool.
-- **Clean exit**: Process must exit cleanly (exit 0/1/2). No daemon or event loop.
-- **Rule lightweight**: Each rule's `check()` must be O(n) and side-effect free.
-- **Binary size**: release binary < 30MB.
-- **No daemon**: Process must have a clear exit point. No server/watch mode.
-- **Cache**: Uses `.cache/ktlint-rs/` directory for parser results/config to speed up repeated runs.
+**ktlint-rs** is a pure-Rust rewrite of Pinterest ktlint and detekt:
+drop-in CLI compatibility, `.editorconfig` support, startup <50ms,
+per-file lint <5ms, binary <30MB, clean exit (no daemon). Hard runtime
+gates are enforced by `scripts/perf-gates.sh` (see `performance/RULE.md`).
 
 ## Architecture
 
@@ -61,27 +53,12 @@ Use **rust-analyzer** as the LSP. It is the official Rust language server:
 Quick commands for agent development:
 
 ```bash
-# Fast type check (recommended, 2x faster than cargo check)
-cargo check
-
-# Strict lint (enable all warnings)
-cargo clippy --all-features -- -D warnings
-
-# Run all tests
-cargo test --all-features
-
-# Format code
-cargo fmt --all
-
-# Format check
-cargo fmt --all -- --check
+cargo check                                # fast type check
+cargo clippy --all-features -- -D warnings # strict lint
+cargo test --all-features                  # all tests
+cargo fmt --all && cargo fmt --all -- --check
 ```
 
-## Git Workflow
-
-- **Always branch + PR**: never push directly to `main`. Create a feature branch (`feat/...`, `fix/...`, `docs/...`, `ci/...`), push, and open a PR.
-- Docs-only changes (`**.md`, `docs/**`) skip CI via `paths-ignore` — no need to wait for build.
-- Commit messages: conventional commits (`feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, `test:`).
 ## TypeInfo Bridge (Phase 13)
 
 Pure Rust type resolution via CST heuristics (`src/resolver/type_bridge.rs`):
@@ -91,12 +68,3 @@ Pure Rust type resolution via CST heuristics (`src/resolver/type_bridge.rs`):
 - Extracts constructor parameter types (`class Foo(val x: Int)`)
 - Extracts parameter types (`fun bar(x: Int, y: String?)`)
 - L2 rules use `check_with_symbols()` to access TypeInfo
-
-## Constraints
-
-- **Pure Rust**: Zero JVM / kotlinc / Gradle dependencies
-- **Binary < 30MB**: Release mode
-- **Startup < 50ms**: No daemon / rayon pool warmup
-- **Memory release**: Immediate release after lint completes
-- **No daemon**: Process must have clear exit point
-
