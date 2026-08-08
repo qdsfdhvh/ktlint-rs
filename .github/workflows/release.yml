@@ -40,6 +40,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --target ${{ matrix.target }}
       - name: Ensure release exists
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
