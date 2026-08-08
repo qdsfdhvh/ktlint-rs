@@ -7,6 +7,7 @@ the whole directory.
 |---|---|
 | **Any git write** — commit, push, branch, merge, PR | `git-workflow/RULE.md` |
 | **Installing/updating the local `ktlint-rs` binary** on PATH (`~/.cargo/bin`), or tagging/releasing | `local-install/RULE.md` |
-| Changing rules / formatter behavior that must stay parity-clean | See `docs/DESIGN.md` § parity; the Spotless oracle differential must stay green (`scripts/spotless-differential.sh --offline`) |
-| Performance-sensitive changes | perf gates: `scripts/perf-gates.sh` (<30MB / <50ms / <5ms / clean exit) |
+| **Implementing/changing a rule or formatter behavior** — must stay parity-clean (oracle differential green, consumer corpus 0 violations) | `parity/RULE.md` |
+| **Performance-sensitive changes** — parsing, rule engine, formatter, cache | `performance/RULE.md` (`scripts/perf-gates.sh`: <30MB / <50ms / <5ms / clean exit) |
+| **Any task touching a consumer project** (kataris-app, ktor, …) — validation only, never edits | `scope/RULE.md` |
 | Corpus validation | mutation gates: `scripts/mutation-test.sh` (idempotence + convergence) |
