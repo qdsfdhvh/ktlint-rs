@@ -30,19 +30,13 @@ impl Rule for BlankLineBetweenWhenConditions {
                     }
                     continue;
                 }
-                // A condition is multiline when the text before `->` (or the
-                // whole entry, when there is no arrow at the top level) spans
-                // more than one line.
-                let has_multiline = entries.iter().any(|e| {
-                    let text = &s[e.start_byte()..e.end_byte()];
-                    match text.find("->") {
-                        Some(arrow) => {
-                            let cond = &text[..arrow];
-                            cond.contains('\n')
-                        }
-                        None => e.start_position().row != e.end_position().row,
-                    }
-                });
+                // A condition is multiline when the whole when-entry spans
+                // more than one line (a block body `1 -> {\n ... \n}` counts,
+                // matching ktlint 1.8). Single-line entries — including a
+                // single-line block `{ println() }` — do not.
+                let has_multiline = entries
+                    .iter()
+                    .any(|e| e.start_position().row != e.end_position().row);
                 if has_multiline {
                     for k in 1..entries.len() {
                         let prev = entries[k - 1];
@@ -77,5 +71,55 @@ impl Rule for BlankLineBetweenWhenConditions {
             }
         }
         v
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        BlankLineBetweenWhenConditions.check(&tree, src)
+    }
+
+    #[test]
+    fn all_single_line_entries_no_violation() {
+        let src = "fun f(x: Int) {\n    when (x) {\n        1 -> println(\"one\")\n        2 -> println(\"two\")\n        else -> println(\"other\")\n    }\n}\n";
+        assert!(check(src).is_empty());
+    }
+
+    #[test]
+    fn one_multiline_entry_separates_all() {
+        let src = "fun f(x: Int) {\n    when (x) {\n        1 -> {\n            println(\"one\")\n            println(\"uno\")\n        }\n        2 -> println(\"two\")\n        else -> println(\"other\")\n    }\n}\n";
+        let v = check(src);
+        assert_eq!(v.len(), 2);
+        assert_eq!(v[0].line, 7); // `2 ->` line
+        assert_eq!(v[1].line, 8); // `else ->` line
+        assert_eq!(v[0].rule_id, "standard:blank-line-between-when-conditions");
+    }
+
+    #[test]
+    fn single_line_block_body_is_not_multiline() {
+        let src = "fun f(x: Int) {\n    when (x) {\n        1 -> { println(\"one\") }\n        2 -> println(\"two\")\n    }\n}\n";
+        assert!(check(src).is_empty());
+    }
+
+    #[test]
+    fn all_multiline_entries_still_separated() {
+        let src = "fun f(x: Int) {\n    when (x) {\n        1 -> {\n            println(\"one\")\n        }\n        2 -> {\n            println(\"two\")\n        }\n    }\n}\n";
+        let v = check(src);
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].line, 6); // `2 -> {` line
+    }
+
+    #[test]
+    fn multiline_condition_triggers() {
+        let src = "fun f(x: Int) {\n    when (x) {\n        x +\n            1 -> println(\"one\")\n        2 -> println(\"two\")\n    }\n}\n";
+        let v = check(src);
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].line, 5); // `2 ->` line
     }
 }

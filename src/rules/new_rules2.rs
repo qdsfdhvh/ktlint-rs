@@ -148,7 +148,10 @@ impl Rule for NoSingleLineBlockCommentRule {
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         for (i, l) in s.lines().enumerate() {
-            if l.trim().starts_with("/*") && l.trim().ends_with("*/") {
+            let trimmed = l.trim();
+            // KDoc (`/** ... */`) is exempt — the rule targets plain block
+            // comments used where a line comment would do.
+            if trimmed.starts_with("/*") && !trimmed.starts_with("/**") && trimmed.ends_with("*/") {
                 v.push(Violation {
                     file: String::new(),
                     line: i + 1,

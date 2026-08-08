@@ -404,7 +404,7 @@ fn apply_spacing_rules(
             })?;
         }
         type Pass = (&'static str, fn(&str) -> String);
-        let passes: [Pass; 30] = [
+        let passes: [Pass; 29] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -456,10 +456,6 @@ fn apply_spacing_rules(
             ("standard:trailing-comma", fix_single_line_trailing_comma),
             ("standard:no-consecutive-blank-lines", fix_blank_lines),
             ("standard:no-blank-line-in-list", fix_blank_line_in_list),
-            (
-                "standard:blank-line-between-when-conditions",
-                fix_when_conditions_blank_lines,
-            ),
             ("legacy:brace-between-pass", fix_brace_between),
             ("legacy:double-space-pass", fix_double_spaces),
         ];
@@ -467,6 +463,17 @@ fn apply_spacing_rules(
             if owner.starts_with("legacy:") || rule_enabled(rule_configs, owner, code_style) {
                 text = safe_transform(owner, &text, |input| masked_transform(input, transform))?;
             }
+        }
+        if rule_enabled(
+            rule_configs,
+            "standard:blank-line-between-when-conditions",
+            code_style,
+        ) {
+            text = safe_transform(
+                "standard:blank-line-between-when-conditions",
+                &text,
+                fix_when_conditions_blank_lines,
+            )?;
         }
         text = safe_transform(
             "legacy:class-header-spacing-pass",
@@ -2248,49 +2255,76 @@ fn fix_class_header_spacing(source: &str) -> String {
     restore_protected(&fixed, &store)
 }
 
-/// `standard:blank-line-between-when-conditions` — insert a blank line before
-/// a when-branch whose body is a block (`else -> {`), separating it from a
-/// preceding simple-expression branch, mirroring ktlint 1.8.
+/// `standard:blank-line-between-when-conditions` — when at least one
+/// when-entry spans multiple lines (a block body `1 -> {\n ... \n}`), insert
+/// a blank line between every when-entry, mirroring ktlint 1.8. CST-driven
+/// with the same multiline test as the rule's check, so `--format` fixes
+/// exactly what `check` reports.
 fn fix_when_conditions_blank_lines(source: &str) -> String {
-    let lines: Vec<&str> = source.split_inclusive('\n').collect();
-    let mut out: Vec<&str> = Vec::with_capacity(lines.len());
-    let mut in_when = false;
-    let mut prev_was_branch = false;
-    for (i, line) in lines.iter().enumerate() {
-        let trimmed = line.trim();
-        if !in_when {
-            let has_when = trimmed
-                .split(|c: char| !c.is_alphanumeric() && c != '_')
-                .any(|w| w == "when");
-            if has_when && trimmed.contains('{') && !trimmed.contains('}') {
-                in_when = true;
-                prev_was_branch = false;
-            }
-            out.push(line);
-            continue;
-        }
-        if trimmed == "}" {
-            in_when = false;
-            out.push(line);
-            continue;
-        }
-        if trimmed.contains("->") {
-            let this_is_block = trimmed.ends_with('{');
-            if (prev_was_branch || this_is_block)
-                && i > 0
-                && !out.last().is_some_and(|l| l.trim().is_empty())
+    // Runs on the raw source (callers pass it directly, not via
+    // masked_transform). Mask string/comment interiors first so braces and
+    // `->` inside them are never touched. The masked text parses with
+    // SENTINEL error nodes (private-use chars), which is fine: when_expression
+    // structure survives, so no has_error guard here (mirrors
+    // fix_statement_wrapping).
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    let Some((masked, store)) = mask_protected(source, &tree) else {
+        return source.to_string();
+    };
+    // Re-parse the masked text so node byte offsets match the text we edit
+    // (SENTINELs change byte lengths; node offsets must come from the same
+    // string the edits will apply to).
+    let tree = parser.parse(&masked);
+    let source = &masked;
+    // (start_byte, end_byte) whitespace runs to replace with a blank line.
+    let mut edits: Vec<(usize, usize)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "when_expression" {
+            let mut w = node.walk();
+            let entries: Vec<tree_sitter::Node> = node
+                .children(&mut w)
+                .filter(|c| c.kind() == "when_entry")
+                .collect();
+            if entries.len() >= 2
+                && entries
+                    .iter()
+                    .any(|e| e.start_position().row != e.end_position().row)
             {
-                // Insert a blank line before this branch (unless one exists).
-                out.push("\n");
+                for pair in entries.windows(2) {
+                    // SENTINELs are multi-byte; clamp offsets to char
+                    // boundaries before slicing.
+                    let prev_end = source.floor_char_boundary(pair[0].end_byte());
+                    let cur_start = source.floor_char_boundary(pair[1].start_byte());
+                    let gap = &source[prev_end..cur_start];
+                    if gap.matches('\n').count() < 2 {
+                        edits.push((prev_end, cur_start));
+                    }
+                }
             }
-            prev_was_branch = this_is_block;
-        } else if !trimmed.is_empty() && !trimmed.starts_with('}') {
-            // Branch block body content; the block branch itself was already
-            // separated.
         }
-        out.push(line);
+        let mut w2 = node.walk();
+        let mut kids = Vec::new();
+        for c in node.children(&mut w2) {
+            kids.push(c);
+        }
+        for c in kids.into_iter().rev() {
+            stack.push(c);
+        }
     }
-    out.concat()
+    edits.sort_by_key(|(start, _)| std::cmp::Reverse(*start));
+    let mut text = source.to_string();
+    for (start, end) in edits {
+        // Derive the indent from the line the previous entry ended on.
+        let line_start = text[..start].rfind('\n').map_or(0, |i| i + 1);
+        let indent: String = text[line_start..start]
+            .chars()
+            .take_while(|c| *c == ' ' || *c == '\t')
+            .collect();
+        text.replace_range(start..end, &format!("\n\n{indent}"));
+    }
+    restore_protected(&text, &store)
 }
 
 fn fix_blank_lines(source: &str) -> String {
@@ -3526,5 +3560,97 @@ catch(e: E) { b() }"
     fn wrapping_fix_leaves_short_code_untouched() {
         let src = "package com.example\n\nval ok = shortCall(a, b)\n";
         assert_eq!(fix_wrapping(src, 4, 120), src);
+    }
+}
+
+#[cfg(test)]
+mod when_fixer_probe2 {
+    use super::*;
+
+    #[test]
+    fn probe() {
+        let src = "fun f(x: Int) {\n    when (x) {\n        1 -> {\n            println(\"one\")\n            println(\"uno\")\n        }\n        2 -> println(\"two\")\n        else -> println(\"other\")\n    }\n}\n";
+        // 直接 masked_transform 路径（与管线一致）
+        let out = masked_transform(src, fix_when_conditions_blank_lines);
+        println!("masked_transform CHANGED: {}", out != src);
+        if out != src {
+            println!("{out}");
+        }
+        // 看 masked 后 parse 是否有 error
+        let tree = parse_clean(src);
+        println!("parse_clean(src): {}", tree.is_some());
+        if let Some(t) = &tree {
+            let (masked, _store) = mask_protected(src, t).unwrap();
+            let mtree = parse_clean(&masked);
+            println!("parse_clean(masked): {}", mtree.is_some());
+            if let Some(mt) = &mtree {
+                println!("masked has_error: {}", mt.root_node().has_error());
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod when_fixer_probe3 {
+    use super::*;
+
+    #[test]
+    fn probe() {
+        let src = "fun f(x: Int) {\n    when (x) {\n        1 -> {\n            println(\"one\")\n            println(\"uno\")\n        }\n        2 -> println(\"two\")\n        else -> println(\"other\")\n    }\n}\n";
+        let tree = parse_clean(src).unwrap();
+        let (masked, _store) = mask_protected(src, &tree).unwrap();
+        for (i, ch) in masked.chars().enumerate() {
+            if ch == '\u{E000}' {
+                let (bs, be) = (i.saturating_sub(5), (i + 10).min(masked.len()));
+                println!(
+                    "SENTINEL at char {i}: {:?}",
+                    masked.get(bs..be).unwrap_or("")
+                );
+            }
+        }
+        let mtree = KotlinParser::new().parse(&masked);
+        println!("masked root: {}", mtree.root_node().kind());
+        let mut stack = vec![mtree.root_node()];
+        let mut count = 0;
+        while let Some(n) = stack.pop() {
+            if n.is_error() {
+                count += 1;
+                if count <= 3 {
+                    let (s, e) = (n.start_byte(), n.end_byte());
+                    println!(
+                        "ERROR node {}..{}: {:?}",
+                        s,
+                        e,
+                        masked.get(s..e).unwrap_or("")
+                    );
+                }
+            }
+            let mut w = n.walk();
+            let mut kids = Vec::new();
+            for c in n.children(&mut w) {
+                kids.push(c);
+            }
+            for c in kids.into_iter().rev() {
+                stack.push(c);
+            }
+        }
+        println!("error nodes: {count}");
+        // 看 when_expression 在 masked 里是否解析
+        let mut stack2 = vec![mtree.root_node()];
+        while let Some(n) = stack2.pop() {
+            if n.kind() == "when_expression" {
+                let mut w = n.walk();
+                let kids: Vec<tree_sitter::Node> = n.children(&mut w).collect();
+                println!("when_expression in masked: {} children", kids.len());
+            }
+            let mut w = n.walk();
+            let mut kids = Vec::new();
+            for c in n.children(&mut w) {
+                kids.push(c);
+            }
+            for c in kids.into_iter().rev() {
+                stack2.push(c);
+            }
+        }
     }
 }
