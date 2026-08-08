@@ -118,10 +118,45 @@ impl Rule for FunctionSignatureSpacing {
         let l: Vec<&str> = s.lines().collect();
         for (i, ln) in l.iter().enumerate() {
             let t = ln.trim();
-            if t.starts_with("fun ") && t.contains('(') && !t.contains(')') {
+            // A function whose parameter list opens on this line but has not
+            // closed yet (`fun foo(`, also with modifiers `private fun foo(`):
+            // ktlint's FunctionSignatureRule reports the whitespace before the
+            // first parameter on the next line (single-line collapse).
+            let has_fun = t
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .any(|w| w == "fun");
+            if has_fun && t.contains('(') && !t.contains(')') {
                 let after_open = t.split_once('(').map_or("", |(_, rest)| rest).trim();
-                if !after_open.is_empty() {
+                let params_on_next_line = t.trim_end().ends_with('(');
+                if !after_open.is_empty() || params_on_next_line {
                     let next = l.get(i + 1).copied().unwrap_or("");
+                    // Skip an empty multiline parameter list (`fun foo(\n)`).
+                    if next.trim().starts_with(')') {
+                        continue;
+                    }
+                    // Only report when the signature fits on one line — a
+                    // genuinely long multiline signature is fine.
+                    let mut sig_parts = vec![t];
+                    let mut j = i + 1;
+                    while j < l.len() {
+                        let tj = l[j].trim();
+                        sig_parts.push(tj);
+                        let te = tj.trim_end();
+                        // Closing `)` of the parameter list: line ends with
+                        // `)` (or `) {` / `) =`). Parameters like `() -> Unit`
+                        // contain parens but do not end the list.
+                        if (te.ends_with(')') && !tj.contains("->"))
+                            || (te.ends_with('{') && tj.contains(')'))
+                        {
+                            break;
+                        }
+                        j += 1;
+                    }
+                    let line_start = ln.len() - t.len();
+                    let single_len = line_start + sig_parts.join(" ").chars().count();
+                    if single_len > self.max_length {
+                        continue;
+                    }
                     v.push(Violation {
                         file: String::new(),
                         line: i + 2,
