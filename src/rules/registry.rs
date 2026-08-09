@@ -29,7 +29,10 @@ impl Registry {
             Box::new(spacing::ArgumentListWrapping),
             Box::new(spacing::BlockCommentStar),
             Box::new(spacing::block_comment_alignment::BlockCommentInitialStarAlignment),
-            Box::new(spacing::ClassSignatureSpacing::new(config.code_style)),
+            Box::new(spacing::ClassSignatureSpacing::new(
+                config.code_style,
+                config.max_line_length,
+            )),
             Box::new(spacing::ColonSpacing),
             Box::new(spacing::CommaSpacing),
             Box::new(spacing::ParameterListSpacing),
