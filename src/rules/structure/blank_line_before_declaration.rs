@@ -138,7 +138,14 @@ fn check_pair(
     };
     // Anything between the previous code's end and the effective start must
     // not contain a blank line.
-    let gap = &source[prev.end_byte().min(source.len())..line_start];
+    let start = prev.end_byte().min(source.len());
+    // A leading comment can sit inside the previous declaration's byte range
+    // when the effective start row precedes prev's end (multi-byte masking
+    // aside); guard the slice so it can never invert.
+    if start > line_start {
+        return;
+    }
+    let gap = &source[start..line_start];
     if gap.contains("\n\n") {
         return;
     }
