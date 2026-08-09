@@ -30,27 +30,40 @@ impl Rule for BlankLineBetweenWhenConditions {
                     }
                     continue;
                 }
-                // A condition is multiline when the whole when-entry spans
-                // more than one line (a block body `1 -> {\n ... \n}` counts,
-                // matching ktlint 1.8). Single-line entries — including a
-                // single-line block `{ println() }` — do not.
-                let has_multiline = entries
-                    .iter()
-                    .any(|e| e.start_position().row != e.end_position().row);
+                // A condition is multiline when a when-entry spans more than
+                // one line (a block body `1 -> {\n ... \n}` counts, matching
+                // ktlint 1.8). Single-line entries — including a single-line
+                // block `{ println() }` — do not.
+                //
+                // Detection uses only each entry's *start row*, never its end
+                // row or byte range: tree-sitter-kotlin mis-parses conditions
+                // that start with a parenthesised comparison (`(a ?: 0) > 0 ->
+                // ...` followed by another condition) and swallows the next
+                // condition into the current entry's end, which would make a
+                // clean single-line `when` look multiline (issue #160).
+                let mut starts: Vec<usize> =
+                    entries.iter().map(|e| e.start_position().row).collect();
+                starts.sort_unstable();
+                starts.dedup();
+                let when_end = node.end_position().row;
+                let has_multiline = starts.windows(2).any(|w| w[1] - w[0] > 1)
+                    || starts.last().is_some_and(|&last| when_end - last > 1);
                 if has_multiline {
+                    // A blank line must separate each entry from the previous
+                    // one. `starts` are the entries' start rows (reliable even
+                    // when tree-sitter mis-parses the entry range); entry k is
+                    // missing its blank line when the text between the end of
+                    // entry k-1 and the start of entry k contains fewer than
+                    // two newlines.
                     for k in 1..entries.len() {
                         let prev = entries[k - 1];
                         let cur = entries[k];
-                        // Whitespace between the previous entry's end and this
-                        // entry's start must contain a blank line.
                         let gap = &s[prev.end_byte()..cur.start_byte()];
                         let blank_count = gap.matches('\n').count();
                         if blank_count < 2 {
-                            let line = s[..cur.start_byte()]
-                                .bytes()
-                                .filter(|&b| b == b'\n')
-                                .count()
-                                + 1;
+                            // Report on the entry's own start row (start rows
+                            // are reliable; the byte range is not).
+                            let line = cur.start_position().row + 1;
                             v.push(Violation {
                                 file: String::new(),
                                 line,
@@ -113,6 +126,16 @@ mod tests {
         let v = check(src);
         assert_eq!(v.len(), 1);
         assert_eq!(v[0].line, 6); // `2 -> {` line
+    }
+
+    #[test]
+    fn paren_conditions_all_single_line_no_violation() {
+        // Issue #160 regression: `(a ?: 0) > 0 ->` conditions make
+        // tree-sitter inflate the first entry's range into the next
+        // condition, which used to look multiline. Detection must use entry
+        // start rows only.
+        let src = "class C {\n    fun f() {\n        val s = when {\n            (a ?: 0) > 0 -> \"A\"\n            (b ?: 0) > 0 -> \"B\"\n            else -> \"C\"\n        }\n    }\n}\n";
+        assert!(check(src).is_empty());
     }
 
     #[test]

@@ -84,6 +84,13 @@ impl FunctionSignatureSpacing {
                         if s[body_start..expr.end_byte()].contains("\"\"\"") {
                             continue;
                         }
+                        // A multiline expression body (e.g. a `when` or `if`
+                        // chain) must stay on its own line — ktlint's
+                        // multiline-expression-wrapping demands it, so
+                        // "fits on same line" never applies (issue #160).
+                        if expr.start_position().row != expr.end_position().row {
+                            continue;
+                        }
                         // Strictly less than the remaining space.
                         if first_line_len >= remaining {
                             continue;
@@ -258,9 +265,26 @@ mod tests {
     }
 
     #[test]
+    #[test]
+    fn multiline_body_never_reports_fits_on_same_line() {
+        // Issue #160: a multiline expression body (`when { ... }`) must stay
+        // on its own line — ktlint's multiline-expression-wrapping demands it,
+        // so function-signature must not ask to merge it.
+        let src = "package com.example\n\nclass Plain {\n    private val a: Int? = null\n\n    fun render(): String =\n        when {\n            a != null -> \"A\"\n            else -> \"C\"\n        }\n}\n";
+        let v = fs_check(src);
+        let fs: Vec<_> = v
+            .iter()
+            .filter(|x| x.message.contains("First line of body expression"))
+            .collect();
+        assert!(fs.is_empty(), "multiline body must not report fits: {fs:?}");
+    }
+
     fn body_merge_reports_when_body_fits_on_signature_line() {
-        // Case B from #101: `mapOf(` (6 chars) fits after the 68-char signature.
-        let src = "package com.example\n\nfun build(extra: Array<Pair<String, String>>): Map<String, String> =\n    mapOf(\n        *extra,\n        \"k\" to \"v\",\n    )\n";
+        // Case B from #101: `buildString(` fits after the signature. The body
+        // must be single-line — a multiline body (`mapOf(\n ... \n)`) stays on
+        // its own line, matching ktlint 1.8 (multiline-expression-wrapping
+        // demands it; issue #160).
+        let src = "package com.example\n\nfun build(extra: Array<Pair<String, String>>): Map<String, String> =\n    buildString()\n";
         let v = fs_check(src);
         let fs: Vec<_> = v
             .iter()
