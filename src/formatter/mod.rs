@@ -38,11 +38,23 @@ fn is_protected_kind(kind: &str) -> bool {
 /// `fix_colons` collapses ` : `→`: ` (correct for `val x: Int`, wrong here), so these
 /// specific colons are protected via their CST parent.
 fn is_space_before_colon(node: &tree_sitter::Node) -> bool {
-    // Super-type colons are repaired by fix_colons itself (it distinguishes
-    // `class Foo(...) : Base` from constructor parameter colons). Do not mask
-    // them away here, otherwise fix_colons never sees `object Bar:Base`.
-    let _ = node;
-    false
+    // A supertype colon — `class Foo(...) : Base`, `data object Full : X` —
+    // must keep its space before the `:`; fix_colons' line scan cannot
+    // reliably tell these from parameter/return-type colons, so protect the
+    // ones the CST can identify (their parent is the declaration node).
+    if node.kind() != ":" {
+        return false;
+    }
+    node.parent().is_some_and(|p| {
+        matches!(
+            p.kind(),
+            "class_declaration"
+                | "object_declaration"
+                | "interface_declaration"
+                | "enum_declaration"
+                | "secondary_constructor"
+        )
+    })
 }
 
 /// A backtick-quoted identifier (e.g. `` fun `name with spaces`() ``) is not a
@@ -290,7 +302,24 @@ where
         return Ok(source.to_string());
     }
     let Some(before_tree) = parse_clean(source) else {
-        return Ok(source.to_string());
+        // Truly invalid Kotlin is fail-closed (nothing runs on it). A
+        // grammar-limited file — parse errors the structural check accepts —
+        // still gets the pass so indentation can be fixed, skipping the
+        // post-parse/protected validation that needs a clean tree;
+        // idempotence is still enforced.
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(source);
+        if crate::parser::structural_invalid(source, &tree).is_some() {
+            return Ok(source.to_string());
+        }
+        let transformed = transform(source);
+        if transformed == source {
+            return Ok(source.to_string());
+        }
+        if transform(&transformed) != transformed {
+            anyhow::bail!("{owner} is not idempotent");
+        }
+        return Ok(transformed);
     };
     let protected_before = protected_snapshot(source, &before_tree)?;
     let transformed = transform(source);
@@ -569,8 +598,15 @@ pub fn format_source(
     code_style: CodeStyle,
     max_line_length: usize,
 ) -> anyhow::Result<String> {
-    if source.contains(SENTINEL) || parse_clean(source).is_none() {
+    if source.contains(SENTINEL) {
         return Ok(source.to_string());
+    }
+    // Truly invalid Kotlin is left untouched; grammar-limited-but-valid
+    // files (parse errors the check accepts) are still formatted.
+    if let Some(tree) = parse_clean(source) {
+        if crate::parser::structural_invalid(source, &tree).is_some() {
+            return Ok(source.to_string());
+        }
     }
     let text = format_once(
         source,
@@ -625,10 +661,16 @@ pub fn auto_fix(
             .collect();
 
         let original = std::fs::read_to_string(file_path)?;
-        // Unsupported syntax and sentinel collisions are fail-closed for the entire
-        // file, including newline/whitespace normalization.
-        if original.contains(SENTINEL) || parse_clean(&original).is_none() {
+        // Truly invalid Kotlin and sentinel collisions are fail-closed for
+        // the entire file; grammar-limited-but-valid files (parse errors the
+        // check accepts) are still formatted.
+        if original.contains(SENTINEL) {
             continue;
+        }
+        if let Some(tree) = parse_clean(&original) {
+            if crate::parser::structural_invalid(&original, &tree).is_some() {
+                continue;
+            }
         }
         let text = format_once(
             &original,
@@ -1278,30 +1320,42 @@ fn fix_semicolon_newlines(source: &str, _indent_size: usize) -> String {
 fn fix_indentation(source: &str, indent_size: usize) -> String {
     let mut parser = KotlinParser::new();
     let tree = parser.parse(source);
-    if tree.root_node().has_error() {
+    // Truly invalid Kotlin (structural_invalid) is left untouched; the
+    // grammar-limited-but-valid case (parse errors the check accepts) is
+    // still fixed — the fixer is line-based and the mask protects what the
+    // CST can identify.
+    if tree.root_node().has_error() && crate::parser::structural_invalid(source, &tree).is_some() {
         return source.to_string();
     }
     let Some((masked, store)) = mask_protected(source, &tree) else {
         return source.to_string();
     };
 
-    // AST-driven expected indentation: for every code line, the containing
-    // block's depth (class_body/function_body/control_structure_body/...)
-    // determines the expected leading spaces. We only *raise* lines whose
-    // current indent is clearly too shallow for their block — never lower
-    // existing indentation, so continuation/wrapped lines are preserved.
-    let mut expected: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
-    collect_expected_indents(&masked, &mut expected, indent_size);
+    // Per-line expected indentation — the same rolling computation the
+    // check uses (`compute_line_expected`: brace depth, continuation after
+    // `{`/`:`/`=`, closing-brace correction, supertype class bodies), so
+    // `--format` fixes exactly what `check` reports. Runs on the masked
+    // text: SENTINELs are inert (no `{`/`:`/`=`), comments are already
+    // masked. We only *raise* lines whose current indent is clearly too
+    // shallow — never lower existing indentation, so continuation/wrapped
+    // lines are preserved.
+    let lines_owned: Vec<&str> = masked.split('\n').collect();
+    let expected =
+        crate::rules::structure::indentation::compute_line_expected(&lines_owned, indent_size);
     let lines: Vec<&str> = masked.split_inclusive('\n').collect();
     let mut output = String::with_capacity(masked.len());
     for (row, line) in lines.iter().enumerate() {
         let trimmed = line.trim_start();
-        if trimmed.is_empty() || trimmed.starts_with(SENTINEL) {
+        // A masked line whose *entire* content is a protected fragment (raw
+        // string interior, comment body) must not be re-indented — its
+        // leading spaces are content. A line with real code indent before the
+        // fragment (`      ::engine`) is still re-indented.
+        let current = line.len() - trimmed.len();
+        if trimmed.is_empty() || (trimmed.starts_with(SENTINEL) && current == 0) {
             output.push_str(line);
             continue;
         }
-        let current = line.len() - trimmed.len();
-        if let Some(&want) = expected.get(&row) {
+        if let Some(&want) = expected.get(row) {
             // Raise clearly-too-shallow lines: either the indent is not a
             // multiple of indent_size (explicitly wrong — matches the rule's
             // "should be multiple of N" report), or it is at least a full
@@ -1312,6 +1366,10 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
             let non_multiple = current % indent_size != 0;
             let full_level_short = current.saturating_add(indent_size) <= want;
             if current < want && (non_multiple || full_level_short) {
+                // Only *raise* too-shallow lines. Never lower: continuation
+                // and alignment indents that the line-based expectation does
+                // not model (operator/chain continuations) must be preserved,
+                // and over-indented lines would otherwise be mangled.
                 let has_nl = line.ends_with('\n');
                 output.push_str(&" ".repeat(want));
                 output.push_str(trimmed.trim_end_matches('\n'));
@@ -1334,44 +1392,6 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
 /// between its opening and closing brace by one level. Continuation lines
 /// (those at depth>0 but not starting a new statement) are left alone because
 /// we only ever raise clearly-too-shallow lines.
-fn collect_expected_indents(
-    masked: &str,
-    expected: &mut std::collections::HashMap<usize, usize>,
-    indent_size: usize,
-) {
-    // Brace-depth (+ paren-continuation) expected indent over the
-    // protected-masked source (string interiors are SENTINEL). A line's
-    // expected indent reflects braces closed at its start; its own braces then
-    // update depth. Lines inside unclosed parens are continuations (no
-    // expected — the fixer leaves them alone).
-    let mut depth = 0usize;
-    let mut parens = 0usize;
-    for (row, line) in masked.split('\n').enumerate() {
-        let trimmed = line.trim();
-        let opens = trimmed.bytes().filter(|b| *b == b'{').count();
-        // Only a line that *starts* with `}` (a closer / `} else` continuation)
-        // sits one level shallower; interior braces belong to the same line.
-        let leading_closes = trimmed.bytes().take_while(|b| *b == b'}').count();
-        let po = trimmed.bytes().filter(|b| *b == b'(').count();
-        let pc = trimmed.bytes().filter(|b| *b == b')').count();
-        let line_depth = depth.saturating_sub(leading_closes);
-        if parens == 0 {
-            let entry = expected.entry(row).or_insert(0);
-            let line_expected = line_depth * indent_size;
-            if *entry < line_expected {
-                *entry = line_expected;
-            }
-        }
-        // Net depth: leading closers pop; this line's opens push; interior
-        // braces (`x { ... }` on one line) pair and cancel.
-        let total_closes = trimmed.bytes().filter(|b| *b == b'}').count();
-        let interior_closes = total_closes - leading_closes;
-        let net = opens.saturating_sub(interior_closes);
-        depth = depth.saturating_sub(leading_closes).saturating_add(net);
-        parens = parens.saturating_add(po).saturating_sub(pc);
-    }
-}
-
 fn fix_trailing_ws(source: &str) -> String {
     // Trim trailing whitespace per line while preserving the newline structure.
     // split_inclusive keeps each line's terminator, so we must strip it first,
@@ -1696,8 +1716,13 @@ fn fix_colons(source: &str) -> String {
                 || trimmed.starts_with("data class ")
                 || trimmed.starts_with("enum class ")
                 || trimmed.starts_with("sealed class ")
+                || trimmed.starts_with("annotation class ")
+                || trimmed.starts_with("value class ")
+                || trimmed.starts_with("inline class ")
                 || trimmed.starts_with("interface ")
-                || trimmed.starts_with("object ");
+                || trimmed.starts_with("object ")
+                || trimmed.starts_with("data object ")
+                || trimmed.starts_with("sealed object ");
             let prev_char = prefix.chars().rev().find(|c| !c.is_whitespace());
             // Super-type colon: after the primary constructor's `)` (class Foo
             // ...(..) : Base), after a generic `>` (class Foo<T> : Base), or an
@@ -1713,7 +1738,16 @@ fn fix_colons(source: &str) -> String {
                 (is_declaration && matches!(prev_char, Some(')' | '>'))) || direct_object;
             let type_constraint =
                 prefix.rfind('<') > prefix.rfind('>') || prefix.contains(" where ");
-            if super_colon || type_constraint {
+            // Anonymous-object supertype (`respond(object : X {`) can sit
+            // inside a CST ERROR in grammar-limited files, so the CST
+            // protection can't see it — a word `object` right before the
+            // colon is the line-level fallback.
+            let word_before = prefix
+                .trim_end()
+                .rsplit(|c: char| !c.is_alphanumeric() && c != '_')
+                .next()
+                .unwrap_or("");
+            if super_colon || type_constraint || word_before == "object" {
                 output.push(' ');
             }
             output.push(':');
@@ -2339,7 +2373,10 @@ fn fix_when_conditions_blank_lines(source: &str) -> String {
         }
         for &row in block.starts.iter().skip(1) {
             let line_start = line_starts.get(row).copied().unwrap_or(0);
-            let has_blank = line_start >= 2 && &source[line_start - 2..line_start] == "\n\n";
+            // line_start is a char boundary (right after `\n`); slice
+            // forward-only so a multi-byte SENTINEL just before it can never
+            // be cut in half.
+            let has_blank = line_start >= 2 && source[..line_start].ends_with("\n\n");
             if !has_blank {
                 insert.push(line_start);
             }
@@ -3679,6 +3716,79 @@ mod when_fixer_probe3 {
             for c in kids.into_iter().rev() {
                 stack2.push(c);
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod colon_probe {
+    use super::*;
+
+    #[test]
+    fn probe() {
+        for src in [
+            "class Foo : Base",
+            "data object Full : KtorSyncMode(\"All\")",
+            "call.respond(object : OutgoingContent {",
+            "val x: Int = 1",
+            "fun foo(): Int = 1",
+            "class Bar(x: Int) : Base()",
+        ] {
+            let tree = KotlinParser::new().parse(src);
+            let mut stack = vec![tree.root_node()];
+            while let Some(n) = stack.pop() {
+                if n.kind() == ":" {
+                    let parent = n.parent().map_or("?".into(), |p| p.kind().to_string());
+                    println!("colon parent={parent} in={src:?}");
+                }
+                let mut w = n.walk();
+                let mut kids = Vec::new();
+                for c in n.children(&mut w) {
+                    kids.push(c);
+                }
+                for c in kids.into_iter().rev() {
+                    stack.push(c);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod colon_probe3 {
+    use super::*;
+
+    #[test]
+    fn probe() {
+        for src in [
+            "class EventSourceRecorder : EventSourceListener() {\n}\n",
+            "public actual open class TlsException : IOException {\n}\n",
+            "class Foo : Base\n",
+        ] {
+            let tree = KotlinParser::new().parse(src);
+            let mut stack = vec![tree.root_node()];
+            while let Some(n) = stack.pop() {
+                if n.kind() == ":" {
+                    let parent = n.parent().map_or("?".into(), |p| p.kind().to_string());
+                    println!("{parent}: protected={}", is_space_before_colon(&n));
+                }
+                let mut w = n.walk();
+                let mut kids = Vec::new();
+                for c in n.children(&mut w) {
+                    kids.push(c);
+                }
+                for c in kids.into_iter().rev() {
+                    stack.push(c);
+                }
+            }
+            let out = fix_colons(src);
+            println!("  fix_colons: {:?}", out.lines().next());
+            let m = masked_transform(src, fix_colons);
+            println!("  masked_transform: {:?}", m.lines().next());
+            // 看 masked 文本的冒号
+            let tree2 = KotlinParser::new().parse(src);
+            let (masked, _) = mask_protected(src, &tree2).unwrap();
+            println!("  masked: {:?}", masked.lines().next());
         }
     }
 }

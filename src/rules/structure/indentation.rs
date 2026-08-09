@@ -139,16 +139,21 @@ impl Rule for Indentation {
             } else {
                 depth_expected
             };
+            // ktlint reports whenever the actual indent differs from the
+            // expected one — over-indentation too (its message is always a
+            // concrete "should be M"). Non-multiples report even when less
+            // than a full level short; multiple-of-N lines only when a full
+            // level short (issue #152). Over-indented lines still report at
+            // the expected indent (the fixer never lowers, so they stay).
             if expected_for_line > spaces {
                 let full_level_short = expected_for_line - spaces >= is;
-                // Non-multiples report the brace-depth expectation even when
-                // less than a full level short (ktlint reports a concrete
-                // "should be N" for any wrong indent); multiple-of-N lines
-                // only when a full level short (issue #152).
                 if too_shallow || full_level_short {
                     too_shallow = true;
                     expected_indent = Some(expected_for_line);
                 }
+            } else if too_shallow {
+                too_shallow = true;
+                expected_indent = Some(expected_for_line);
             }
             if too_shallow {
                 let message = match expected_indent {
@@ -181,15 +186,28 @@ impl Rule for Indentation {
 /// line ends with `{`, `:`, or `=` (a block opener, supertype colon, or
 /// initializer/expression-body `=`). Brace counting skips strings, comments,
 /// and char literals, like [`expected_depth`].
-fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
+pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
     let mut out = vec![0usize; lines.len()];
     let mut depth = 0usize;
     let mut prev_expected = 0usize;
+    let mut paren_depth = 0usize;
+    let mut paren_expected: Vec<usize> = Vec::new();
     let mut in_block_comment = false;
     let mut in_raw_string = false;
     for (i, line) in lines.iter().enumerate() {
         let t = line.trim();
         let mut e = depth * is;
+        if t.ends_with(')') {
+            paren_expected.pop();
+            paren_depth = paren_depth.saturating_sub(1);
+        }
+        if paren_depth > 0 {
+            if let Some(&list) = paren_expected.last() {
+                if list > e {
+                    e = list;
+                }
+            }
+        }
         if i > 0 {
             let prev = lines[i - 1].trim_end();
             // A comment or blank line never opens a continuation — a comment
@@ -212,11 +230,20 @@ fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
                 // and continuation blocks like a `when {` on a `=` line).
                 e = prev_expected.saturating_sub(is);
             } else if !prev_inert {
-                if prev.ends_with('{') && prev_was_supertype {
+                if paren_depth > 0 {
+                    // Inside a paren list the expectation already came from
+                    // the list indent; keep it.
+                } else if prev.ends_with('{') && prev_was_supertype {
                     // Class body opened on a supertype continuation line.
                     e = prev_expected;
-                } else if prev.ends_with('{') || prev.ends_with(':') || prev.ends_with('=') {
-                    // Body/continuation line: the opener's expectation + one level.
+                } else if prev.ends_with('{')
+                    || prev.ends_with('(')
+                    || prev.ends_with(':')
+                    || prev.ends_with('=')
+                {
+                    // Body/continuation line (block body, parameter list,
+                    // supertype colon, initializer/expression body): the
+                    // opener's expectation + one level.
                     let want = prev_expected.saturating_add(is);
                     if want > e {
                         e = want;
@@ -295,6 +322,10 @@ fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
         let opens = cleaned.bytes().filter(|b| *b == b'{').count();
         let closes = cleaned.bytes().filter(|b| *b == b'}').count();
         depth = depth.saturating_add(opens).saturating_sub(closes);
+        if t.ends_with('(') {
+            paren_expected.push(e.saturating_add(is));
+            paren_depth += 1;
+        }
     }
     out
 }
