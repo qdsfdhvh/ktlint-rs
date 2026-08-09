@@ -751,27 +751,3 @@ mod tests {
         );
     }
 }
-
-#[cfg(test)]
-mod dbg_expect {
-    use crate::rules::structure::indentation::compute_line_expected;
-
-    #[test]
-    fn dump_der() {
-        let src = std::fs::read_to_string(
-            "/Users/seiko/Developer/Android/Tools/ktlint-rs/tests/fixtures/okhttp/okhttp-tls/src/test/java/okhttp3/tls/internal/der/DerCertificatesTest.kt",
-        )
-        .unwrap();
-        let lines: Vec<&str> = src.lines().collect();
-        let exp = compute_line_expected(&lines, 2);
-        for i in 788..799 {
-            eprintln!(
-                "L{} expect={} actual={} text={:?}",
-                i + 1,
-                exp[i],
-                lines[i].len() - lines[i].trim_start().len(),
-                lines[i].trim()
-            );
-        }
-    }
-}
