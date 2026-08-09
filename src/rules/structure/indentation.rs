@@ -241,7 +241,8 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
                 continue;
             }
             if c == '"' {
-                if !in_string && !in_raw_string
+                if !in_string
+                    && !in_raw_string
                     && chars.peek() == Some(&'"')
                     && chars.clone().nth(1) == Some('"')
                 {
@@ -398,5 +399,3 @@ mod tests {
         assert!(check(src, 4).is_empty());
     }
 }
-
-
