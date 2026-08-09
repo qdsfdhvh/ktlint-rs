@@ -70,6 +70,14 @@ impl Rule for Indentation {
             return violations;
         }
 
+        // Per-line expected indent: brace depth × indent_size, raised to the
+        // previous line's expectation + one level when the previous line ends
+        // a continuation (`:`/`=`) or opens a block (`{`). This unifies
+        // standard blocks and continuation blocks — a `when {` on a `=`
+        // continuation line puts its body one level deeper than the raw brace
+        // depth would suggest (issue #152).
+        let line_expected = compute_line_expected(&lines, is);
+
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
             // Trailing whitespace must not count as indentation (issue #169).
@@ -121,8 +129,7 @@ impl Rule for Indentation {
             // (lines whose expected depth is unchanged but whose indent is a
             // continuation alignment) are skipped conservatively: only a line
             // a full level short of its brace depth is reported.
-            let depth = expected_depth(&lines, i);
-            let depth_expected = depth * is;
+            let depth_expected = line_expected[i];
             // A closing brace sits one level inside its own block's depth —
             // except a mis-indented brace (non-multiple) which is reported at
             // the block's depth (covers continuation blocks like a `when {`
@@ -141,22 +148,6 @@ impl Rule for Indentation {
                 if too_shallow || full_level_short {
                     too_shallow = true;
                     expected_indent = Some(expected_for_line);
-                }
-            }
-            // Continuation lines (supertype after `:`, initializer after `=`,
-            // expression body after `=`) are expected at the previous line's
-            // indent + one level — the brace-depth expectation is one level
-            // too shallow for them (issue #152).
-            if too_shallow && expected_indent.is_none() {
-                if let Some(prev_line) = lines.get(i.wrapping_sub(1)) {
-                    let pt = prev_line.trim_end();
-                    if (pt.ends_with(':') || pt.ends_with('=')) && !pt.ends_with(":=") {
-                        let prev_indent = prev_line.len() - prev_line.trim_start().len();
-                        let want = prev_indent + is;
-                        if want > spaces {
-                            expected_indent = Some(want);
-                        }
-                    }
                 }
             }
             if too_shallow {
@@ -185,29 +176,63 @@ impl Rule for Indentation {
 
 /// Brace depth before a given line — used to detect zero-indent lines inside
 /// a block without full continuation analysis.
-fn expected_depth(lines: &[&str], target: usize) -> usize {
+/// Per-line expected indent. For each line: the brace depth × indent_size,
+/// raised to the previous line's expectation + one level when the previous
+/// line ends with `{`, `:`, or `=` (a block opener, supertype colon, or
+/// initializer/expression-body `=`). Brace counting skips strings, comments,
+/// and char literals, like [`expected_depth`].
+fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
+    let mut out = vec![0usize; lines.len()];
     let mut depth = 0usize;
-    // Block-comment and raw-string state span lines (a `/** ... */` KDoc often
-    // contains `{`/`}` in code examples, and a `"""` raw string spans lines
-    // with braces that must never count). Unterminated single-line strings
-    // are invalid Kotlin and rejected earlier as parse errors.
+    let mut prev_expected = 0usize;
     let mut in_block_comment = false;
     let mut in_raw_string = false;
     for (i, line) in lines.iter().enumerate() {
-        if i >= target {
-            break;
-        }
         let t = line.trim();
-        // Skip string content and comments: `{`/`}` inside quotes (or raw
-        // strings), escaped quotes (`\"`), and comments are not block
-        // delimiters and would inflate the depth.
+        let mut e = depth * is;
+        if i > 0 {
+            let prev = lines[i - 1].trim_end();
+            // A comment or blank line never opens a continuation — a comment
+            // ending in `:` or `{` must not raise the next line's expectation.
+            let prev_trim = prev.trim_start();
+            let prev_inert = prev_trim.is_empty()
+                || prev_trim.starts_with("//")
+                || prev_trim.starts_with("/*")
+                || prev_trim.starts_with('*');
+            // True when the previous line was a supertype continuation (its
+            // own previous line ended with `:`). The class body `{` that
+            // follows opens the *class* body (indent = the continuation's
+            // expectation), not a nested block (continuation + 4).
+            let prev_was_supertype = i > 1
+                && lines[i - 2].trim_end().ends_with(':')
+                && !lines[i - 2].trim_end().ends_with(":=");
+            if t.starts_with('}') {
+                // A closing brace sits at the block's indent: the previous
+                // line's expectation minus one level (handles `} else if {`
+                // and continuation blocks like a `when {` on a `=` line).
+                e = prev_expected.saturating_sub(is);
+            } else if !prev_inert {
+                if prev.ends_with('{') && prev_was_supertype {
+                    // Class body opened on a supertype continuation line.
+                    e = prev_expected;
+                } else if prev.ends_with('{') || prev.ends_with(':') || prev.ends_with('=') {
+                    // Body/continuation line: the opener's expectation + one level.
+                    let want = prev_expected.saturating_add(is);
+                    if want > e {
+                        e = want;
+                    }
+                }
+            }
+        }
+        out[i] = e;
+        prev_expected = e;
+        // Count this line's braces outside strings/comments.
         let mut in_string = false;
         let mut cleaned = String::with_capacity(t.len());
         let mut chars = t.chars().peekable();
         while let Some(c) = chars.next() {
             if !in_string && !in_block_comment && !in_raw_string {
                 if c == '/' && chars.peek() == Some(&'/') {
-                    // line comment: skip to end of line
                     break;
                 }
                 if c == '/' && chars.peek() == Some(&'*') {
@@ -224,12 +249,10 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
                 continue;
             }
             if c == '\\' {
-                // escape: `\"` inside a string must not toggle in_string
                 chars.next();
                 continue;
             }
             if c == '\'' && !in_string && !in_raw_string {
-                // character literal `'{'` — its interior is not code
                 loop {
                     match chars.next() {
                         Some('\\') => {
@@ -247,7 +270,6 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
                     && chars.peek() == Some(&'"')
                     && chars.clone().nth(1) == Some('"')
                 {
-                    // `"""` opens a raw string (spans lines)
                     in_raw_string = true;
                     chars.next();
                     chars.next();
@@ -255,13 +277,11 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
                 }
                 if in_raw_string {
                     if chars.peek() == Some(&'"') && chars.clone().nth(1) == Some('"') {
-                        // `"""` closes the raw string
                         in_raw_string = false;
                         chars.next();
                         chars.next();
                         continue;
                     }
-                    // a single quote inside a raw string is content
                     continue;
                 }
                 in_string = !in_string;
@@ -276,7 +296,7 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
         let closes = cleaned.bytes().filter(|b| *b == b'}').count();
         depth = depth.saturating_add(opens).saturating_sub(closes);
     }
-    depth
+    out
 }
 
 #[cfg(test)]
