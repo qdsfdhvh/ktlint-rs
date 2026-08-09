@@ -810,6 +810,7 @@ fn fix_function_body_merge(source: &str, max_line_length: usize) -> String {
                             if first_line_len < remaining
                                 && !first_line.trim_start().starts_with('@')
                                 && !source[body_start..expr.end_byte()].contains("\"\"\"")
+                                && expr.start_position().row == expr.end_position().row
                                 && source[eq.end_byte()..body_start]
                                     .chars()
                                     .all(|c| c.is_whitespace())
@@ -2277,31 +2278,32 @@ fn fix_when_conditions_blank_lines(source: &str) -> String {
     // string the edits will apply to).
     let tree = parser.parse(&masked);
     let source = &masked;
-    // (start_byte, end_byte) whitespace runs to replace with a blank line.
-    let mut edits: Vec<(usize, usize)> = Vec::new();
+    // Multiline test mirrors the rule's check: a when-entry spanning more
+    // than one line. Uses only entry start rows — tree-sitter mis-parses
+    // conditions like `(a ?: 0) > 0 ->` and inflates the entry's end into
+    // the next condition (issue #160).
+    // Collect every when block: its entries' start rows and its end row.
+    struct WhenBlock {
+        starts: Vec<usize>,
+        end_row: usize,
+    }
+    let mut blocks: Vec<WhenBlock> = Vec::new();
     let mut stack = vec![tree.root_node()];
     while let Some(node) = stack.pop() {
         if node.kind() == "when_expression" {
             let mut w = node.walk();
-            let entries: Vec<tree_sitter::Node> = node
+            let mut starts: Vec<usize> = node
                 .children(&mut w)
                 .filter(|c| c.kind() == "when_entry")
+                .map(|e| e.start_position().row)
                 .collect();
-            if entries.len() >= 2
-                && entries
-                    .iter()
-                    .any(|e| e.start_position().row != e.end_position().row)
-            {
-                for pair in entries.windows(2) {
-                    // SENTINELs are multi-byte; clamp offsets to char
-                    // boundaries before slicing.
-                    let prev_end = source.floor_char_boundary(pair[0].end_byte());
-                    let cur_start = source.floor_char_boundary(pair[1].start_byte());
-                    let gap = &source[prev_end..cur_start];
-                    if gap.matches('\n').count() < 2 {
-                        edits.push((prev_end, cur_start));
-                    }
-                }
+            starts.sort_unstable();
+            starts.dedup();
+            if starts.len() >= 2 {
+                blocks.push(WhenBlock {
+                    starts,
+                    end_row: node.end_position().row,
+                });
             }
         }
         let mut w2 = node.walk();
@@ -2313,16 +2315,42 @@ fn fix_when_conditions_blank_lines(source: &str) -> String {
             stack.push(c);
         }
     }
-    edits.sort_by_key(|(start, _)| std::cmp::Reverse(*start));
+    if blocks.is_empty() {
+        return restore_protected(source, &store);
+    }
+    // Line-start byte offsets of the (masked) source.
+    let mut line_starts = vec![0usize];
+    for (i, b) in source.bytes().enumerate() {
+        if b == b'\n' {
+            line_starts.push(i + 1);
+        }
+    }
+    // Insert a blank line before every entry after the first, unless one
+    // already exists (previous line is empty).
+    let mut insert: Vec<usize> = Vec::new();
+    for block in &blocks {
+        let multiline = block.starts.windows(2).any(|w| w[1] - w[0] > 1)
+            || block
+                .starts
+                .last()
+                .is_some_and(|&last| block.end_row - last > 1);
+        if !multiline {
+            continue;
+        }
+        for &row in block.starts.iter().skip(1) {
+            let line_start = line_starts.get(row).copied().unwrap_or(0);
+            let has_blank = line_start >= 2 && &source[line_start - 2..line_start] == "\n\n";
+            if !has_blank {
+                insert.push(line_start);
+            }
+        }
+    }
+    if insert.is_empty() {
+        return restore_protected(source, &store);
+    }
     let mut text = source.to_string();
-    for (start, end) in edits {
-        // Derive the indent from the line the previous entry ended on.
-        let line_start = text[..start].rfind('\n').map_or(0, |i| i + 1);
-        let indent: String = text[line_start..start]
-            .chars()
-            .take_while(|c| *c == ' ' || *c == '\t')
-            .collect();
-        text.replace_range(start..end, &format!("\n\n{indent}"));
+    for &pos in insert.iter().rev() {
+        text.insert_str(pos, "\n");
     }
     restore_protected(&text, &store)
 }
@@ -3537,10 +3565,10 @@ catch(e: E) { b() }"
 
     #[test]
     fn wrapping_fix_body_merge_joins_fitting_body() {
-        let src = "package com.example\n\nfun build(extra: Array<Pair<String, String>>): Map<String, String> =\n    mapOf(\n        *extra,\n    )\n";
+        let src = "package com.example\n\nfun build(extra: Array<Pair<String, String>>): Map<String, String> =\n    buildString()\n";
         let out = fix_wrapping(src, 4, 120);
         assert!(
-            out.contains("Map<String, String> = mapOf("),
+            out.contains("Map<String, String> = buildString("),
             "body should join signature line: {out}"
         );
     }
