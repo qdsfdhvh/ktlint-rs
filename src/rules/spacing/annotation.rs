@@ -24,7 +24,7 @@ impl Rule for AnnotationSpacing {
                 check_annotation(&node, bytes, &mut v);
             }
         });
-        check_top_level_annotation_groups(source, &mut v);
+        check_same_line_annotation_groups(source, &mut v);
         v
     }
 }
@@ -122,19 +122,43 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
     }
 }
 
-fn check_top_level_annotation_groups(source: &str, violations: &mut Vec<Violation>) {
+/// ktlint 1.8: two or more annotations on one line are fine only when the
+/// annotation group is on its own line. When the last annotation is followed
+/// on the same line by a declaration, report "Expected newline after last
+/// annotation" (issue #168). A single annotation (`@Composable fun ...`) is
+/// fine. A group followed by a newline (`@Marker @Other\nval ...`) is fine.
+fn check_same_line_annotation_groups(source: &str, violations: &mut Vec<Violation>) {
     for (line_index, line) in source.lines().enumerate() {
-        if let Some(rest) = line.strip_prefix('@') {
-            if let Some(second) = rest.find('@') {
-                violations.push(Violation {
-                    file: String::new(),
-                    line: line_index + 1,
-                    col: second + 2,
-                    rule_id: "standard:annotation".into(),
-                    message: "Multiple annotations on same line".into(),
-                    auto_fixable: true,
-                });
-            }
+        let at_positions: Vec<usize> = line.match_indices('@').map(|(p, _)| p).collect();
+        if at_positions.len() < 2 {
+            continue;
+        }
+        let last_at = *at_positions.last().unwrap();
+        // Skip the annotation name (`@Marker`) and any annotation arguments
+        // in parens.
+        let rest = &line[last_at + 1..];
+        let name_len = rest
+            .find(|c: char| !c.is_alphanumeric() && c != '_' && c != '.')
+            .unwrap_or(rest.len());
+        let after_name = rest[name_len..].trim_start();
+        // The last annotation is followed on the same line by a declaration.
+        let followed_by_decl = after_name.starts_with("val ")
+            || after_name.starts_with("var ")
+            || after_name.starts_with("fun ")
+            || after_name.starts_with("class ")
+            || after_name.starts_with("object ")
+            || after_name.starts_with("interface ")
+            || after_name.starts_with("typealias ")
+            || after_name.starts_with("constructor(");
+        if followed_by_decl {
+            violations.push(Violation {
+                file: String::new(),
+                line: line_index + 1,
+                col: last_at + 1 + name_len + 1,
+                rule_id: "standard:annotation".into(),
+                message: "Expected newline after last annotation".into(),
+                auto_fixable: true,
+            });
         }
     }
 }
@@ -175,8 +199,12 @@ mod tests {
         assert!(check("@A\n@B\nclass Foo\n").is_empty());
     }
     #[test]
-    fn two_annotations_same_line_bad() {
-        assert!(!check("@A @B\nclass Foo\n").is_empty());
+    fn two_annotations_same_line_followed_by_decl_bad() {
+        // ktlint: a group followed on the same line by a declaration needs a
+        // newline after the last annotation.
+        assert!(!check("@A @B class Foo\n").is_empty());
+        // A group on its own line is fine.
+        assert!(check("@A @B\nclass Foo\n").is_empty());
     }
     #[test]
     fn code_before_annotation_bad() {
@@ -184,8 +212,9 @@ mod tests {
     }
     #[test]
     fn three_annotations_first_clean() {
-        let v = check("@A @B @C\nclass Foo\n");
-        assert!(!v.is_empty());
+        let v = check("@A @B @C class Foo\n");
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].message, "Expected newline after last annotation");
     }
     #[test]
     fn annotation_in_when_flagged() {
@@ -194,7 +223,9 @@ mod tests {
     /// JVM-compatible: inconsistent layout
     #[test]
     fn mixed_layout_bad() {
-        assert!(!check("@Foo\n@Bar @Baz\nfun foo() {}\n").is_empty());
+        // `@Bar @Baz` on one line is fine (group on its own line); the
+        // inconsistency comes from the declaration sharing the line.
+        assert!(!check("@Foo\n@Bar @Baz fun foo() {}\n").is_empty());
     }
     #[test]
     fn consistent_layout_ok() {

@@ -16,7 +16,7 @@ const CACHE_VERSION: u32 = 5;
 /// violations (from older rule versions) are never served. This is a coarse
 /// global version; a per-rule fingerprint would be finer but this is safe:
 /// any rule change invalidates the whole cache for the binary version.
-const RULES_VERSION: u64 = 12;
+const RULES_VERSION: u64 = 14;
 
 #[derive(Serialize, Deserialize)]
 struct CacheFile {
@@ -63,6 +63,20 @@ fn config_fingerprint(config: &KtlintConfig) -> u64 {
     config.insert_final_newline.hash(&mut h);
     config.max_line_length.hash(&mut h);
     config.compat.hash(&mut h);
+    // Per-rule enable/disable from .editorconfig must invalidate the cache:
+    // disabling a rule leaves stale violations in the old entry (issue #166).
+    let mut rules: Vec<&String> = config.rules.keys().collect();
+    rules.sort();
+    for k in rules {
+        k.hash(&mut h);
+        config.rules[k].enabled.hash(&mut h);
+    }
+    let mut cats: Vec<&String> = config.category_overrides.keys().collect();
+    cats.sort();
+    for k in cats {
+        k.hash(&mut h);
+        config.category_overrides[k].enabled.hash(&mut h);
+    }
     h.finish()
 }
 
