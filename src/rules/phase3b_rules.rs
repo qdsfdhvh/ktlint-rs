@@ -3,12 +3,16 @@ use crate::rules::{Rule, Violation};
 
 pub struct FunctionSignatureSpacing {
     max_length: usize,
+    code_style: crate::config::CodeStyle,
 }
 
 impl FunctionSignatureSpacing {
-    pub fn new(max_length: usize) -> Self {
+    pub fn new(max_length: usize, code_style: crate::config::CodeStyle) -> Self {
         let max_length = if max_length == 0 { 120 } else { max_length };
-        Self { max_length }
+        Self {
+            max_length,
+            code_style,
+        }
     }
 
     /// Body-expression merge (mirrors ktlint 1.8 FunctionSignatureRule):
@@ -85,10 +89,14 @@ impl FunctionSignatureSpacing {
                             continue;
                         }
                         // A multiline expression body (e.g. a `when` or `if`
-                        // chain) must stay on its own line — ktlint's
-                        // multiline-expression-wrapping demands it, so
-                        // "fits on same line" never applies (issue #160).
-                        if expr.start_position().row != expr.end_position().row {
+                        // chain) must stay on its own line under
+                        // ktlint_official — multiline-expression-wrapping
+                        // demands it, so "fits on same line" never applies
+                        // (issue #160). Under android_studio ktlint reports it
+                        // (issue #167).
+                        if expr.start_position().row != expr.end_position().row
+                            && self.code_style == crate::config::CodeStyle::KtlintOfficial
+                        {
                             continue;
                         }
                         // Strictly less than the remaining space.
@@ -261,7 +269,8 @@ mod tests {
     fn fs_check(source: &str) -> Vec<Violation> {
         let mut parser = KotlinParser::new();
         let tree = parser.parse(source);
-        FunctionSignatureSpacing::new(120).check(&tree, source)
+        FunctionSignatureSpacing::new(120, crate::config::CodeStyle::KtlintOfficial)
+            .check(&tree, source)
     }
 
     #[test]
