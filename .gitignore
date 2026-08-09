@@ -11,6 +11,8 @@ tests/fixtures/*
 !tests/fixtures/spotless-parity/**
 !tests/fixtures/ktlint-1.8-rule-parity/
 !tests/fixtures/ktlint-1.8-rule-parity/**
+!tests/fixtures/oracle-cases/
+!tests/fixtures/oracle-cases/**
 !.gitkeep
 task_plan.md
 findings.md

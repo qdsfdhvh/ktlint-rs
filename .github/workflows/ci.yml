@@ -62,6 +62,12 @@ jobs:
           for kind in discovery config diagnostics format idempotence; do
             ./scripts/spotless-differential.sh --offline --inject-mismatch "$kind"
           done
+      - name: Oracle differential on the regression case corpus
+        run: |
+          ./scripts/get-ktlint.sh 1.8.0 >/dev/null
+          printf '#!/bin/bash\nexec java -jar %s "$@"\n' "$PWD/.ktlint/ktlint-1.8.0.jar" > .ktlint/ktlint
+          chmod +x .ktlint/ktlint
+          KTLINT_JVM="$PWD/.ktlint/ktlint" ./scripts/oracle-diff.sh
 
   clippy:
     name: Clippy

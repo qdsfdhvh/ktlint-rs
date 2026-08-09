@@ -57,11 +57,14 @@ impl CurlySpacing {
             if is_first_token_on_line {
                 // Allman style: a `{` on its own line. Allowed for lambda
                 // literals (a wrapped trailing lambda or a lambda argument
-                // starts on its own line), reported for block braces —
+                // starts on its own line) and for the `when` block brace
+                // (ktlint 1.8 exempts it), reported for block braces —
                 // function body, class body, control flow — which must stay
                 // on the same line as the declaration (issue #178).
-                let parent_is_lambda = node.parent().is_some_and(|p| p.kind() == "lambda_literal");
-                if !parent_is_lambda {
+                let parent_is_exempt = node
+                    .parent()
+                    .is_some_and(|p| matches!(p.kind(), "lambda_literal" | "when_expression"));
+                if !parent_is_exempt {
                     violations.push(Violation {
                         file: String::new(),
                         line: pos.row + 1,
@@ -233,9 +236,23 @@ mod tests {
         );
     }
 
+    // ktlint 1.8 exempts the `when` block brace from the newline check.
     #[test]
-    fn newline_before_when_brace_reported() {
-        let source = "fun f(x: Int) {\n    when (x)\n    {\n        1 -> a()\n    }\n}\n";
+    fn newline_before_when_block_brace_is_exempt() {
+        let source = "fun f(x: Int) {\n    when (x)\n    {\n        1 -> println(1)\n    }\n}\n";
+        let v = check(source);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn newline_before_when_entry_brace_reported() {
+        // A when-entry block (`1 ->\n{`) is a control-structure body, not the
+        // when block itself — ktlint reports it.
+        let source = "fun f(x: Int) {\n    when (x) {\n        1 ->\n        {\n            a()\n        }\n    }\n}\n";
         let v = check(source);
         assert!(
             v.iter()
@@ -254,6 +271,105 @@ mod tests {
             v.is_empty(),
             "violations: {:?}",
             v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    // ── Allman-brace regression battery (issue #178) ──
+    // Every block context reports; lambda literals and the when block are
+    // exempt; same-line braces are unaffected.
+
+    fn newline_reports(source: &str) {
+        let v = check(source);
+        assert!(
+            v.iter()
+                .any(|x| x.message == "Unexpected newline before \"{\""),
+            "expected newline-before-brace in:\n{source}\nviolations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn allman_for() {
+        newline_reports("fun f() {\n    for (i in 0..1)\n    {\n        println(i)\n    }\n}\n");
+    }
+
+    #[test]
+    fn allman_while() {
+        newline_reports("fun f() {\n    while (true)\n    {\n        break\n    }\n}\n");
+    }
+
+    #[test]
+    fn allman_do() {
+        newline_reports("fun f() {\n    do\n    {\n        g()\n    } while (true)\n}\n");
+    }
+
+    #[test]
+    fn allman_else() {
+        newline_reports("fun f() {\n    if (x)\n    {\n        a()\n    }\n    else\n    {\n        b()\n    }\n}\n");
+    }
+
+    #[test]
+    fn allman_catch() {
+        newline_reports("fun f() {\n    try {\n        a()\n    } catch (e: Exception)\n    {\n        b()\n    }\n}\n");
+    }
+
+    #[test]
+    fn allman_finally() {
+        newline_reports(
+            "fun f() {\n    try {\n        a()\n    } finally\n    {\n        b()\n    }\n}\n",
+        );
+    }
+
+    #[test]
+    fn allman_object_literal() {
+        newline_reports("val o = object\n{\n    val a = 1\n}\n");
+    }
+
+    #[test]
+    fn allman_init_block() {
+        newline_reports("class C {\n    init\n    {\n        println()\n    }\n}\n");
+    }
+
+    #[test]
+    fn allman_enum_body() {
+        newline_reports("enum class E\n{\n    A\n}\n");
+    }
+
+    #[test]
+    fn allman_companion_object() {
+        newline_reports("class C {\n    companion object\n    {\n        val a = 1\n    }\n}\n");
+    }
+
+    #[test]
+    fn allman_getter() {
+        newline_reports("class C {\n    val a: Int\n        get()\n        {\n            return 1\n        }\n}\n");
+    }
+
+    #[test]
+    fn allman_setter() {
+        newline_reports("class C {\n    var a: Int = 0\n        set(value)\n        {\n            field = value\n        }\n}\n");
+    }
+
+    #[test]
+    fn same_line_braces_untouched() {
+        // The newline check must not fire for ordinary same-line braces.
+        let src = "class Foo {\n    fun bar() {\n        if (x) { a() } else { b() }\n        return 1\n    }\n}\n";
+        let v = check(src);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn missing_space_before_brace_still_reported() {
+        let src = "fun f(){\n    return 1\n}\n";
+        assert!(
+            check(src)
+                .iter()
+                .any(|x| x.message == "Missing spacing before \"{\""),
+            "missing-space must still fire"
         );
     }
 

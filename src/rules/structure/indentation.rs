@@ -186,12 +186,32 @@ impl Rule for Indentation {
 /// line ends with `{`, `:`, or `=` (a block opener, supertype colon, or
 /// initializer/expression-body `=`). Brace counting skips strings, comments,
 /// and char literals, like [`expected_depth`].
+/// True when a trimmed line opens a multiline `for` header (`for (` or
+/// `label@ for (`). ktlint indents the first continuation line of a for
+/// header at the statement's own level, unlike every other paren list.
+fn is_for_header(t: &str) -> bool {
+    let t = t.trim();
+    // Strip a leading label (`outer@ for (`).
+    let t = if let Some(idx) = t.find('@') {
+        let rest = t[idx + 1..].trim_start();
+        if rest.starts_with("for ") || rest.starts_with("for(") {
+            rest
+        } else {
+            t
+        }
+    } else {
+        t
+    };
+    t.starts_with("for ") || t.starts_with("for(")
+}
+
 pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
     let mut out = vec![0usize; lines.len()];
     let mut depth = 0usize;
     let mut prev_expected = 0usize;
     let mut paren_depth = 0usize;
-    let mut paren_expected: Vec<usize> = Vec::new();
+    let mut paren_expected: Vec<(usize, bool, usize)> = Vec::new();
+    let mut prev_last_code: Option<char> = None;
     let mut in_block_comment = false;
     let mut in_raw_string = false;
     for (i, line) in lines.iter().enumerate() {
@@ -203,8 +223,13 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
         let mut in_string = false;
         let mut brace_opens = 0usize;
         let mut brace_closes = 0usize;
-        let mut paren_opens = 0usize;
-        let mut paren_closes = 0usize;
+        // Same-line paren pairs cancel out; an unmatched `)` closes a
+        // cross-line list (popping the stack right here), a trailing `(`
+        // opens one (pushed at the end of the loop). last_code is the last
+        // char that was counted (comments/strings leave it unset, so a KDoc
+        // line ending in `(` never opens a list).
+        let mut paren_local = 0usize;
+        let mut last_code: Option<char> = None;
         let mut chars = t.chars().peekable();
         while let Some(c) = chars.next() {
             if !in_string && !in_block_comment && !in_raw_string {
@@ -256,6 +281,14 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
                         in_raw_string = false;
                         chars.next();
                         chars.next();
+                        // A run of four quotes closes the raw string as a
+                        // whole (`""""` = content ending in `"` + `"""`
+                        // — ktor fixtures use this for a string containing a
+                        // trailing quote). Consume the fourth quote too so no
+                        // dangling `"` opens a regular string.
+                        if chars.peek() == Some(&'"') {
+                            chars.next();
+                        }
                         continue;
                     }
                     continue;
@@ -263,29 +296,44 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
                 in_string = !in_string;
                 continue;
             }
-            if (in_string || in_raw_string) && (c == '{' || c == '}') {
+            // String and raw-string content is data: nothing inside it may
+            // count as a brace/paren or set last_code (a base64 padding `=`
+            // or a `)` in a string must not open a continuation / close a
+            // paren list).
+            if in_string || in_raw_string {
                 continue;
             }
             match c {
                 '{' => brace_opens += 1,
                 '}' => brace_closes += 1,
-                '(' => paren_opens += 1,
-                ')' => paren_closes += 1,
+                '(' => paren_local += 1,
+                ')' => {
+                    // A line may close a paren list without *ending* in `)`
+                    // — `) {`, `): Int {`, `),` all close it, and `) = foo(`
+                    // closes one list and opens another (issue #176).
+                    if paren_local > 0 {
+                        paren_local -= 1;
+                    } else {
+                        paren_expected.pop();
+                        paren_depth = paren_depth.saturating_sub(1);
+                    }
+                }
                 _ => {}
             }
-        }
-        // A line may close a paren list without *ending* in `)` — `) {`,
-        // `): Int {`, `),` all close it — so pop for every net closing paren
-        // (issue #176: multiline value parameter lists pushed the closing
-        // line and everything after it one level too far right).
-        for _ in 0..paren_closes.saturating_sub(paren_opens) {
-            paren_expected.pop();
-            paren_depth = paren_depth.saturating_sub(1);
+            last_code = Some(c);
         }
         let mut e = depth * is;
         if paren_depth > 0 {
-            if let Some(&list) = paren_expected.last() {
-                if list > e {
+            if let Some(&(list, for_header, opener_row)) = paren_expected.last() {
+                // ktlint keeps a multiline `for (` header's structure at the
+                // for-statement's own indent — the first line after the
+                // opener (`for (\n    x in y`) and closing `)` lines of
+                // nested lists inside the header — unlike function/if/while
+                // lists which indent them. Continuation lines of the header
+                // expression (`.dropWhile { … }` chains) get the list indent.
+                let first_of_for_header = for_header && i == opener_row + 1;
+                let closing_of_for_header = for_header && t.starts_with(')');
+                if !(first_of_for_header || closing_of_for_header) && list > e {
                     e = list;
                 }
             }
@@ -315,17 +363,18 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
                 if paren_depth > 0 {
                     // Inside a paren list the expectation already came from
                     // the list indent; keep it.
-                } else if prev.ends_with('{') && prev_was_supertype {
+                } else if prev_last_code == Some('{') && prev_was_supertype {
                     // Class body opened on a supertype continuation line.
                     e = prev_expected;
-                } else if prev.ends_with('{')
-                    || prev.ends_with('(')
-                    || prev.ends_with(':')
-                    || prev.ends_with('=')
-                {
+                } else if matches!(
+                    prev_last_code,
+                    Some('{') | Some('(') | Some(':') | Some('=')
+                ) {
                     // Body/continuation line (block body, parameter list,
                     // supertype colon, initializer/expression body): the
-                    // opener's expectation + one level.
+                    // opener's expectation + one level. prev_last_code is the
+                    // previous line's last *code* char — a trailing comment
+                    // ending in `=`/`:` must not open a continuation.
                     let want = prev_expected.saturating_add(is);
                     if want > e {
                         e = want;
@@ -335,12 +384,13 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
         }
         out[i] = e;
         prev_expected = e;
+        prev_last_code = last_code;
         // Count this line's braces outside strings/comments.
         depth = depth
             .saturating_add(brace_opens)
             .saturating_sub(brace_closes);
-        if t.ends_with('(') {
-            paren_expected.push(e.saturating_add(is));
+        if last_code == Some('(') {
+            paren_expected.push((e.saturating_add(is), is_for_header(t), i));
             paren_depth += 1;
         }
     }
@@ -515,6 +565,173 @@ mod tests {
         // A balanced `foo(1)` on a continuation line must not pop the outer
         // list; the `)` inside the default value is not a list closer.
         let src = "fun f(\n    a: Int = foo(1),\n    b: Int,\n) {\n    println(b)\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    // ── Regression battery: cases discovered while fixing issue #176 ──
+
+    // `) = onEvent(` closes the parameter list AND opens a new call on the
+    // same line. Net paren count is zero, but the close must pop the
+    // parameter list and the trailing `(` must push the call list (okhttp
+    // EventListenerAdapter shape).
+    #[test]
+    fn close_then_open_same_line() {
+        let src = "class Adapter {\n    fun connectFailed(\n        call: Call,\n        ioe: IOException,\n    ) = onEvent(\n        ConnectFailed(\n            System.nanoTime(),\n            call,\n            ioe,\n        ),\n    )\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    // A KDoc line ending in `(` (a java example inside a block comment) must
+    // not open a paren list — the push is driven by the last *code* char.
+    #[test]
+    fn kdoc_line_ending_in_paren_does_not_open_list() {
+        let src = "/**\n * ```java\n *    public List<X509Certificate> checkServerTrusted(\n *        X509Certificate[] chain, String authType) {\n *    }\n * ```\n */\nclass Trust {\n    fun sslSocketFactory(\n        factory: SSLSocketFactory,\n    ) = apply {\n        if (factory != this.factory) {\n            this.factory = factory\n        }\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    // A trailing comment ending in `=`/`:` must not open a continuation.
+    #[test]
+    fn trailing_comment_ending_in_equals_does_not_continue() {
+        let src = "class Hpack {\n    fun readIndexedHeaderField() {\n        bytesIn.writeByte(0xff) // == Indexed - Add ==\n        bytesIn.write(\"8080808008\".decodeHex()) // idx = -2147483521\n        assertFailsWith<IOException> {\n            hpackReader.readHeaders()\n        }.also { expected ->\n            assertThat(expected.message).isEqualTo(\"overflow\")\n        }\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    // ── Multiline `for (` headers (ktlint keeps the first line and the
+    //    closing parens at the for-statement's own indent) ──
+
+    #[test]
+    fn for_header_first_line_at_statement_indent() {
+        let src =
+            "fun f() {\n    for (\n    step in seq()\n    ) {\n        println(step)\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn for_header_chained_continuation() {
+        let src = "fun f() {\n    for (\n    step in generateSequence(1) { it * 2 }\n        .dropWhile { it < 64 }\n        .takeWhile { it <= 8192 }\n    ) {\n        bb.clear()\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn for_header_nested_list_close_at_statement_indent() {
+        let src = "fun f() {\n    for (\n    x in listOf(\n        1,\n        2,\n    )\n    ) {\n        println(x)\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn for_header_labeled() {
+        let src = "fun f() {\n    outer@ for (\n    step in seq()\n    ) {\n        println(step)\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn for_header_deep_nesting() {
+        let src = "class Outer {\n    fun f() {\n        for (\n        step in seq()\n        ) {\n            println(step)\n        }\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn for_header_misindented_first_line_reported() {
+        let src =
+            "fun f() {\n    for (\n      step in seq()\n    ) {\n        println(step)\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.iter()
+                .any(|x| x.line == 3 && x.message.contains("(6) (should be 4)")),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    // String content must not leak into paren/continuation state: a base64
+    // padding `=` or a `)` inside a string must not open a continuation or
+    // close a paren list.
+    #[test]
+    fn string_content_does_not_leak() {
+        let src = "class T {\n    fun f() {\n        val bytes =\n          (\n            \"MIGJAoGBAICkUeG2stqfbyr6gyiVm5pN9YEDRXlowi+rfYGyWhC7ouW9fXAnhgShQKMOU8\" +\n              \"62mG3tcttSYGdsjM3z1crhQlUzpKqncrzwqbzPuAyt2t9Oib/bvjAvbl8gJH7IMRDl9RVgGYkApdkXVqgjSYigTH\" +\n              \"TEWxCEgnrfu/YzEkO6l3rXAgMBAAE=\"\n          ).decodeBase64()!!\n        println(bytes)\n    }\n}\n";
+        let v = check(src, 2);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    // A raw string whose closing side is a four-quote run (`""""` =
+    // content ending in `"` + closing `"""`) must not leave a dangling
+    // `"` that opens a regular string and poisons the next lines.
+    #[test]
+    fn raw_string_four_quote_close() {
+        let src = "fun f() {\n    assertEquals(\"\"\"\"1\"\"kotlin\"\"\"\", x)\n    assertEquals(\n        \"\"\"{\"id\":1}\"\"\",\n        y,\n    )\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn string_content_paren_does_not_close_list() {
+        // `a: String = ")"` — the `)` inside the string is content.
+        let src = "fun f(\n    a: String = \")\",\n    b: Int,\n) {\n    println(b)\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    // while/if multiline headers DO indent their first line (only `for` is
+    // special in ktlint).
+    #[test]
+    fn while_and_if_headers_indent_first_line() {
+        let src = "fun f(x: Int) {\n    while (\n        cond\n    ) {\n        println()\n    }\n    if (\n        x > 0\n    ) {\n        println(x)\n    }\n}\n";
         let v = check(src, 4);
         assert!(
             v.is_empty(),

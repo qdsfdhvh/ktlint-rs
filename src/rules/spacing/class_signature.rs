@@ -48,6 +48,7 @@ impl ClassSignatureSpacing {
             // list is reported (ktlint_official allows it).
             if self.code_style == CodeStyle::AndroidStudio {
                 self.check_multiline_parameters(&node, bytes, violations);
+                self.check_supertype_newline(&node, bytes, violations);
             }
         }
         for i in 0..node.child_count() {
@@ -85,7 +86,11 @@ impl ClassSignatureSpacing {
         // the collapsed signature actually fits within max_line_length — a
         // signature that cannot fit must stay multiline. Mirrors ktlint 1.8
         // (and function-signature's own fits check).
-        if !self.collapsed_fits(node, &ctor, bytes) {
+        let Some(class_kw) = self.class_keyword(node) else {
+            return;
+        };
+        let start = class_kw.start_byte();
+        if !self.fits(start, ctor.end_byte(), node, bytes) {
             return;
         }
         let mut w = ctor.walk();
@@ -137,41 +142,93 @@ impl ClassSignatureSpacing {
         }
     }
 
-    /// Issue #177: whether collapsing this class header onto one line would
-    /// fit within max_line_length. The header runs from the declaration start
-    /// (class keyword, or leading annotations) to just before the class body
-    /// `{`; its width is the line indent plus the header text with every
-    /// whitespace run collapsed to a single space (the form ktlint would
-    /// produce).
-    fn collapsed_fits(
+    /// android_studio: when the full header (params + supertypes) cannot fit
+    /// on one line, the supertype list must start on its own line — ktlint
+    /// 1.8 reports "Super type should start on a newline" at the first
+    /// supertype. Runs for every class (single-line params included); stays
+    /// silent when the params themselves cannot collapse (ktlint does not
+    /// demand a supertype newline then).
+    fn check_supertype_newline(
         &self,
         node: &tree_sitter::Node,
-        ctor: &tree_sitter::Node,
         bytes: &[u8],
-    ) -> bool {
-        let header_end = node
+        violations: &mut Vec<Violation>,
+    ) {
+        let supertypes: Vec<tree_sitter::Node> = node
             .children(&mut node.walk())
-            .find(|c| c.kind() == "class_body")
-            .map_or(node.end_byte(), |b| b.start_byte());
-        let start = node.start_byte();
-        if header_end <= start {
+            .filter(|c| c.kind() == "delegation_specifier")
+            .collect();
+        let (Some(first), Some(last)) = (supertypes.first(), supertypes.last()) else {
+            return;
+        };
+        let Some(class_kw) = self.class_keyword(node) else {
+            return;
+        };
+        let start = class_kw.start_byte();
+        // Full header (params + supertypes) on one line: fits → fine.
+        if self.fits(start, last.end_byte(), node, bytes) {
+            return;
+        }
+        // A multiline constructor whose params cannot collapse keeps the
+        // whole header multiline — no supertype request (matches ktlint).
+        if let Some(ctor) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "primary_constructor")
+        {
+            if ctor.start_position().row != ctor.end_position().row
+                && !self.fits(start, ctor.end_byte(), node, bytes)
+            {
+                return;
+            }
+        }
+        // The supertype name counts as already on a new line when a line
+        // break sits between the `:` and the first supertype.
+        let colon_end = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == ":")
+            .map_or(start, |c| c.end_byte());
+        if bytes[colon_end..first.start_byte()].contains(&b'\n') {
+            return;
+        }
+        let pos = first.start_position();
+        violations.push(Violation {
+            file: String::new(),
+            line: pos.row + 1,
+            col: pos.column + 1,
+            rule_id: self.id().to_string(),
+            message: "Super type should start on a newline".to_string(),
+            auto_fixable: true,
+        });
+    }
+
+    /// The `class` keyword child of a class declaration.
+    fn class_keyword<'a>(&self, node: &tree_sitter::Node<'a>) -> Option<tree_sitter::Node<'a>> {
+        node.children(&mut node.walk())
+            .find(|c| c.kind() == "class")
+    }
+
+    /// Issue #177: whether collapsing `bytes[start..end]` (the class
+    /// signature, with or without supertypes) onto one line fits within
+    /// max_line_length. Mirrors ktlint 1.8's measurement: from the `class`
+    /// keyword to the end of the primary constructor (annotations and
+    /// modifiers are not part of it — verified against the oracle). Width is
+    /// the line indent plus the header text with every whitespace run
+    /// collapsed to a single space.
+    fn fits(&self, start: usize, end: usize, node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+        if end <= start {
             return false;
         }
-        // ctor end must fall within the header (it does for a primary
-        // constructor).
-        if ctor.end_byte() > header_end {
-            return false;
-        }
-        let text = match std::str::from_utf8(&bytes[start..header_end]) {
+        let text = match std::str::from_utf8(&bytes[start..end]) {
             Ok(t) => t,
             Err(_) => return false,
         };
         // Indent of the declaration's first line.
-        let line_start = bytes[..start]
+        let decl_start = node.start_byte();
+        let line_start = bytes[..decl_start]
             .iter()
             .rposition(|&b| b == b'\n')
             .map_or(0, |i| i + 1);
-        let indent_len = bytes[line_start..start]
+        let indent_len = bytes[line_start..decl_start]
             .iter()
             .filter(|&&b| b == b' ' || b == b'\t')
             .count();
@@ -183,6 +240,10 @@ impl ClassSignatureSpacing {
         indent_len + collapsed_len <= self.max_line_length
     }
 
+    /// Issue #177: whether collapsing this class header onto one line would
+    /// fit within max_line_length. Mirrors ktlint 1.8's measurement: the
+    /// signature runs from the `class` keyword to the end of the primary
+    /// constructor — annotations, modifiers and the supertype list are not
     fn check_class(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
         let mut saw_class_keyword = false;
 
@@ -310,5 +371,123 @@ mod tests {
         // A nested class's collapsed signature includes its line indent.
         let src = "class Outer {\n    class Inner(\n        val a: String,\n    )\n}\n";
         assert!(!check(src).is_empty());
+    }
+
+    // android_studio: when the full header (params + supertypes) cannot fit
+    // on one line, the supertype list must start on its own line.
+    #[test]
+    fn supertype_newline_reported_when_full_header_too_long() {
+        // Params collapse fits; with the supertype the line exceeds 120.
+        let src = "class ChildWithLongName(\n    private val alphaConfigurationValue: String,\n    private val betaConfigurationValue: String,\n) : ParentBase()\n";
+        let v = check(src);
+        assert!(
+            v.iter()
+                .any(|x| x.message == "Super type should start on a newline"),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn supertype_newline_reported_for_single_line_params() {
+        // Single-line params, supertype pushes the line over the limit.
+        let src = "class Foo(val x: Int) : SomeExtremelyLongBaseClassNameThatExceedsTheLimitCompletelyAndThenSomeMoreCharactersToPushItOverTheEdgeCompletely()\n";
+        let v = check(src);
+        assert!(
+            v.iter()
+                .any(|x| x.message == "Super type should start on a newline"),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn supertype_newline_silent_when_supertype_already_on_new_line() {
+        let src = "class Foo(\n    val x: Int,\n) :\n    SomeExtremelyLongBaseClassNameThatExceedsTheLimitCompletelyAndThenSomeMoreCharactersToPushItOverTheEdgeCompletely()\n";
+        let v = check(src);
+        assert!(
+            v.iter()
+                .all(|x| x.message != "Super type should start on a newline"),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn supertype_newline_silent_when_params_cannot_collapse() {
+        // Params alone exceed the limit — ktlint stays silent about the
+        // supertype too.
+        let src = "class Huge(\n    private val alphaConfigurationValue: String,\n    private val betaConfigurationValue: String,\n    private val gammaConfigurationValue: String,\n    private val deltaConfigurationValue: String,\n) : SomeLongParent()\n";
+        let v = check(src);
+        assert!(
+            v.iter()
+                .all(|x| x.message != "Super type should start on a newline"),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn supertype_newline_silent_when_full_header_fits() {
+        let src = "class Foo(val x: Int) : Parent()\n";
+        assert!(check(src).is_empty());
+    }
+
+    #[test]
+    fn supertype_newline_no_params() {
+        // No constructor at all, supertype pushes the line over the limit.
+        let src = "class Foo : SomeExtremelyLongBaseClassNameThatExceedsTheLimitCompletelyAndThenSomeMoreCharactersToPushItOverTheEdgeCompletely()\n";
+        let v = check(src);
+        assert!(
+            v.iter()
+                .any(|x| x.message == "Super type should start on a newline"),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn ktlint_official_never_requests_collapse() {
+        // The multiline-param collapse is android_studio-only; under
+        // ktlint_official the same shape must stay silent.
+        let src =
+            "class Short(\n    private val alpha: String,\n    private val beta: String,\n)\n";
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        let v = ClassSignatureSpacing::new(CodeStyle::KtlintOfficial, 120).check(&tree, src);
+        assert!(
+            v.is_empty(),
+            "ktlint_official must not request collapse: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn supertype_newline_gated_on_android_studio() {
+        // "Super type should start on a newline" is android_studio-only.
+        let src = "class Foo(val x: Int) : SomeExtremelyLongBaseClassNameThatExceedsTheLimitCompletelyAndThenSomeMoreCharactersToPushItOverTheEdgeCompletely()\n";
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        let v = ClassSignatureSpacing::new(CodeStyle::KtlintOfficial, 120).check(&tree, src);
+        assert!(
+            v.iter()
+                .all(|x| x.message != "Super type should start on a newline"),
+            "ktlint_official must not report supertype newline: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn multiline_params_silent_when_max_unset_defaults_to_120() {
+        // max_line_length = 0 means "default 120" (same as MaxLineLength).
+        let src = "class Wide(\n    private val alphaConfigurationValue: String,\n    private val betaConfigurationValue: String,\n    private val gammaConfigurationValue: String,\n    private val deltaConfigurationValue: String,\n)\n";
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        let v = ClassSignatureSpacing::new(CodeStyle::AndroidStudio, 0).check(&tree, src);
+        assert!(
+            v.is_empty(),
+            "collapsed width 189 > default 120 must stay silent: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
     }
 }
