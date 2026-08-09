@@ -55,10 +55,8 @@ pub fn structural_invalid(source: &str, tree: &tree_sitter::Tree) -> Option<(usi
             let line = n.start_position().row + 1;
             let col = n.start_position().column + 1;
             let text = &source[s..e];
-            if text.len() <= 64 && (text.contains('#') || garbage_at(text)) {
-                if garbage.is_none() {
-                    garbage = Some((line, col));
-                }
+            if text.len() <= 64 && (text.contains('#') || garbage_at(text)) && garbage.is_none() {
+                garbage = Some((line, col));
             }
         }
         let mut cur = n.walk();
@@ -304,9 +302,7 @@ fn scan_structural_balance(source: &str) -> Option<(usize, usize)> {
                     // single-line strings cannot span a newline
                     return Some(here!());
                 } else {
-                    if state == State::Char && c == b'\'' {
-                        state = State::Code;
-                    } else if state == State::Str && c == b'"' {
+                    if (state == State::Char && c == b'\'') || (state == State::Str && c == b'"') {
                         state = State::Code;
                     }
                     i += 1;

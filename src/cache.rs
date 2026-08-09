@@ -16,7 +16,7 @@ const CACHE_VERSION: u32 = 5;
 /// violations (from older rule versions) are never served. This is a coarse
 /// global version; a per-rule fingerprint would be finer but this is safe:
 /// any rule change invalidates the whole cache for the binary version.
-const RULES_VERSION: u64 = 11;
+const RULES_VERSION: u64 = 12;
 
 #[derive(Serialize, Deserialize)]
 struct CacheFile {
