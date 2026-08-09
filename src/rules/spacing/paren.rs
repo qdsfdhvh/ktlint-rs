@@ -45,16 +45,7 @@ impl ParenSpacing {
         let end_byte = node.end_byte();
         let pos = node.start_position();
 
-        if end_byte < bytes.len() && bytes[end_byte] == b' ' {
-            violations.push(Violation {
-                file: String::new(),
-                line: pos.row + 1,
-                col: pos.column + 2,
-                rule_id: self.id().to_string(),
-                message: "Unexpected spacing after \"(\"".to_string(),
-                auto_fixable: true,
-            });
-        } else if end_byte < bytes.len()
+        let empty_split_list = end_byte < bytes.len()
             && bytes[end_byte] == b'\n'
             && node.parent().is_some_and(|p| {
                 // An *empty* argument list split across lines (`foo(\n    )`)
@@ -64,8 +55,8 @@ impl ParenSpacing {
                     p.kind(),
                     "value_arguments" | "function_value_parameters" | "lambda_parameters"
                 ) && p.child_count() <= 2
-            })
-        {
+            });
+        if (end_byte < bytes.len() && bytes[end_byte] == b' ') || empty_split_list {
             violations.push(Violation {
                 file: String::new(),
                 line: pos.row + 1,

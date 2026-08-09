@@ -29,7 +29,7 @@ impl Registry {
             Box::new(spacing::ArgumentListWrapping),
             Box::new(spacing::BlockCommentStar),
             Box::new(spacing::block_comment_alignment::BlockCommentInitialStarAlignment),
-            Box::new(spacing::ClassSignatureSpacing),
+            Box::new(spacing::ClassSignatureSpacing::new(config.code_style)),
             Box::new(spacing::ColonSpacing),
             Box::new(spacing::CommaSpacing),
             Box::new(spacing::ParameterListSpacing),
@@ -137,7 +137,10 @@ impl Registry {
             // `standard:wrapping` is provided by wrapping::GeneralWrapping above.
             Box::new(phase1_more::KtlintNoConsecutiveComments),
             // ── Phase 3b ──────────────────────────────────────────────
-            Box::new(phase3b_rules::FunctionSignatureSpacing::new(config.max_line_length)),
+            Box::new(phase3b_rules::FunctionSignatureSpacing::new(
+                config.max_line_length,
+                config.code_style,
+            )),
             Box::new(phase3b_rules::FunctionExpressionBody),
             Box::new(phase3b_rules::KeywordSpacing),
             // ── Final rules ───────────────────────────────────────────

@@ -129,7 +129,7 @@ impl Rule for EnumWrapping {
     fn id(&self) -> &'static str {
         "standard:enum-wrapping"
     }
-    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, _source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         let mut stack = vec![tree.root_node()];
         while let Some(node) = stack.pop() {
