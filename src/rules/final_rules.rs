@@ -129,27 +129,41 @@ impl Rule for EnumWrapping {
     fn id(&self) -> &'static str {
         "standard:enum-wrapping"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        let mut in_enum = false;
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if t.starts_with("enum ") {
-                in_enum = true;
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "enum_class_body"
+                && node.start_position().row != node.end_position().row
+            {
+                // Multiline enum: every entry after the first on a shared line
+                // is reported (ktlint 1.8, issue #168).
+                let mut w = node.walk();
+                let entries: Vec<tree_sitter::Node> = node
+                    .children(&mut w)
+                    .filter(|c| c.kind() == "enum_entry")
+                    .collect();
+                for pair in entries.windows(2) {
+                    if pair[0].end_position().row == pair[1].start_position().row {
+                        let p = pair[1].start_position();
+                        v.push(Violation {
+                            file: String::new(),
+                            line: p.row + 1,
+                            col: p.column + 1,
+                            rule_id: self.id().into(),
+                            message: "Enum entry should start on a separate line".into(),
+                            auto_fixable: true,
+                        });
+                    }
+                }
             }
-            if in_enum && t == "}" {
-                in_enum = false;
+            let mut w2 = node.walk();
+            let mut kids = Vec::new();
+            for c in node.children(&mut w2) {
+                kids.push(c);
             }
-            if in_enum && t.starts_with('{') && t.contains(',') {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 1,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Enum entry should start on a separate line".into(),
-                    auto_fixable: true,
-                });
+            for c in kids.into_iter().rev() {
+                stack.push(c);
             }
         }
         v

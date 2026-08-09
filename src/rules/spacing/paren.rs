@@ -54,6 +54,26 @@ impl ParenSpacing {
                 message: "Unexpected spacing after \"(\"".to_string(),
                 auto_fixable: true,
             });
+        } else if end_byte < bytes.len()
+            && bytes[end_byte] == b'\n'
+            && node.parent().is_some_and(|p| {
+                // An *empty* argument list split across lines (`foo(\n    )`)
+                // is a spacing error; a multiline list with arguments is not
+                // (ktlint 1.8, issue #170).
+                matches!(
+                    p.kind(),
+                    "value_arguments" | "function_value_parameters" | "lambda_parameters"
+                ) && p.child_count() <= 2
+            })
+        {
+            violations.push(Violation {
+                file: String::new(),
+                line: pos.row + 1,
+                col: pos.column + 2,
+                rule_id: self.id().to_string(),
+                message: "Unexpected spacing after \"(\"".to_string(),
+                auto_fixable: true,
+            });
         }
     }
 

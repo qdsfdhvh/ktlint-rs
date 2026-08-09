@@ -72,7 +72,8 @@ impl Rule for Indentation {
 
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
-            let spaces = line.len() - trimmed.len();
+            // Trailing whitespace must not count as indentation (issue #169).
+            let spaces = line.len() - line.trim_start().len();
 
             let raw_delimiters = line.matches("\"\"\"").count();
             if in_raw_string || raw_delimiters % 2 == 1 {
