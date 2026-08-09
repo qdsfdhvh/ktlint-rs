@@ -121,11 +121,41 @@ impl Rule for Indentation {
             // continuation alignment) are skipped conservatively: only a line
             // a full level short of its brace depth is reported.
             let depth = expected_depth(&lines, i);
-            if !too_shallow && !trimmed.starts_with('}') {
-                let expected = depth * is;
-                if expected > 0 && spaces < expected && expected - spaces >= is {
+            let depth_expected = depth * is;
+            // A closing brace sits one level inside its own block's depth —
+            // except a mis-indented brace (non-multiple) which is reported at
+            // the block's depth (covers continuation blocks like a `when {`
+            // on a `=` continuation line).
+            let expected_for_line = if trimmed.starts_with('}') && !too_shallow {
+                depth_expected.saturating_sub(is)
+            } else {
+                depth_expected
+            };
+            if expected_for_line > spaces {
+                let full_level_short = expected_for_line - spaces >= is;
+                // Non-multiples report the brace-depth expectation even when
+                // less than a full level short (ktlint reports a concrete
+                // "should be N" for any wrong indent); multiple-of-N lines
+                // only when a full level short (issue #152).
+                if too_shallow || full_level_short {
                     too_shallow = true;
-                    expected_indent = Some(expected);
+                    expected_indent = Some(expected_for_line);
+                }
+            }
+            // Continuation lines (supertype after `:`, initializer after `=`,
+            // expression body after `=`) are expected at the previous line's
+            // indent + one level — the brace-depth expectation is one level
+            // too shallow for them (issue #152).
+            if too_shallow && expected_indent.is_none() {
+                if let Some(prev_line) = lines.get(i.wrapping_sub(1)) {
+                    let pt = prev_line.trim_end();
+                    if (pt.ends_with(':') || pt.ends_with('=')) && !pt.ends_with(":=") {
+                        let prev_indent = prev_line.len() - prev_line.trim_start().len();
+                        let want = prev_indent + is;
+                        if want > spaces {
+                            expected_indent = Some(want);
+                        }
+                    }
                 }
             }
             if too_shallow {
@@ -156,6 +186,12 @@ impl Rule for Indentation {
 /// a block without full continuation analysis.
 fn expected_depth(lines: &[&str], target: usize) -> usize {
     let mut depth = 0usize;
+    // Block-comment and raw-string state span lines (a `/** ... */` KDoc often
+    // contains `{`/`}` in code examples, and a `"""` raw string spans lines
+    // with braces that must never count). Unterminated single-line strings
+    // are invalid Kotlin and rejected earlier as parse errors.
+    let mut in_block_comment = false;
+    let mut in_raw_string = false;
     for (i, line) in lines.iter().enumerate() {
         if i >= target {
             break;
@@ -165,11 +201,10 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
         // strings), escaped quotes (`\"`), and comments are not block
         // delimiters and would inflate the depth.
         let mut in_string = false;
-        let mut in_block_comment = false;
         let mut cleaned = String::with_capacity(t.len());
         let mut chars = t.chars().peekable();
         while let Some(c) = chars.next() {
-            if !in_string && !in_block_comment {
+            if !in_string && !in_block_comment && !in_raw_string {
                 if c == '/' && chars.peek() == Some(&'/') {
                     // line comment: skip to end of line
                     break;
@@ -192,7 +227,7 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
                 chars.next();
                 continue;
             }
-            if c == '\'' && !in_string {
+            if c == '\'' && !in_string && !in_raw_string {
                 // character literal `'{'` — its interior is not code
                 loop {
                     match chars.next() {
@@ -206,10 +241,31 @@ fn expected_depth(lines: &[&str], target: usize) -> usize {
                 continue;
             }
             if c == '"' {
+                if !in_string && !in_raw_string
+                    && chars.peek() == Some(&'"')
+                    && chars.clone().nth(1) == Some('"')
+                {
+                    // `"""` opens a raw string (spans lines)
+                    in_raw_string = true;
+                    chars.next();
+                    chars.next();
+                    continue;
+                }
+                if in_raw_string {
+                    if chars.peek() == Some(&'"') && chars.clone().nth(1) == Some('"') {
+                        // `"""` closes the raw string
+                        in_raw_string = false;
+                        chars.next();
+                        chars.next();
+                        continue;
+                    }
+                    // a single quote inside a raw string is content
+                    continue;
+                }
                 in_string = !in_string;
                 continue;
             }
-            if in_string && (c == '{' || c == '}') {
+            if (in_string || in_raw_string) && (c == '{' || c == '}') {
                 continue;
             }
             cleaned.push(c);
@@ -325,7 +381,14 @@ mod tests {
     #[test]
     fn char_literal_brace_does_not_inflate_depth() {
         let src = "class A {\n    fun f() {\n        val i = value.indexOf('{')\n        val p = value.substringBefore('{', \"\")\n        foo()\n    }\n}\n";
-        assert!(check(src, 4).is_empty());
+        let v = check(src, 4);
+        if !v.is_empty() {
+            println!(
+                "VIOLATIONS: {:?}",
+                v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+            );
+        }
+        assert!(v.is_empty());
     }
 
     #[test]
@@ -335,3 +398,5 @@ mod tests {
         assert!(check(src, 4).is_empty());
     }
 }
+
+
