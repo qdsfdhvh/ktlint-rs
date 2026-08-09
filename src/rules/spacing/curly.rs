@@ -54,10 +54,23 @@ impl CurlySpacing {
             let is_first_token_on_line = bytes[line_start..start_byte]
                 .iter()
                 .all(|byte| byte.is_ascii_whitespace());
-            // Should have space before unless preceded by (, [, or at line start
-            if prev_char == b'\n' || is_first_token_on_line {
-                // OK — first token on the line; preceding spaces are indentation
-                // OK — directly after opening paren/bracket
+            if is_first_token_on_line {
+                // Allman style: a `{` on its own line. Allowed for lambda
+                // literals (a wrapped trailing lambda or a lambda argument
+                // starts on its own line), reported for block braces —
+                // function body, class body, control flow — which must stay
+                // on the same line as the declaration (issue #178).
+                let parent_is_lambda = node.parent().is_some_and(|p| p.kind() == "lambda_literal");
+                if !parent_is_lambda {
+                    violations.push(Violation {
+                        file: String::new(),
+                        line: pos.row + 1,
+                        col: pos.column + 1,
+                        rule_id: self.id().to_string(),
+                        message: "Unexpected newline before \"{\"".to_string(),
+                        auto_fixable: true,
+                    });
+                }
             } else if matches!(prev_char, b'(' | b'[') {
                 // OK — lambda literals can directly follow an opening delimiter.
             } else if prev_char == b'@' {
@@ -168,6 +181,86 @@ mod tests {
     #[test]
     fn indented_lambda_argument_is_ok() {
         let source = "call(\n    { value() },\n)\n";
+        assert!(check(source).is_empty());
+    }
+
+    // Issue #178: a block brace on its own line (Allman style) is reported.
+    #[test]
+    fn newline_before_function_body_brace_reported() {
+        let source = "fun a(): Int\n{\n    return 1\n}\n";
+        let v = check(source);
+        assert!(
+            v.iter()
+                .any(|x| x.message.contains("Unexpected newline before \"{\"")),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn newline_before_control_flow_brace_reported() {
+        let source = "fun b(x: Int): Int {\n    if (x > 0)\n    {\n        return 1\n    }\n    return 0\n}\n";
+        let v = check(source);
+        assert!(
+            v.iter()
+                .any(|x| x.message.contains("Unexpected newline before \"{\"")),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn newline_before_class_body_brace_reported() {
+        let source = "class C\n{\n    val a = 1\n}\n";
+        let v = check(source);
+        assert!(
+            v.iter()
+                .any(|x| x.message.contains("Unexpected newline before \"{\"")),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn newline_before_try_and_finally_reported() {
+        let source = "fun f() {\n    try\n    {\n        a()\n    }\n    finally\n    {\n        b()\n    }\n}\n";
+        let v = check(source);
+        assert!(
+            v.iter()
+                .any(|x| x.message.contains("Unexpected newline before \"{\"")),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn newline_before_when_brace_reported() {
+        let source = "fun f(x: Int) {\n    when (x)\n    {\n        1 -> a()\n    }\n}\n";
+        let v = check(source);
+        assert!(
+            v.iter()
+                .any(|x| x.message.contains("Unexpected newline before \"{\"")),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn lambda_on_own_line_still_ok() {
+        // A wrapped trailing lambda starts on its own line — not reported.
+        let source = "val x = list\n    .map\n    {\n        it * 2\n    }\n";
+        let v = check(source);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn brace_after_comment_style_still_fine() {
+        // Same-line braces are unaffected by the newline check.
+        let source = "fun f() {\n    return 1\n}\n";
         assert!(check(source).is_empty());
     }
 }
