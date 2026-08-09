@@ -196,66 +196,15 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
     let mut in_raw_string = false;
     for (i, line) in lines.iter().enumerate() {
         let t = line.trim();
-        let mut e = depth * is;
-        if t.ends_with(')') {
-            paren_expected.pop();
-            paren_depth = paren_depth.saturating_sub(1);
-        }
-        if paren_depth > 0 {
-            if let Some(&list) = paren_expected.last() {
-                if list > e {
-                    e = list;
-                }
-            }
-        }
-        if i > 0 {
-            let prev = lines[i - 1].trim_end();
-            // A comment or blank line never opens a continuation — a comment
-            // ending in `:` or `{` must not raise the next line's expectation.
-            let prev_trim = prev.trim_start();
-            let prev_inert = prev_trim.is_empty()
-                || prev_trim.starts_with("//")
-                || prev_trim.starts_with("/*")
-                || prev_trim.starts_with('*');
-            // True when the previous line was a supertype continuation (its
-            // own previous line ended with `:`). The class body `{` that
-            // follows opens the *class* body (indent = the continuation's
-            // expectation), not a nested block (continuation + 4).
-            let prev_was_supertype = i > 1
-                && lines[i - 2].trim_end().ends_with(':')
-                && !lines[i - 2].trim_end().ends_with(":=");
-            if t.starts_with('}') {
-                // A closing brace sits at the block's indent: the previous
-                // line's expectation minus one level (handles `} else if {`
-                // and continuation blocks like a `when {` on a `=` line).
-                e = prev_expected.saturating_sub(is);
-            } else if !prev_inert {
-                if paren_depth > 0 {
-                    // Inside a paren list the expectation already came from
-                    // the list indent; keep it.
-                } else if prev.ends_with('{') && prev_was_supertype {
-                    // Class body opened on a supertype continuation line.
-                    e = prev_expected;
-                } else if prev.ends_with('{')
-                    || prev.ends_with('(')
-                    || prev.ends_with(':')
-                    || prev.ends_with('=')
-                {
-                    // Body/continuation line (block body, parameter list,
-                    // supertype colon, initializer/expression body): the
-                    // opener's expectation + one level.
-                    let want = prev_expected.saturating_add(is);
-                    if want > e {
-                        e = want;
-                    }
-                }
-            }
-        }
-        out[i] = e;
-        prev_expected = e;
-        // Count this line's braces outside strings/comments.
+        // Strip strings, comments, and char literals first so the paren counts
+        // below reflect code only — a `)` inside a string must not close a
+        // paren list. Counts are accumulated inline to keep this hot path
+        // single-pass (no post-hoc scan of a cleaned string).
         let mut in_string = false;
-        let mut cleaned = String::with_capacity(t.len());
+        let mut brace_opens = 0usize;
+        let mut brace_closes = 0usize;
+        let mut paren_opens = 0usize;
+        let mut paren_closes = 0usize;
         let mut chars = t.chars().peekable();
         while let Some(c) = chars.next() {
             if !in_string && !in_block_comment && !in_raw_string {
@@ -317,11 +266,79 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
             if (in_string || in_raw_string) && (c == '{' || c == '}') {
                 continue;
             }
-            cleaned.push(c);
+            match c {
+                '{' => brace_opens += 1,
+                '}' => brace_closes += 1,
+                '(' => paren_opens += 1,
+                ')' => paren_closes += 1,
+                _ => {}
+            }
         }
-        let opens = cleaned.bytes().filter(|b| *b == b'{').count();
-        let closes = cleaned.bytes().filter(|b| *b == b'}').count();
-        depth = depth.saturating_add(opens).saturating_sub(closes);
+        // A line may close a paren list without *ending* in `)` — `) {`,
+        // `): Int {`, `),` all close it — so pop for every net closing paren
+        // (issue #176: multiline value parameter lists pushed the closing
+        // line and everything after it one level too far right).
+        for _ in 0..paren_closes.saturating_sub(paren_opens) {
+            paren_expected.pop();
+            paren_depth = paren_depth.saturating_sub(1);
+        }
+        let mut e = depth * is;
+        if paren_depth > 0 {
+            if let Some(&list) = paren_expected.last() {
+                if list > e {
+                    e = list;
+                }
+            }
+        }
+        if i > 0 {
+            let prev = lines[i - 1].trim_end();
+            // A comment or blank line never opens a continuation — a comment
+            // ending in `:` or `{` must not raise the next line's expectation.
+            let prev_trim = prev.trim_start();
+            let prev_inert = prev_trim.is_empty()
+                || prev_trim.starts_with("//")
+                || prev_trim.starts_with("/*")
+                || prev_trim.starts_with('*');
+            // True when the previous line was a supertype continuation (its
+            // own previous line ended with `:`). The class body `{` that
+            // follows opens the *class* body (indent = the continuation's
+            // expectation), not a nested block (continuation + 4).
+            let prev_was_supertype = i > 1
+                && lines[i - 2].trim_end().ends_with(':')
+                && !lines[i - 2].trim_end().ends_with(":=");
+            if t.starts_with('}') {
+                // A closing brace sits at the block's indent: the previous
+                // line's expectation minus one level (handles `} else if {`
+                // and continuation blocks like a `when {` on a `=` line).
+                e = prev_expected.saturating_sub(is);
+            } else if !prev_inert {
+                if paren_depth > 0 {
+                    // Inside a paren list the expectation already came from
+                    // the list indent; keep it.
+                } else if prev.ends_with('{') && prev_was_supertype {
+                    // Class body opened on a supertype continuation line.
+                    e = prev_expected;
+                } else if prev.ends_with('{')
+                    || prev.ends_with('(')
+                    || prev.ends_with(':')
+                    || prev.ends_with('=')
+                {
+                    // Body/continuation line (block body, parameter list,
+                    // supertype colon, initializer/expression body): the
+                    // opener's expectation + one level.
+                    let want = prev_expected.saturating_add(is);
+                    if want > e {
+                        e = want;
+                    }
+                }
+            }
+        }
+        out[i] = e;
+        prev_expected = e;
+        // Count this line's braces outside strings/comments.
+        depth = depth
+            .saturating_add(brace_opens)
+            .saturating_sub(brace_closes);
         if t.ends_with('(') {
             paren_expected.push(e.saturating_add(is));
             paren_depth += 1;
@@ -449,5 +466,71 @@ mod tests {
         // `shouldn't` inside a string — the `'` must not start a char literal.
         let src = "class A {\n    fun f() {\n        require(length > 0) { \"range shouldn't be empty\" }\n        parts.add(x)\n    }\n}\n";
         assert!(check(src, 4).is_empty());
+    }
+
+    // Issue #176: multiline value parameter lists must not push the closing
+    // `)` line or the body that follows one level too far right. 0.1.12 was
+    // clean; 0.1.13 regressed.
+    #[test]
+    fn multiline_value_parameter_list_clean() {
+        let src = "fun f(\n    a: Int,\n) {\n    println(a)\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn multiline_value_parameter_list_no_trailing_comma() {
+        let src = "fun f(\n    a: Int\n) {\n    println(a)\n}\n";
+        assert!(check(src, 4).is_empty());
+    }
+
+    #[test]
+    fn multiline_value_parameter_list_with_return_type() {
+        let src = "fun f(\n    a: Int,\n): Int {\n    return a\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn multiline_class_parameters_clean() {
+        let src = "class Wide(\n    private val alpha: String,\n    private val beta: String,\n) {\n    fun run(\n        a: Int,\n    ): Int {\n        return a\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn multiline_params_balanced_parens_in_default_value() {
+        // A balanced `foo(1)` on a continuation line must not pop the outer
+        // list; the `)` inside the default value is not a list closer.
+        let src = "fun f(\n    a: Int = foo(1),\n    b: Int,\n) {\n    println(b)\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn secondary_constructor_multiline_clean() {
+        let src = "class C(\n    val a: Int,\n) {\n    constructor(\n        a: Int,\n    ) : this()\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
     }
 }
