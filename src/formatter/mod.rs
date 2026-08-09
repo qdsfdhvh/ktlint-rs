@@ -2350,7 +2350,7 @@ fn fix_when_conditions_blank_lines(source: &str) -> String {
     }
     let mut text = source.to_string();
     for &pos in insert.iter().rev() {
-        text.insert_str(pos, "\n");
+        text.insert(pos, '\n');
     }
     restore_protected(&text, &store)
 }
