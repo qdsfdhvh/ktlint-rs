@@ -326,6 +326,35 @@ where
     if transformed == source {
         return Ok(source.to_string());
     }
+    // KTLINT_RS_FORMAT_DEBUG=1: report which rule rewrites what, so a
+    // formatter regression can be bisected to the responsible pass.
+    if std::env::var("KTLINT_RS_FORMAT_DEBUG").is_ok() {
+        let before: Vec<&str> = source.lines().collect();
+        let after: Vec<&str> = transformed.lines().collect();
+        let max = before.len().max(after.len());
+        let mut ranges: Vec<(usize, usize)> = Vec::new();
+        for i in 0..max {
+            let b = before.get(i).copied().unwrap_or("<eof>");
+            let a = after.get(i).copied().unwrap_or("<eof>");
+            if b != a {
+                match ranges.last_mut() {
+                    Some((_, end)) if *end + 1 == i => *end = i,
+                    _ => ranges.push((i, i)),
+                }
+            }
+        }
+        for (s0, s1) in &ranges {
+            eprintln!("[format-debug] {owner}: lines {}-{} changed:", s0 + 1, s1 + 1);
+            for i in *s0..=*s1 {
+                let b = before.get(i).copied().unwrap_or("<eof>");
+                let a = after.get(i).copied().unwrap_or("<eof>");
+                if b != a {
+                    eprintln!("  L{} before: {:?}", i + 1, b);
+                    eprintln!("  L{} after:  {:?}", i + 1, a);
+                }
+            }
+        }
+    }
     let Some(after_tree) = parse_clean(&transformed) else {
         anyhow::bail!("{owner} produced invalid Kotlin syntax");
     };
