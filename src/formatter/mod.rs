@@ -344,7 +344,11 @@ where
             }
         }
         for (s0, s1) in &ranges {
-            eprintln!("[format-debug] {owner}: lines {}-{} changed:", s0 + 1, s1 + 1);
+            eprintln!(
+                "[format-debug] {owner}: lines {}-{} changed:",
+                s0 + 1,
+                s1 + 1
+            );
             for i in *s0..=*s1 {
                 let b = before.get(i).copied().unwrap_or("<eof>");
                 let a = after.get(i).copied().unwrap_or("<eof>");
