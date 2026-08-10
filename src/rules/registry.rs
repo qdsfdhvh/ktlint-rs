@@ -98,7 +98,14 @@ impl Registry {
             Box::new(structure::unnecessary_paren_lambda::UnnecessaryParenBeforeLambda),
             // ── Imports ───────────────────────────────────────────────
             Box::new(NoWildcardImports),
-            Box::new(imports::ImportOrdering),
+            Box::new(imports::ImportOrdering::new(
+                config.code_style,
+                &config
+                    .rules
+                    .get("ij_kotlin_properties")
+                    .map(|rc| rc.properties.clone())
+                    .unwrap_or_default(),
+            )),
             Box::new(imports::NoUnusedImports),
             Box::new(detekt::style::UnusedParameter),
             Box::new(detekt::style::LibraryCodeMustSpecifyReturnType),
