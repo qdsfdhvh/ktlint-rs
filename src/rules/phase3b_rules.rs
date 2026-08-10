@@ -267,7 +267,10 @@ impl FunctionSignatureSpacing {
                 .iter()
                 .rposition(|&b| b != b' ' && b != b'\t')
                 .map_or(line_start, |i| line_start + i);
-            if bytes.get(trimmed) == Some(&b',') {
+            // Report only when the closing `)` is NOT on the parameter's own
+            // line (`beta: String)` or `beta: String) = Unit` keep it).
+            let rest_has_close = bytes[last.end_byte()..line_end].contains(&b')');
+            if !rest_has_close {
                 v.push(Violation {
                     file: String::new(),
                     line: row + 1,
@@ -315,7 +318,20 @@ impl FunctionSignatureSpacing {
         bytes: &[u8],
     ) -> bool {
         let start = self.measure_start(node, bytes);
-        let end = params.end_byte();
+        // Measure to the end of the closing-paren line: ` {`, `: Int {` etc.
+        // on that line count against max_line_length too (issue #188).
+        let end = {
+            let byte = params.end_byte();
+            let line_end = bytes[byte..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .map_or(bytes.len(), |i| byte + i);
+            let mut e = line_end;
+            while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
+                e -= 1;
+            }
+            e
+        };
         if end <= start {
             return false;
         }
@@ -332,10 +348,20 @@ impl FunctionSignatureSpacing {
             .iter()
             .filter(|&&b| b == b' ' || b == b'\t')
             .count();
-        let collapsed_len = text
-            .lines()
-            .map(|l| l.trim().chars().count())
-            .sum::<usize>();
+        // ktlint's collapsed single-line form: lines trimmed, joined with
+        // `, ` after a trailing comma (`fun f(\n    a: Int,\n    b: Int)`
+        // -> `fun f(a: Int, b: Int)`).
+        let collapsed_len = {
+            let lines: Vec<&str> = text.lines().map(|l| l.trim()).collect();
+            let mut len = 0usize;
+            for (i, l) in lines.iter().enumerate() {
+                len += l.chars().count();
+                if i + 1 < lines.len() && l.ends_with(',') && lines[i + 1] != ")" {
+                    len += 1;
+                }
+            }
+            len
+        };
         indent_len + collapsed_len <= self.max_length
     }
 
