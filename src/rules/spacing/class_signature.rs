@@ -13,6 +13,38 @@ pub struct ClassSignatureSpacing {
     max_line_length: usize,
 }
 
+/// The byte just past the last non-newline char on `byte`'s line — the
+/// closing-paren line may continue with ` {`, `: Int {` or ` : Super {`,
+/// which must count against max_line_length (issue #188).
+
+/// Length of ktlint's collapsed single-line form: each line trimmed and
+/// joined with no separator, except after a trailing comma where ktlint
+/// writes `, ` (its reformatted parameter list).
+fn collapsed_len_of(text: &str) -> usize {
+    let lines: Vec<&str> = text.lines().map(|l| l.trim()).collect();
+    let mut len = 0usize;
+    for (i, l) in lines.iter().enumerate() {
+        len += l.chars().count();
+        if i + 1 < lines.len() && l.ends_with(',') && lines[i + 1] != ")" {
+            len += 1;
+        }
+    }
+    len
+}
+
+fn line_end_after(bytes: &[u8], byte: usize) -> usize {
+    let line_end = bytes[byte..]
+        .iter()
+        .position(|&b| b == b'\n')
+        .map_or(bytes.len(), |i| byte + i);
+    // trim trailing whitespace on the line
+    let mut end = line_end;
+    while end > byte && (bytes[end - 1] == b' ' || bytes[end - 1] == b'\t') {
+        end -= 1;
+    }
+    end
+}
+
 impl ClassSignatureSpacing {
     pub fn new(code_style: CodeStyle, max_line_length: usize) -> Self {
         let max_line_length = if max_line_length == 0 {
@@ -87,7 +119,10 @@ impl ClassSignatureSpacing {
         // signature that cannot fit must stay multiline. Mirrors ktlint 1.8
         // (and function-signature's own fits check).
         let start = self.measure_start(node, bytes);
-        if !self.fits(start, ctor.end_byte(), node, bytes) {
+        // Collapse decision: signature + ` {` when the body opens on the
+        // same line; the supertype list in between is not counted (issue
+        // #188).
+        if !self.collapse_fits(start, &ctor, node, bytes) {
             return;
         }
         let mut w = ctor.walk();
@@ -159,18 +194,19 @@ impl ClassSignatureSpacing {
             return;
         };
         let start = self.measure_start(node, bytes);
-        // Full header (params + supertypes) on one line: fits → fine.
-        if self.fits(start, last.end_byte(), node, bytes) {
+        // Full header (params + supertypes + body) on one line: fits → fine.
+        if self.fits(start, line_end_after(bytes, last.end_byte()), node, bytes) {
             return;
         }
-        // A multiline constructor whose params cannot collapse keeps the
-        // whole header multiline — no supertype request (matches ktlint).
+        // The supertype request only applies when the collapsed params
+        // themselves fit (a multiline ctor that cannot collapse keeps the
+        // whole header multiline — matches ktlint).
         if let Some(ctor) = node
             .children(&mut node.walk())
             .find(|c| c.kind() == "primary_constructor")
         {
             if ctor.start_position().row != ctor.end_position().row
-                && !self.fits(start, ctor.end_byte(), node, bytes)
+                && !self.collapse_fits(start, &ctor, node, bytes)
             {
                 return;
             }
@@ -214,6 +250,23 @@ impl ClassSignatureSpacing {
     /// public class`), else the `class` keyword. Annotations are not part of
     /// the measurement (verified: a long annotation does not stop the
     /// collapse request), modifiers are (issue #182).
+
+    /// The byte just past the last non-newline char on `byte`'s line — the
+    /// closing-paren line may continue with ` {`, `: Int {` or ` : Super {`,
+    /// which must count against max_line_length (issue #188).
+    fn line_end_after(bytes: &[u8], byte: usize) -> usize {
+        let line_end = bytes[byte..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .map_or(bytes.len(), |i| byte + i);
+        // trim trailing whitespace on the line
+        let mut end = line_end;
+        while end > byte && (bytes[end - 1] == b' ' || bytes[end - 1] == b'\t') {
+            end -= 1;
+        }
+        end
+    }
+
     fn measure_start<'a>(&self, node: &tree_sitter::Node<'a>, bytes: &[u8]) -> usize {
         if let Some(mods) = node
             .children(&mut node.walk())
@@ -253,14 +306,26 @@ impl ClassSignatureSpacing {
     }
 
     fn fits(&self, start: usize, end: usize, node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+        self.measurement_len(start, end, node, bytes) <= self.max_line_length
+    }
+
+    /// ktlint's collapsed single-line length of `bytes[start..end]`: line
+    /// indent plus each line trimmed, joined with `, ` after a trailing
+    /// comma (`class C(\n    val a: X,\n)` -> `class C(val a: X,)`).
+    fn measurement_len(
+        &self,
+        start: usize,
+        end: usize,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+    ) -> usize {
         if end <= start {
-            return false;
+            return usize::MAX;
         }
         let text = match std::str::from_utf8(&bytes[start..end]) {
             Ok(t) => t,
-            Err(_) => return false,
+            Err(_) => return usize::MAX,
         };
-        // Indent of the declaration's first line.
         let decl_start = node.start_byte();
         let line_start = bytes[..decl_start]
             .iter()
@@ -270,14 +335,32 @@ impl ClassSignatureSpacing {
             .iter()
             .filter(|&&b| b == b' ' || b == b'\t')
             .count();
-        // ktlint joins the signature's lines with no separator (each line
-        // trimmed): `class C(\n    val a: X,\n)` collapses to
-        // `class C(val a: X,)` — no space after `(` or before `)`.
-        let collapsed_len = text
-            .lines()
-            .map(|l| l.trim().chars().count())
-            .sum::<usize>();
-        indent_len + collapsed_len <= self.max_line_length
+        indent_len + collapsed_len_of(text)
+    }
+
+    /// Collapse decision: the signature (to the closing paren) plus the
+    /// class body's ` {` when it opens on the same line — the supertype list
+    /// in between is not part of it (issue #188).
+    fn collapse_fits(
+        &self,
+        start: usize,
+        ctor: &tree_sitter::Node,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+    ) -> bool {
+        let base = self.measurement_len(start, ctor.end_byte(), node, bytes);
+        if base > self.max_line_length {
+            return false;
+        }
+        let body_on_line = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "class_body")
+            .is_some_and(|b| b.start_position().row == ctor.end_position().row);
+        if !body_on_line {
+            return true;
+        }
+        // ` {` on the closing-paren line adds 2 columns.
+        base + 2 <= self.max_line_length
     }
 
     /// Issue #177: whether collapsing this class header onto one line would
@@ -401,10 +484,11 @@ mod tests {
         // A tight max_line_length must silence the report for a signature
         // that only fits a shorter collapsed form.
         let src = "class Wide(\n    private val alpha: String,\n    private val beta: String,\n)\n";
-        // collapsed form is 63 chars ( — lines joined with no
-        // separator); at 62 it does not fit → silent.
-        assert!(check_with_max(src, 62).is_empty());
-        assert!(!check_with_max(src, 63).is_empty());
+        // collapsed form is 64 chars, trailing comma kept
+        // (`class Wide(private val alpha: String, private val beta:
+        // String,)` — oracle-verified: max=63 silent, max=64 reports).
+        assert!(check_with_max(src, 63).is_empty());
+        assert!(!check_with_max(src, 64).is_empty());
     }
 
     #[test]
