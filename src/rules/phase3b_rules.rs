@@ -746,23 +746,3 @@ mod tests {
         assert_eq!(fs[0].col, 46);
     }
 }
-
-#[cfg(test)]
-mod dbg_m {
-    use crate::config::CodeStyle;
-    use crate::parser::KotlinParser;
-    use crate::rules::phase3b_rules::FunctionSignatureSpacing;
-    use crate::rules::Rule;
-
-    #[test]
-    fn dump_m117() {
-        let src = std::fs::read_to_string("/tmp/verify/i5/m117.kt").unwrap();
-        let tree = KotlinParser::new().parse(&src);
-        let rule = FunctionSignatureSpacing::new(120, CodeStyle::AndroidStudio);
-        let v = rule.check(&tree, &src);
-        eprintln!(
-            "m117 violations: {:?}",
-            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
-        );
-    }
-}

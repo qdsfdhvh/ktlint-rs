@@ -333,7 +333,6 @@ impl ClassSignatureSpacing {
             .filter(|&&b| b == b' ' || b == b'\t')
             .count();
         eprintln!(
-            "DBGC start={} end={} indent={} collapsed={} total={} text={:?}",
             start,
             end,
             indent_len,
@@ -628,26 +627,6 @@ mod tests {
         assert!(
             v.is_empty(),
             "collapsed width 189 > default 120 must stay silent: {:?}",
-            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
-        );
-    }
-}
-
-#[cfg(test)]
-mod dbg_c {
-    use crate::config::CodeStyle;
-    use crate::parser::KotlinParser;
-    use crate::rules::spacing::class_signature::ClassSignatureSpacing;
-    use crate::rules::Rule;
-
-    #[test]
-    fn dump_c118() {
-        let src = std::fs::read_to_string("/tmp/verify/i5/c118.kt").unwrap();
-        let tree = KotlinParser::new().parse(&src);
-        let rule = ClassSignatureSpacing::new(CodeStyle::AndroidStudio, 120);
-        let v = rule.check(&tree, &src);
-        eprintln!(
-            "c118 violations: {:?}",
             v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
         );
     }
