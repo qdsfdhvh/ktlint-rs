@@ -25,7 +25,7 @@ fn collapsed_len_of(text: &str) -> usize {
     let mut len = 0usize;
     for (i, l) in lines.iter().enumerate() {
         len += l.chars().count();
-        if i + 1 < lines.len() && l.ends_with(',') && lines[i + 1] != ")" {
+        if i + 1 < lines.len() && l.ends_with(',') && !lines[i + 1].starts_with(')') {
             len += 1;
         }
     }
@@ -319,9 +319,6 @@ impl ClassSignatureSpacing {
         node: &tree_sitter::Node,
         bytes: &[u8],
     ) -> usize {
-        if end <= start {
-            return usize::MAX;
-        }
         let text = match std::str::from_utf8(&bytes[start..end]) {
             Ok(t) => t,
             Err(_) => return usize::MAX,
@@ -335,6 +332,7 @@ impl ClassSignatureSpacing {
             .iter()
             .filter(|&&b| b == b' ' || b == b'\t')
             .count();
+
         indent_len + collapsed_len_of(text)
     }
 
@@ -348,8 +346,18 @@ impl ClassSignatureSpacing {
         node: &tree_sitter::Node,
         bytes: &[u8],
     ) -> bool {
+        // Oracle boundary (issue #195): the collapsed signature collapses
+        // up to 120 (incl. trailing comma); with a supertype list the
+        // boundary drops to 118 (` : ` is reserved). Verified at every
+        // width on top-level, nested, supertype and body shapes.
+        let supertype = node
+            .children(&mut node.walk())
+            .any(|c| c.kind() == "delegation_specifier");
+        let limit = self
+            .max_line_length
+            .saturating_sub(if supertype { 2 } else { 0 });
         let base = self.measurement_len(start, ctor.end_byte(), node, bytes);
-        if base > self.max_line_length {
+        if base > limit {
             return false;
         }
         let body_on_line = node
@@ -360,7 +368,7 @@ impl ClassSignatureSpacing {
             return true;
         }
         // ` {` on the closing-paren line adds 2 columns.
-        base + 2 <= self.max_line_length
+        base + 2 <= limit
     }
 
     /// Issue #177: whether collapsing this class header onto one line would

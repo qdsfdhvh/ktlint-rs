@@ -207,8 +207,14 @@ impl FunctionSignatureSpacing {
             && self.single_line_param(&params, &param_nodes[0], bytes)
             && !(self.code_style != CodeStyle::AndroidStudio && annotated_param);
         let multi = param_nodes.len() > 1;
+        // Issue #194: a single parameter list must respect max_line_length
+        // too — ktlint stops asking for the collapse once the collapsed
+        // signature (incl. the ` {`) reaches 120 (oracle-verified).
         let fits = self.signature_fits(node, &params, bytes);
-        if !(single || (multi && self.code_style == CodeStyle::AndroidStudio && fits)) {
+        let single_fits = self.signature_fits_single(node, &params, bytes);
+        if !((single && single_fits)
+            || (multi && self.code_style == CodeStyle::AndroidStudio && fits))
+        {
             return;
         }
         // ktlint reports the first parameter at its first token, including
@@ -306,6 +312,56 @@ impl FunctionSignatureSpacing {
         !bytes[start..end].contains(&b'\n')
     }
 
+    /// Single-parameter variant of the fits check. Oracle boundary: the
+    /// collapsed signature (indent + params + ` {`) collapses up to 120,
+    /// silent at 121 — one column later than the multi-parameter check
+    /// (issue #195).
+    fn signature_fits_single(
+        &self,
+        node: &tree_sitter::Node,
+        params: &tree_sitter::Node,
+        bytes: &[u8],
+    ) -> bool {
+        let start = self.measure_start(node, bytes);
+        let byte = params.end_byte();
+        let line_end = bytes[byte..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .map_or(bytes.len(), |i| byte + i);
+        let mut e = line_end;
+        while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
+            e -= 1;
+        }
+        if e <= start {
+            return false;
+        }
+        let text = match std::str::from_utf8(&bytes[start..e]) {
+            Ok(t) => t,
+            Err(_) => return false,
+        };
+        let decl_start = node.start_byte();
+        let line_start = bytes[..decl_start]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |i| i + 1);
+        let indent_len = bytes[line_start..decl_start]
+            .iter()
+            .filter(|&&b| b == b' ' || b == b'\t')
+            .count();
+        let collapsed_len = {
+            let lines: Vec<&str> = text.lines().map(|l| l.trim()).collect();
+            let mut len = 0usize;
+            for (i, l) in lines.iter().enumerate() {
+                len += l.chars().count();
+                if i + 1 < lines.len() && l.ends_with(',') && !lines[i + 1].starts_with(')') {
+                    len += 1;
+                }
+            }
+            len
+        };
+        indent_len + collapsed_len <= self.max_length
+    }
+
     /// Whether the collapsed signature (from the first non-annotation
     /// modifier, or `fun`, to the parameter list's closing paren) fits within
     /// max_line_length. Lines are trimmed and joined with no separator,
@@ -356,7 +412,7 @@ impl FunctionSignatureSpacing {
             let mut len = 0usize;
             for (i, l) in lines.iter().enumerate() {
                 len += l.chars().count();
-                if i + 1 < lines.len() && l.ends_with(',') && lines[i + 1] != ")" {
+                if i + 1 < lines.len() && l.ends_with(',') && !lines[i + 1].starts_with(')') {
                     len += 1;
                 }
             }
@@ -603,6 +659,29 @@ mod tests {
     }
 
     #[test]
+    // Issue #194: a single-parameter list respects max_line_length too —
+    // the collapsed signature (incl. the ` {`) is silent at 120+.
+    #[test]
+    fn single_param_too_long_stays_multiline() {
+        let src = "package com.example\n\nprivate fun exampleFunctionxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx(\n    parameterName: String,\n) {\n    TODO()\n}\n";
+        let v = fn_check(src, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            v.is_empty(),
+            "collapsed ~160 cols must not be collapsed: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    // Issue #195: fn boundary — collapsed-to-')' (incl. trailing comma and
+    // the ` {`) collapses up to 120, silent at 121 (oracle-verified).
+    #[test]
+    fn fn_collapse_boundary_120() {
+        // x=36 → collapsed-to-')' = 120
+        let fits = "package com.example\n\nprivate fun exampleFunctionxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx(\n    firstParameterName: String,\n    secondParameterName: String,\n) {\n    TODO()\n}\n";
+        // x=37 → collapsed-to-')' = 121
+        let too_long = "package com.example\n\nprivate fun exampleFunctionxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx(\n    firstParameterName: String,\n    secondParameterName: String,\n) {\n    TODO()\n}\n";
+    }
+
     #[test]
     fn multiline_default_value_keeps_list_multiline() {
         let src = "private fun newWebSocket(\n    request: Request =\n      Request\n        .Builder()\n        .url(\n            \"ws://example.com\"\n        ),\n) {\n}\n";
