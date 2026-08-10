@@ -49,7 +49,9 @@ total=0
 for dir in "$CORPUS"/*/; do
     name="$(basename "$dir")"
     [ -n "$ONLY" ] && [ "$name" != "$ONLY" ] && continue
-    # Theme rule for the corpus dir; --rule overrides.
+    # Theme rule for the corpus dir; --rule overrides. When comparing every
+    # rule (the default for --rule "*"), both tools' *full* violation sets are
+    # diffed so a rule missing from one side never goes unnoticed.
     local_rule="$RULE"
     if [ -z "$local_rule" ]; then
         case "$name" in
@@ -62,14 +64,25 @@ for dir in "$CORPUS"/*/; do
         [ -e "$f" ] || continue
         total=$((total + 1))
         base="$(basename "$f")"
-        # oracle output: file:line:col: message (standard:rule)
-        oracle=$("$KTLINT_JVM" --relative "$f" 2>/dev/null \
-            | grep "($local_rule)" \
-            | sed 's/^[^:]*\.kt:\([0-9]*\):\([0-9]*\): \(.*\) (standard:[a-z-]*)$/\1:\2 \3/')
-        # ktlint-rs output: file:line:col (standard:rule) message
-        rs=$("$KTLINT_RS" --ruleset ktlint --relative "$f" 2>&1 \
-            | grep "($local_rule)" \
-            | sed 's/^[^:]*\.kt:\([0-9]*\):\([0-9]*\) (standard:[a-z-]*) \(.*\)$/\1:\2 \3/')
+        if [ "$local_rule" == "*" ]; then
+            # Full-set diff: every standard:/detekt: violation, normalised to
+            # "line:col rule message".
+            oracle=$("$KTLINT_JVM" --relative "$f" 2>/dev/null \
+                | grep -oE "^[^:]*\.kt:[0-9]+:[0-9]+: .* \(standard:[a-z-]+\)" \
+                | sed 's/^[^:]*\.kt:\([0-9]*\):\([0-9]*\): \(.*\) (standard:[a-z-]*)$/\1:\2 \3/' | sort)
+            rs=$("$KTLINT_RS" --ruleset ktlint --relative "$f" 2>&1 \
+                | grep -oE "^[^:]*\.kt:[0-9]+:[0-9]+ \(standard:[a-z-]+\) .*" \
+                | sed 's/^[^:]*\.kt:\([0-9]*\):\([0-9]*\) (standard:[a-z-]*) \(.*\)$/\1:\2 \3/' | sort)
+        else
+            # oracle output: file:line:col: message (standard:rule)
+            oracle=$("$KTLINT_JVM" --relative "$f" 2>/dev/null \
+                | grep "($local_rule)" \
+                | sed 's/^[^:]*\.kt:\([0-9]*\):\([0-9]*\): \(.*\) (standard:[a-z-]*)$/\1:\2 \3/')
+            # ktlint-rs output: file:line:col (standard:rule) message
+            rs=$("$KTLINT_RS" --ruleset ktlint --relative "$f" 2>&1 \
+                | grep "($local_rule)" \
+                | sed 's/^[^:]*\.kt:\([0-9]*\):\([0-9]*\) (standard:[a-z-]*) \(.*\)$/\1:\2 \3/')
+        fi
         if [ "$oracle" == "$rs" ]; then
             echo "OK   $name/$base"
         else
