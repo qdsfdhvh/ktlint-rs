@@ -332,14 +332,7 @@ impl ClassSignatureSpacing {
             .iter()
             .filter(|&&b| b == b' ' || b == b'\t')
             .count();
-        eprintln!(
-            start,
-            end,
-            indent_len,
-            collapsed_len_of(text),
-            indent_len + collapsed_len_of(text),
-            text
-        );
+
         indent_len + collapsed_len_of(text)
     }
 
