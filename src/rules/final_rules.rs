@@ -175,27 +175,94 @@ impl Rule for TrailingCommaOnDeclarationSite {
     fn id(&self) -> &'static str {
         "standard:trailing-comma-on-declaration-site"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            let t = l.trim();
-            if (t.starts_with("data class ") || t.starts_with("class ")) && t.contains(')') {
-                if let Some(rp) = t.rfind(')') {
-                    if rp > 1 && t.as_bytes()[rp - 1] == b',' {
+        let bytes = s.as_bytes();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            let is_lambda_params = node.kind() == "lambda_parameters";
+            let multiline = node.start_position().row != node.end_position().row
+                || (is_lambda_params && lambda_arrow_on_next_line(&node, s));
+            if matches!(
+                node.kind(),
+                "function_value_parameters" | "class_parameters" | "lambda_parameters"
+            ) && multiline
+            {
+                // multiline list: the last parameter must be followed by a
+                // trailing comma (issue #204).
+                let mut w = node.walk();
+                let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
+                let params: Vec<&tree_sitter::Node> = kids
+                    .iter()
+                    .filter(|c| {
+                        matches!(
+                            c.kind(),
+                            "parameter" | "class_parameter" | "variable_declaration"
+                        )
+                    })
+                    .collect();
+                if let Some(last) = params.last() {
+                    let line_start = bytes[..last.end_byte()]
+                        .iter()
+                        .rposition(|&b| b == b'\n')
+                        .map_or(0, |i| i + 1);
+                    let line_end = bytes[last.end_byte()..]
+                        .iter()
+                        .position(|&b| b == b'\n')
+                        .map_or(bytes.len(), |i| last.end_byte() + i);
+                    let trimmed = bytes[line_start..line_end]
+                        .iter()
+                        .rposition(|&b| b != b' ' && b != b'\t')
+                        .map_or(line_start, |i| line_start + i);
+                    if bytes.get(trimmed) != Some(&b',') {
+                        // position = the column right after the last
+                        // parameter (oracle: `beta: String)` -> 4:17).
+                        let pos = last.end_position();
                         v.push(Violation {
                             file: String::new(),
-                            line: i + 1,
-                            col: rp + 1,
+                            line: pos.row + 1,
+                            col: pos.column + 1,
                             rule_id: self.id().into(),
-                            message: "Missing trailing comma on declaration site".into(),
+                            message: "Missing trailing comma before \")\"".into(),
                             auto_fixable: true,
                         });
                     }
                 }
             }
+            let mut w = node.walk();
+            let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
+            for k in kids.into_iter().rev() {
+                stack.push(k);
+            }
         }
         v
     }
+}
+
+/// True when the lambda's `->` sits on a later line than its parameter list
+/// (`{ first: Int, second: Int\n    ->`) — the list is then treated as
+/// multiline for the trailing-comma check (issue #204).
+fn lambda_arrow_on_next_line(params: &tree_sitter::Node, source: &str) -> bool {
+    let mut stack = vec![params.parent()];
+    while let Some(node) = stack.pop() {
+        if let Some(n) = node {
+            if n.kind() == "lambda_literal" {
+                let text = &source[n.start_byte()..n.end_byte()];
+                return text[params.end_byte() - n.start_byte()..]
+                    .find("->")
+                    .is_some_and(|off| {
+                        let arrow_abs = params.end_byte() + off;
+                        source[..arrow_abs].bytes().filter(|&b| b == b'\n').count()
+                            > source[..params.end_byte()]
+                                .bytes()
+                                .filter(|&b| b == b'\n')
+                                .count()
+                    });
+            }
+            stack.push(n.parent());
+        }
+    }
+    false
 }
 
 pub struct TrailingCommaOnCallSite;

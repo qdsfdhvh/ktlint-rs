@@ -24,6 +24,38 @@ impl Rule for AnnotationSpacing {
                 check_annotation(&node, bytes, &mut v);
             }
         });
+        // Issue #204: two annotations sharing a line (`@A("x") @B`) —
+        // ktlint reports "Expected newline before annotation" at the second.
+        walk(tree.root_node(), bytes, &mut |node| {
+            if node.kind() == "modifiers" {
+                let mut w = node.walk();
+                let annotations: Vec<tree_sitter::Node> = node
+                    .children(&mut w)
+                    .filter(|c| c.kind() == "annotation")
+                    .collect();
+                // ktlint reports a second annotation sharing the line only
+                // when the first one carries arguments (`@A("x") @B`); bare
+                // `@A @B` is allowed.
+                for pair in annotations.windows(2) {
+                    let first_has_args = pair[0]
+                        .utf8_text(bytes)
+                        .is_ok_and(|t| t.find('(').is_some_and(|i| i > 1));
+                    if first_has_args
+                        && pair[0].start_position().row == pair[1].start_position().row
+                    {
+                        let pos = pair[1].start_position();
+                        v.push(Violation {
+                            file: String::new(),
+                            line: pos.row + 1,
+                            col: pos.column + 1,
+                            rule_id: self.id().into(),
+                            message: "Expected newline before annotation".into(),
+                            auto_fixable: true,
+                        });
+                    }
+                }
+            }
+        });
         check_same_line_annotation_groups(source, &mut v);
         v
     }

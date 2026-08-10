@@ -5,37 +5,49 @@ pub struct FunctionNameParenSpacing;
 
 impl Rule for FunctionNameParenSpacing {
     fn id(&self) -> &'static str {
-        "standard:spacing-between-function-name-and-parenthesis"
+        "standard:spacing-between-function-name-and-opening-parenthesis"
     }
 
-    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
-        let lines: Vec<&str> = source.lines().collect();
-
-        for (i, line) in lines.iter().enumerate() {
-            let trimmed = line.trim();
-            // Pattern: `fun name (params)` — space before ( in function declaration
-            if trimmed.starts_with("fun ") {
-                // Find the function name then check for space before (
-                if let Some(fun_end) = trimmed.find("fun ") {
-                    let after_fun = &trimmed[fun_end + 4..];
-                    if let Some(name_end) = after_fun.find('(') {
-                        let name = after_fun[..name_end].trim();
-                        if name.contains(' ') {
-                            // Space in the function name — not our concern, other rules handle naming
-                        } else if name_end > 0 && after_fun.as_bytes()[name_end - 1] == b' ' {
+        let bytes = source.as_bytes();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "function_declaration" {
+                let mut w = node.walk();
+                let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
+                // `fun name (` — the name (simple_identifier) must sit
+                // directly against the parameter list's `(`. Works with any
+                // leading modifiers (`public fun name (`), which the old
+                // line-scan missed (issue #203).
+                if let Some(idx) = kids.iter().position(|c| c.kind() == "simple_identifier") {
+                    if let Some(paren) = kids
+                        .iter()
+                        .skip(idx + 1)
+                        .find(|c| c.kind() == "function_value_parameters")
+                    {
+                        let name_end = kids[idx].end_byte();
+                        let paren_start = paren.start_byte();
+                        let gap = &bytes[name_end..paren_start];
+                        if gap.iter().any(|&b| b == b' ' || b == b'\t') {
+                            let pos = paren.start_position();
                             violations.push(Violation {
                                 file: String::new(),
-                                line: i + 1,
-                                col: fun_end + 5 + name_end,
+                                line: pos.row + 1,
+                                col: pos.column + 1,
                                 rule_id: self.id().to_string(),
-                                message: "Unexpected space between function name and \"(\""
+                                message: "Unexpected whitespace between function name and opening parenthesis"
                                     .to_string(),
                                 auto_fixable: true,
                             });
                         }
                     }
                 }
+            }
+            let mut w = node.walk();
+            let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
+            for k in kids.into_iter().rev() {
+                stack.push(k);
             }
         }
         violations
@@ -61,7 +73,7 @@ mod tests {
         assert!(!v.is_empty());
         assert_eq!(
             v[0].rule_id,
-            "standard:spacing-between-function-name-and-parenthesis"
+            "standard:spacing-between-function-name-and-opening-parenthesis"
         );
     }
 }

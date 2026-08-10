@@ -21,10 +21,7 @@ impl Rule for ArgumentListWrapping {
         let bytes = source.as_bytes();
         let mut stack = vec![tree.root_node()];
         while let Some(node) = stack.pop() {
-            if matches!(
-                node.kind(),
-                "value_arguments" | "class_parameters" | "function_value_parameters"
-            ) {
+            if matches!(node.kind(), "value_arguments" | "class_parameters") {
                 self.check_list(&node, bytes, source, &mut violations);
             }
             for i in (0..node.child_count()).rev() {
@@ -91,14 +88,34 @@ impl ArgumentListWrapping {
         }
 
         if !single_line {
-            // Already multiline: each argument should be on its own line.
+            // Already multiline: each argument should be on its own line —
+            // including the first when it sits on the opening-paren line
+            // (`foo("a",\n    "b")` reports `"a"`, issue #204).
             let mut prev_row = start_row;
             for arg in &args {
                 let row = arg.start_position().row;
-                if row == prev_row && row != start_row && !arg.kind().contains("comment") {
+                if row == prev_row && !arg.kind().contains("comment") {
                     violations.push(self.v(*arg, source));
                 }
                 prev_row = row;
+            }
+            // A closing paren sharing the last argument's line
+            // (`"b")`) draws "Missing newline before \")\"".
+            if let (Some(last), Some(rp)) = (
+                args.last(),
+                node.children(&mut node.walk()).find(|c| c.kind() == ")"),
+            ) {
+                if rp.start_position().row == last.end_position().row {
+                    let pos = rp.start_position();
+                    violations.push(Violation {
+                        file: String::new(),
+                        line: pos.row + 1,
+                        col: pos.column + 1,
+                        rule_id: self.id().to_string(),
+                        message: "Missing newline before \")\"".to_string(),
+                        auto_fixable: true,
+                    });
+                }
             }
         } else {
             // Single-line exceeding limit: each argument should be wrapped,

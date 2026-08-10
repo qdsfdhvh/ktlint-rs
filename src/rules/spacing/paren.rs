@@ -43,6 +43,7 @@ impl ParenSpacing {
         violations: &mut Vec<Violation>,
     ) {
         let end_byte = node.end_byte();
+        let start_byte = node.start_byte();
         let pos = node.start_position();
 
         let empty_split_list = end_byte < bytes.len()
@@ -63,6 +64,24 @@ impl ParenSpacing {
                 col: pos.column + 2,
                 rule_id: self.id().to_string(),
                 message: "Unexpected spacing after \"(\"".to_string(),
+                auto_fixable: true,
+            });
+        }
+        // Issue #203: `foo (x)` — a space *before* the `(` of a call or a
+        // parameter list is reported by ktlint's paren-spacing (keyword
+        // constructs like `if (x)` keep their space and are not checked).
+        if node
+            .parent()
+            .is_some_and(|p| matches!(p.kind(), "value_arguments" | "function_value_parameters"))
+            && start_byte > 0
+            && bytes[start_byte - 1] == b' '
+        {
+            violations.push(Violation {
+                file: String::new(),
+                line: pos.row + 1,
+                col: pos.column + 1,
+                rule_id: self.id().to_string(),
+                message: "Unexpected spacing before \"(\"".to_string(),
                 auto_fixable: true,
             });
         }
