@@ -111,6 +111,7 @@ fn type_name(node: &tree_sitter::Node, source: &str) -> Option<String> {
         .map(|t| t.to_string())
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::parser::KotlinParser;
