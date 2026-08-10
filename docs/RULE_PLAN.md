@@ -57,7 +57,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P0 | `standard:spacing-around-angle-brackets` | yes | disabled-by-oracle | `standard:spacing-around-angle-brackets` | unverified: fix_angle_brackets | 0/6 | 0 | 0 |
 | P0 | `standard:spacing-between-declarations-with-annotations` | yes | parity-verified | `standard:spacing-between-declarations-with-annotations` | parity-verified: fix_spacing_before_annotated_declarations | 6/6 | 7 | 0 |
 | P0 | `standard:spacing-between-declarations-with-comments` | yes | disabled-by-oracle | `standard:spacing-between-declarations-with-comments` | unverified | 0/6 | 0 | 0 |
-| P0 | `standard:spacing-between-function-name-and-opening-parenthesis` | yes | disabled-by-oracle | `standard:spacing-between-function-name-and-parenthesis` | unverified | 0/6 | 0 | 0 |
+| P0 | `standard:spacing-between-function-name-and-opening-parenthesis` | yes | disabled-by-oracle | `standard:spacing-between-function-name-and-opening-parenthesis` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:square-brackets-spacing` | yes | disabled-by-oracle | `standard:square-brackets-spacing` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:statement-wrapping` | yes | disabled-by-oracle | `standard:statement-wrapping` | unverified | 0/6 | 0 | 0 |
 | P0 | `standard:string-template` | yes | disabled-by-oracle | `standard:string-template` | unverified | 0/6 | 0 | 0 |

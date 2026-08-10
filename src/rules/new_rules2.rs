@@ -50,11 +50,11 @@ impl Rule for FunctionLiteralRule {
                                 auto_fixable: true,
                             });
                         }
-                        // A newline directly before `->` with a single parameter —
-                        // parameter and arrow must stay together.
+                        // A newline directly before `->` — parameter(s) and
+                        // arrow must stay together (issue #204: multi-param
+                        // lambdas too).
                         let params = &text[lbrace + 1..arrow];
-                        // Single parameter followed by a newline before `->`.
-                        if params.contains('\n') && !params.contains(',') {
+                        if params.contains('\n') {
                             let pos = node.start_byte() + arrow;
                             let line = source[..pos].bytes().filter(|&b| b == b'\n').count() + 1;
                             let line_start = source[..pos].rfind('\n').map_or(0, |i| i + 1);

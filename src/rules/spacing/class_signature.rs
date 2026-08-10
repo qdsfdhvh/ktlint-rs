@@ -206,6 +206,24 @@ impl ClassSignatureSpacing {
         let (Some(first), Some(last)) = (supertypes.first(), supertypes.last()) else {
             return;
         };
+        // Issue #201: an own-line parameter annotation or a comment line in
+        // the parameter list forces the list to stay multiline, so the
+        // supertype is never asked to move either.
+        if let Some(ctor) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "primary_constructor")
+        {
+            let mut w = ctor.walk();
+            let forced_multiline = ctor.children(&mut w).any(|c| {
+                c.kind() == "line_comment"
+                    || c.kind() == "comment"
+                    || (c.kind() == "class_parameter"
+                        && c.start_position().row != c.end_position().row)
+            });
+            if forced_multiline {
+                return;
+            }
+        }
         let start = self.measure_start(node, bytes);
         // Full header (params + supertypes + body) on one line: fits → fine.
         if self.fits(start, line_end_after(bytes, last.end_byte()), node, bytes) {

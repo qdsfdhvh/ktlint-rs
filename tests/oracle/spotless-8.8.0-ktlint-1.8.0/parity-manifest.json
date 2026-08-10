@@ -3047,11 +3047,11 @@
       "knownDirtyMismatchHits": 0,
       "oracleEnabled": true,
       "ownerRustRuleIds": [
-        "standard:spacing-between-function-name-and-parenthesis"
+        "standard:spacing-between-function-name-and-opening-parenthesis"
       ],
       "priority": "P0",
       "registeredAutoFixable": true,
-      "registrationMatch": "alias",
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
       "status": "disabled-by-oracle"
     },

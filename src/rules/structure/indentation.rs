@@ -125,10 +125,6 @@ impl Rule for Indentation {
             if spaces % is != 0 {
                 too_shallow = true;
             }
-            // Nesting-depth check. Closing braces and continuation lines
-            // (lines whose expected depth is unchanged but whose indent is a
-            // continuation alignment) are skipped conservatively: only a line
-            // a full level short of its brace depth is reported.
             let depth_expected = line_expected[i];
             // A closing brace sits one level inside its own block's depth —
             // except a mis-indented brace (non-multiple) which is reported at
@@ -139,12 +135,6 @@ impl Rule for Indentation {
             } else {
                 depth_expected
             };
-            // ktlint reports whenever the actual indent differs from the
-            // expected one — over-indentation too (its message is always a
-            // concrete "should be M"). Non-multiples report even when less
-            // than a full level short; multiple-of-N lines only when a full
-            // level short (issue #152). Over-indented lines still report at
-            // the expected indent (the fixer never lowers, so they stay).
             if expected_for_line > spaces {
                 let full_level_short = expected_for_line - spaces >= is;
                 if too_shallow || full_level_short {

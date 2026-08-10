@@ -3,7 +3,7 @@ use crate::rules::{Rule, Violation};
 
 pub struct OperatorSpacing;
 const OPERATORS: &[&str] = &[
-    "=", "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||",
+    "=", "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", "->",
 ];
 
 impl Rule for OperatorSpacing {

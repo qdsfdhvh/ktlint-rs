@@ -109,7 +109,6 @@ impl CodeStyle {
                     | "standard:no-unused-imports"
                     | "standard:multiline-expression-wrapping"
                     | "standard:no-empty-first-line-in-class-body"
-                    | "standard:argument-list-wrapping"
                     | "standard:no-consecutive-comments"
                     | "standard:when-entry-bracing"
             ),
