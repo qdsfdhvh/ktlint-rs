@@ -114,6 +114,19 @@ impl ClassSignatureSpacing {
         if ctor.start_position().row == ctor.end_position().row {
             return;
         }
+        // Issue #198: an own-line parameter annotation (`@X\n    val p: T`)
+        // makes the parameter node span lines, and a comment line inside the
+        // list is a `line_comment` child — both force the list to stay
+        // multiline (ktlint reports nothing then).
+        let mut w = ctor.walk();
+        let forced_multiline = ctor.children(&mut w).any(|c| {
+            c.kind() == "line_comment"
+                || c.kind() == "comment"
+                || (c.kind() == "class_parameter" && c.start_position().row != c.end_position().row)
+        });
+        if forced_multiline {
+            return;
+        }
         // Issue #177: android_studio asks for the single-line form only when
         // the collapsed signature actually fits within max_line_length — a
         // signature that cannot fit must stay multiline. Mirrors ktlint 1.8
@@ -606,6 +619,21 @@ mod tests {
             v.iter()
                 .all(|x| x.message != "Super type should start on a newline"),
             "ktlint_official must not report supertype newline: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    // Issue #198: an own-line parameter annotation or a comment line forces
+    // the class parameter list to stay multiline (oracle-verified).
+    #[test]
+    fn own_line_annotation_keeps_class_list_multiline() {
+        let src = "public data class ExampleShort(\n    @ExampleMarker(\"id\")\n    public val id: String,\n)\n";
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        let v = ClassSignatureSpacing::new(CodeStyle::AndroidStudio, 120).check(&tree, src);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
             v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
         );
     }

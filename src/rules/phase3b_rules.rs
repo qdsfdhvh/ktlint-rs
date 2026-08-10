@@ -177,6 +177,23 @@ impl FunctionSignatureSpacing {
         if params.start_position().row == params.end_position().row {
             return;
         }
+        // Issue #198: an own-line parameter annotation (`@X\n    value: T`)
+        // is a `parameter_modifiers` node on a different row than its
+        // parameter, and a comment line is a `line_comment` child — both
+        // force the list to stay multiline (ktlint reports nothing then).
+        let mut w = params.walk();
+        let kids: Vec<tree_sitter::Node> = params.children(&mut w).collect();
+        let forced_multiline = kids
+            .iter()
+            .any(|c| c.kind() == "line_comment" || c.kind() == "comment")
+            || kids.windows(2).any(|pair| {
+                pair[0].kind() == "parameter_modifiers"
+                    && pair[1].kind() == "parameter"
+                    && pair[0].end_position().row != pair[1].start_position().row
+            });
+        if forced_multiline {
+            return;
+        }
         let mut w = params.walk();
         let param_nodes: Vec<tree_sitter::Node> = params
             .children(&mut w)
@@ -629,6 +646,27 @@ mod tests {
     }
 
     #[test]
+    // Issue #198: an own-line parameter annotation forces the list to stay
+    // multiline, under both code styles; same-line annotations still
+    // collapse.
+    #[test]
+    fn own_line_parameter_annotation_keeps_list_multiline() {
+        let src = "public data class ExampleShort(\n    @ExampleMarker(\"id\")\n    public val id: String,\n)\n";
+        let v = fn_check(src, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            v.is_empty(),
+            "own-line annotation must not ask for collapse: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn comment_line_keeps_list_multiline() {
+        let src = "public data class ExampleComment(\n    // keep this id\n    public val id: String,\n)\n";
+        let v = fn_check(src, crate::config::CodeStyle::AndroidStudio);
+        assert!(v.is_empty(), "comment line must keep the list multiline");
+    }
+
     #[test]
     fn annotated_single_param_exempt_under_official() {
         let src = "fun setup(\n    @TempDir tempDir: Path,\n) {\n}\n";
