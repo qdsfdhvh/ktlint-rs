@@ -157,7 +157,17 @@ impl Registry {
             Box::new(final_rules::TypeArgumentListSpacing),
             Box::new(final_rules::SpacingAroundAngleBrackets),
             Box::new(final_rules::EnumWrapping),
-            Box::new(final_rules::TrailingCommaOnDeclarationSite),
+            Box::new(final_rules::TrailingCommaOnDeclarationSite::new(
+                config
+                    .rules
+                    .get("ij_kotlin_properties")
+                    .map(|rc| {
+                        rc.properties
+                            .get("ij_kotlin_allow_trailing_comma")
+                            .is_some_and(|v| v == "true")
+                    })
+                    .unwrap_or(false),
+            )),
             Box::new(final_rules::TrailingCommaOnCallSite),
             // ── detekt empty-blocks ───────────────────────────────────
             Box::new(detekt::empty_blocks::EmptyFunctionBlock),

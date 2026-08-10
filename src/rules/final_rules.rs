@@ -170,7 +170,21 @@ impl Rule for EnumWrapping {
     }
 }
 
-pub struct TrailingCommaOnDeclarationSite;
+pub struct TrailingCommaOnDeclarationSite {
+    /// `ij_kotlin_allow_trailing_comma = true` forces the trailing comma on
+    /// multiline declaration-site lists; without it the comma is only
+    /// reported when it is unnecessary (single-parameter list).
+    allow_trailing_comma: bool,
+}
+
+impl TrailingCommaOnDeclarationSite {
+    pub fn new(allow_trailing_comma: bool) -> Self {
+        Self {
+            allow_trailing_comma,
+        }
+    }
+}
+
 impl Rule for TrailingCommaOnDeclarationSite {
     fn id(&self) -> &'static str {
         "standard:trailing-comma-on-declaration-site"
@@ -214,9 +228,13 @@ impl Rule for TrailingCommaOnDeclarationSite {
                         .iter()
                         .rposition(|&b| b != b' ' && b != b'\t')
                         .map_or(line_start, |i| line_start + i);
-                    if bytes.get(trimmed) != Some(&b',') {
-                        // position = the column right after the last
-                        // parameter (oracle: `beta: String)` -> 4:17).
+                    let has_comma = bytes.get(trimmed) == Some(&b',');
+                    // Oracle: with `ij_kotlin_allow_trailing_comma = true` a
+                    // multiline declaration-site list must end with a comma.
+                    // (The "unnecessary trailing comma" direction depends on
+                    // the enclosing class context in ktlint 1.8 and is left
+                    // unreported for now.)
+                    if self.allow_trailing_comma && !has_comma {
                         let pos = last.end_position();
                         v.push(Violation {
                             file: String::new(),
