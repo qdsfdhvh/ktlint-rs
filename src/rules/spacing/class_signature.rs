@@ -86,10 +86,7 @@ impl ClassSignatureSpacing {
         // the collapsed signature actually fits within max_line_length — a
         // signature that cannot fit must stay multiline. Mirrors ktlint 1.8
         // (and function-signature's own fits check).
-        let Some(class_kw) = self.class_keyword(node) else {
-            return;
-        };
-        let start = class_kw.start_byte();
+        let start = self.measure_start(node, bytes);
         if !self.fits(start, ctor.end_byte(), node, bytes) {
             return;
         }
@@ -161,10 +158,7 @@ impl ClassSignatureSpacing {
         let (Some(first), Some(last)) = (supertypes.first(), supertypes.last()) else {
             return;
         };
-        let Some(class_kw) = self.class_keyword(node) else {
-            return;
-        };
-        let start = class_kw.start_byte();
+        let start = self.measure_start(node, bytes);
         // Full header (params + supertypes) on one line: fits → fine.
         if self.fits(start, last.end_byte(), node, bytes) {
             return;
@@ -214,6 +208,50 @@ impl ClassSignatureSpacing {
     /// modifiers are not part of it — verified against the oracle). Width is
     /// the line indent plus the header text with every whitespace run
     /// collapsed to a single space.
+    /// Byte offset where ktlint starts measuring the collapsed signature:
+    /// the first non-annotation token of the `modifiers` node (it may hold
+    /// annotations before the actual modifiers — `@Deprecated("x")
+    /// public class`), else the `class` keyword. Annotations are not part of
+    /// the measurement (verified: a long annotation does not stop the
+    /// collapse request), modifiers are (issue #182).
+    fn measure_start<'a>(&self, node: &tree_sitter::Node<'a>, bytes: &[u8]) -> usize {
+        if let Some(mods) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "modifiers")
+        {
+            let text = &bytes[mods.start_byte()..mods.end_byte()];
+            let mut i = 0usize;
+            while i < text.len() && text[i] == b'@' {
+                i += 1;
+                while i < text.len()
+                    && (text[i].is_ascii_alphanumeric() || text[i] == b'_' || text[i] == b'.')
+                {
+                    i += 1;
+                }
+                if i < text.len() && text[i] == b'(' {
+                    let mut depth = 1usize;
+                    i += 1;
+                    while i < text.len() && depth > 0 {
+                        match text[i] {
+                            b'(' => depth += 1,
+                            b')' => depth = depth.saturating_sub(1),
+                            _ => {}
+                        }
+                        i += 1;
+                    }
+                }
+                while i < text.len() && text[i].is_ascii_whitespace() {
+                    i += 1;
+                }
+            }
+            if i < text.len() {
+                return mods.start_byte() + i;
+            }
+        }
+        self.class_keyword(node)
+            .map_or(node.start_byte(), |k| k.start_byte())
+    }
+
     fn fits(&self, start: usize, end: usize, node: &tree_sitter::Node, bytes: &[u8]) -> bool {
         if end <= start {
             return false;
@@ -232,11 +270,13 @@ impl ClassSignatureSpacing {
             .iter()
             .filter(|&&b| b == b' ' || b == b'\t')
             .count();
+        // ktlint joins the signature's lines with no separator (each line
+        // trimmed): `class C(\n    val a: X,\n)` collapses to
+        // `class C(val a: X,)` — no space after `(` or before `)`.
         let collapsed_len = text
-            .split_whitespace()
-            .map(|w| w.chars().count())
-            .sum::<usize>()
-            + text.split_whitespace().count().saturating_sub(1);
+            .lines()
+            .map(|l| l.trim().chars().count())
+            .sum::<usize>();
         indent_len + collapsed_len <= self.max_line_length
     }
 
@@ -361,9 +401,10 @@ mod tests {
         // A tight max_line_length must silence the report for a signature
         // that only fits a shorter collapsed form.
         let src = "class Wide(\n    private val alpha: String,\n    private val beta: String,\n)\n";
-        // collapsed form is 66 chars; at 65 it does not fit → silent.
-        assert!(check_with_max(src, 65).is_empty());
-        assert!(!check_with_max(src, 66).is_empty());
+        // collapsed form is 63 chars ( — lines joined with no
+        // separator); at 62 it does not fit → silent.
+        assert!(check_with_max(src, 62).is_empty());
+        assert!(!check_with_max(src, 63).is_empty());
     }
 
     #[test]

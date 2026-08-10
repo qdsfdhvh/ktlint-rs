@@ -45,6 +45,14 @@ pub trait Rule: Send + Sync {
     }
     fn check(&self, tree: &Tree, source: &str) -> Vec<Violation>;
 
+    /// Lint with the file path known (needed by filename-style rules).
+    /// Defaults to [`Rule::check`] — symbol-table rules build their own
+    /// table there; only rules that genuinely need the file name override
+    /// this (standard:filename).
+    fn check_with_path(&self, _path: &str, tree: &Tree, source: &str) -> Vec<Violation> {
+        self.check(tree, source)
+    }
+
     /// Lint with a pre-built SymbolTable. L1 rules override; others delegate to `check`.
     fn check_with_symbols(
         &self,
@@ -147,7 +155,7 @@ impl RuleEngine {
             if rule.requires_type_resolution() && self.config.skip_type_resolution {
                 continue;
             }
-            for mut v in rule.check_with_symbols(tree, source, Some(&sym_table)) {
+            for mut v in rule.check_with_path(path, tree, source) {
                 v.file = path.to_string();
                 violations.push(v);
             }
