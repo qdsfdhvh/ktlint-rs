@@ -298,6 +298,7 @@ fn safe_transform<F>(owner: &'static str, source: &str, transform: F) -> anyhow:
 where
     F: Fn(&str) -> String,
 {
+    let _t0 = std::time::Instant::now();
     if source.contains(SENTINEL) {
         return Ok(source.to_string());
     }
@@ -324,7 +325,19 @@ where
     let protected_before = protected_snapshot(source, &before_tree)?;
     let transformed = transform(source);
     if transformed == source {
+        if std::env::var("KTLINT_RS_FORMAT_DEBUG").is_ok() {
+            eprintln!(
+                "[format-debug] {owner}: no change ({}us)",
+                _t0.elapsed().as_micros()
+            );
+        }
         return Ok(source.to_string());
+    }
+    if std::env::var("KTLINT_RS_FORMAT_DEBUG").is_ok() {
+        eprintln!(
+            "[format-debug] {owner}: changed ({}us)",
+            _t0.elapsed().as_micros()
+        );
     }
     // KTLINT_RS_FORMAT_DEBUG=1: report which rule rewrites what, so a
     // formatter regression can be bisected to the responsible pass.
@@ -1821,19 +1834,50 @@ fn fix_annotation_blank_lines(source: &str) -> String {
     output
 }
 
+/// True when the line is a *standalone* annotation: one or more `@X` /
+/// `@X(args)` tokens followed by only whitespace or a trailing comment. An
+/// annotated parameter (`@Dispatcher(Default) dispatcher: Type,`) or an
+/// annotated declaration (`@Test fun f()`) is not annotation-only.
 fn is_annotation_only_line(line: &str) -> bool {
-    line.starts_with('@')
-        && ![
-            " class ",
-            " fun ",
-            " interface ",
-            " object ",
-            " typealias ",
-            " val ",
-            " var ",
-        ]
-        .iter()
-        .any(|keyword| line.contains(keyword))
+    let mut rest = line.trim_start();
+    if !rest.starts_with('@') {
+        return false;
+    }
+    loop {
+        let Some(after_at) = rest.strip_prefix('@') else {
+            break;
+        };
+        let after_at = after_at.trim_start();
+        let ident_end = after_at
+            .find(|c: char| !(c.is_alphanumeric() || c == '_' || c == '.'))
+            .unwrap_or(after_at.len());
+        let mut i = ident_end;
+        // The annotation's argument list must follow the name *directly*
+        // (`@Ann(...)`) — a later `(` in `@Ann class Annotated(...)` is the
+        // declaration's own, not annotation arguments.
+        if after_at[i..].starts_with('(') {
+            let paren_start = i;
+            let mut depth = 0usize;
+            let mut closed = false;
+            for (j, c) in after_at[paren_start..].char_indices() {
+                if c == '(' {
+                    depth += 1;
+                } else if c == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        i = paren_start + j + 1;
+                        closed = true;
+                        break;
+                    }
+                }
+            }
+            if !closed {
+                return false;
+            }
+        }
+        rest = after_at[i..].trim_start();
+    }
+    rest.is_empty() || rest.starts_with("//") || rest.starts_with("/*")
 }
 
 fn is_annotation_or_declaration(line: &str) -> bool {
@@ -1872,7 +1916,13 @@ fn fix_spacing_before_annotated_declarations(source: &str) -> String {
             trimmed.starts_with('@') && (trimmed.contains("get(") || trimmed.contains("set("));
         if is_annotation_only_line(trimmed) && index > 0 && !is_accessor_annotation {
             let previous = lines[index - 1].trim();
-            if !previous.is_empty() && looks_like_declaration_line(previous) {
+            // Consecutive annotation lines belong to the same declaration —
+            // no blank line between them; only a *declaration* above gets
+            // separated.
+            if !previous.is_empty()
+                && !is_annotation_only_line(previous)
+                && looks_like_declaration_line(previous)
+            {
                 output.push('\n');
             }
         }

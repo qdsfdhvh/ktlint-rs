@@ -68,6 +68,7 @@ jobs:
           printf '#!/bin/bash\nexec java -jar %s "$@"\n' "$PWD/.ktlint/ktlint-1.8.0.jar" > .ktlint/ktlint
           chmod +x .ktlint/ktlint
           KTLINT_JVM="$PWD/.ktlint/ktlint" ./scripts/oracle-diff.sh
+          KTLINT_JVM="$PWD/.ktlint/ktlint" ./scripts/format-diff.sh
 
   clippy:
     name: Clippy

@@ -57,7 +57,7 @@ impl ArgumentListWrapping {
                 !matches!(
                     c.kind(),
                     "(" | ")" | "," | "\n" | "comment" | "multiline_comment"
-                )
+                ) && c.kind() != "parameter_modifiers"
             })
             .collect();
         if args.is_empty() {
