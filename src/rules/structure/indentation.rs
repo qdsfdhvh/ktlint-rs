@@ -767,6 +767,89 @@ mod tests {
 
     // while/if multiline headers DO indent their first line (only `for` is
     // special in ktlint).
+    // ── Continuation-shape battery (issue #202 groundwork) ──
+    // These shapes are the continuation expectations the indent engine must
+    // get right; each pair checks that a correctly-formatted file stays
+    // clean and a one-level-shallow body line is reported.
+
+    #[test]
+    fn chained_call_alignment_clean() {
+        let src = "class C {\n    fun f() {\n        aSocket(selector)\n            .udp()\n            .bind(\"127.0.0.1\", 8000)\n            .use { socket ->\n                val a = socket\n            }\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn lambda_body_in_named_argument_clean() {
+        let src = "class C {\n    fun f() {\n        val server = embeddedServer(\n            factory = Jetty,\n            configure = {\n                sslConnector(\n                    keyStore = ks,\n                ) {\n                    this.port = port\n                }\n            },\n        )\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn close_paren_lambda_body_clean() {
+        let src = "class C {\n    fun f() {\n        sslConnector(\n            keyStore = ks,\n        ) {\n            this.port = port\n        }\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn try_finally_clean() {
+        let src = "class C {\n    fun f() {\n        try {\n            awaitCancellation()\n        } finally {\n            servers.forEach { it.stop() }\n        }\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn else_if_chain_clean() {
+        let src = "fun f(x: Int) {\n    if (x > 0) {\n        a()\n    } else if (x < 0) {\n        b()\n    } else {\n        c()\n    }\n}\n";
+        assert!(check(src, 4).is_empty());
+    }
+
+    #[test]
+    fn nested_blocks_clean() {
+        let src = "class C {\n    fun f() {\n        val x = run {\n            val y = run {\n                1\n            }\n            y + 1\n        }\n    }\n}\n";
+        assert!(check(src, 4).is_empty());
+    }
+
+    #[test]
+    fn chain_after_closing_paren_clean() {
+        let src = "class C {\n    fun f() {\n        val ch = TLSBuilder\n            .client()\n            .build()\n            .connect(\n                port\n            )\n            .sync()\n    }\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn multiline_binary_expression_clean() {
+        let src = "fun f() {\n    val x = first\n        + second\n        + third\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
     #[test]
     fn while_and_if_headers_indent_first_line() {
         let src = "fun f(x: Int) {\n    while (\n        cond\n    ) {\n        println()\n    }\n    if (\n        x > 0\n    ) {\n        println(x)\n    }\n}\n";
