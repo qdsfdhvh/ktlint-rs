@@ -359,6 +359,11 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
                 // line's expectation minus one level (handles `} else if {`
                 // and continuation blocks like a `when {` on a `=` line).
                 e = prev_expected.saturating_sub(is);
+            } else if t.starts_with(')') {
+                // A closing-paren line (`)`, `) {`, `),`) closes the list it
+                // belongs to — the paren stack already popped it, and a prev
+                // `(`/`=` continuation must not push it back out (empty
+                // split argument list `inner(\n)` shape, issue #183).
             } else if !prev_inert {
                 if paren_depth > 0 {
                     // Inside a paren list the expectation already came from
@@ -375,7 +380,16 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
                     // opener's expectation + one level. prev_last_code is the
                     // previous line's last *code* char — a trailing comment
                     // ending in `=`/`:` must not open a continuation.
-                    let want = prev_expected.saturating_add(is);
+                    let want = if prev_last_code == Some('=') && prev_expected > depth * is {
+                        // The `=` sits on a continuation line itself
+                        // (wrapped return type: `fun name():\n    Type =\n
+                        // body`): the body returns to the enclosing
+                        // declaration's level instead of one deeper
+                        // (issue #183 shape 1).
+                        depth * is
+                    } else {
+                        prev_expected.saturating_add(is)
+                    };
                     if want > e {
                         e = want;
                     }
@@ -707,6 +721,40 @@ mod tests {
     #[test]
     fn raw_string_four_quote_close() {
         let src = "fun f() {\n    assertEquals(\"\"\"\"1\"\"kotlin\"\"\"\", x)\n    assertEquals(\n        \"\"\"{\"id\":1}\"\"\",\n        y,\n    )\n}\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    // Issue #183 shape 1: return type wrapped onto a continuation line —
+    // the body after `=` returns to the declaration's level, not one deeper.
+    #[test]
+    fn wrapped_return_type_body_stays_at_declaration_level() {
+        let src = "private fun Int.toVeryLongDescriptiveEnumerationNameThatForcesTheReturnTypeOntoItsOwnLine():\n    SomeQualifiedResultTypeName =\n    when (this) {\n        0 -> SomeQualifiedResultTypeName.ZERO\n        else -> SomeQualifiedResultTypeName.OTHER\n    }\n";
+        let v = check(src, 4);
+        assert!(
+            v.is_empty(),
+            "violations: {:?}",
+            v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn plain_expression_body_still_indents() {
+        // `fun f() =\n    body` — the `=` sits on the declaration line, so
+        // the body indents one level.
+        let src = "fun f() =\n    body()\n";
+        assert!(check(src, 4).is_empty());
+    }
+
+    // Issue #183 shape 2: an empty argument list split across lines
+    // (`inner(\n)`) must not push the closing paren one level out.
+    #[test]
+    fn empty_split_argument_list_clean() {
+        let src = "fun outer() {\n    inner(\n    )\n}\n\nfun inner() = Unit\n";
         let v = check(src, 4);
         assert!(
             v.is_empty(),
