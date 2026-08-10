@@ -1,4 +1,5 @@
 //! Phase 3.3 semantics: no-empty-file, indent, max-line, kdoc, function-signature
+use crate::config::CodeStyle;
 use crate::rules::{Rule, Violation};
 
 pub struct FunctionSignatureSpacing {
@@ -130,26 +131,253 @@ impl Rule for FunctionSignatureSpacing {
     }
     fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            let t = ln.trim();
-            if t.starts_with("fun ") && t.contains('(') && !t.contains(')') {
-                let after_open = t.split_once('(').map_or("", |(_, rest)| rest).trim();
-                if !after_open.is_empty() {
-                    let next = l.get(i + 1).copied().unwrap_or("");
-                    v.push(Violation {
-                        file: String::new(),
-                        line: i + 2,
-                        col: next.len() - next.trim_start().len() + 1,
-                        rule_id: self.id().into(),
-                        message: "Single whitespace expected before parameter".into(),
-                        auto_fixable: true,
-                    });
-                }
-            }
-        }
+        self.check_multiline_parameters(tree, s, &mut v);
         self.check_body_merge(tree, s, &mut v);
         v
+    }
+}
+
+impl FunctionSignatureSpacing {
+    /// Issue #184: a multiline value parameter list is reported the same way
+    /// ktlint's function-signature does — the single-line form is demanded
+    /// when it exists:
+    /// - a *single* parameter split across lines always collapses (no
+    ///   max_line_length check), under both code styles;
+    /// - *multiple* parameters collapse only under android_studio and only
+    ///   when the collapsed signature fits max_line_length;
+    /// - an *empty* list split across lines reports "No whitespace expected
+    ///   in empty parameter list" under both styles.
+    fn check_multiline_parameters(
+        &self,
+        tree: &tree_sitter::Tree,
+        s: &str,
+        v: &mut Vec<Violation>,
+    ) {
+        let bytes = s.as_bytes();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "function_declaration" {
+                self.check_params(&node, bytes, v);
+            }
+            let mut w = node.walk();
+            let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
+            for k in kids.into_iter().rev() {
+                stack.push(k);
+            }
+        }
+    }
+
+    fn check_params(&self, node: &tree_sitter::Node, bytes: &[u8], v: &mut Vec<Violation>) {
+        let Some(params) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "function_value_parameters")
+        else {
+            return;
+        };
+        if params.start_position().row == params.end_position().row {
+            return;
+        }
+        let mut w = params.walk();
+        let param_nodes: Vec<tree_sitter::Node> = params
+            .children(&mut w)
+            .filter(|c| c.kind() == "parameter")
+            .collect();
+        if param_nodes.is_empty() {
+            // `fun f(\n)` — ktlint reports at the column right after `(`.
+            let pos = params.start_position();
+            v.push(Violation {
+                file: String::new(),
+                line: pos.row + 1,
+                col: pos.column + 2,
+                rule_id: self.id().to_string(),
+                message: "No whitespace expected in empty parameter list".into(),
+                auto_fixable: true,
+            });
+            return;
+        }
+        // ktlint_official never collapses a *single* annotated parameter
+        // (`@TempDir tempDir: Path` keeps its line) — android_studio does.
+        let annotated_param = {
+            let mut w = params.walk();
+            let kids: Vec<tree_sitter::Node> = params.children(&mut w).collect();
+            let idx = kids.iter().position(|c| c.kind() == "parameter");
+            idx.is_some_and(|i| i > 0 && kids[i - 1].kind() == "parameter_modifiers")
+        };
+        let single = param_nodes.len() == 1
+            && self.single_line_param(&params, &param_nodes[0], bytes)
+            && !(self.code_style != CodeStyle::AndroidStudio && annotated_param);
+        let multi = param_nodes.len() > 1;
+        let fits = self.signature_fits(node, &params, bytes);
+        if !(single || (multi && self.code_style == CodeStyle::AndroidStudio && fits)) {
+            return;
+        }
+        // ktlint reports the first parameter at its first token, including
+        // parameter modifiers (`@TempDir tempDir: Path` reports at `@`) —
+        // but only when the first parameter starts on its own line. A
+        // parameter on the opening-paren line (`fun f(alpha: String,` shape,
+        // handled by parameter-list-wrapping) gets no "first parameter"
+        // message.
+        let first_on_new_line = param_nodes[0].start_position().row > params.start_position().row;
+        let first_pos = {
+            let mut w = params.walk();
+            let kids: Vec<tree_sitter::Node> = params.children(&mut w).collect();
+            let idx = kids.iter().position(|c| c.kind() == "parameter");
+            idx.and_then(|i| kids.get(i.saturating_sub(1)))
+                .filter(|c| c.kind() == "parameter_modifiers")
+                .map_or_else(|| param_nodes[0].start_position(), |c| c.start_position())
+        };
+        for (idx, p) in param_nodes.iter().enumerate() {
+            let pos = if idx == 0 {
+                first_pos
+            } else {
+                p.start_position()
+            };
+            let message = if idx == 0 {
+                if !first_on_new_line {
+                    continue;
+                }
+                "No whitespace expected between opening parenthesis and first parameter name"
+            } else {
+                "Single whitespace expected before parameter"
+            };
+            v.push(Violation {
+                file: String::new(),
+                line: pos.row + 1,
+                col: pos.column + 1,
+                rule_id: self.id().to_string(),
+                message: message.to_string(),
+                auto_fixable: true,
+            });
+        }
+        // Last parameter's line end — only when the line ends with a comma
+        // (a parameter on the closing-paren line gets no message; ktlint
+        // reports the column after the trailing comma).
+        if let Some(last) = param_nodes.last() {
+            let row = last.end_position().row;
+            let line_start = bytes[..last.end_byte()]
+                .iter()
+                .rposition(|&b| b == b'\n')
+                .map_or(0, |i| i + 1);
+            let line_end = bytes[line_start..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .map_or(bytes.len(), |i| line_start + i);
+            let line_text = &bytes[line_start..line_end];
+            let trimmed = line_text
+                .iter()
+                .rposition(|&b| b != b' ' && b != b'\t')
+                .map_or(line_start, |i| line_start + i);
+            if bytes.get(trimmed) == Some(&b',') {
+                v.push(Violation {
+                    file: String::new(),
+                    line: row + 1,
+                    col: trimmed - line_start + 2,
+                    rule_id: self.id().to_string(),
+                    message:
+                        "No whitespace expected between last parameter and closing parenthesis"
+                            .to_string(),
+                    auto_fixable: true,
+                });
+            }
+        }
+    }
+
+    /// Whether a (single) parameter occupies exactly one line including its
+    /// default value — `a: Int = 1,` yes, `request: Request =\n      Request…`
+    /// no (a multiline default expression keeps the list multiline even
+    /// though the collapsed form would fit, matching ktlint).
+    fn single_line_param(
+        &self,
+        params: &tree_sitter::Node,
+        param: &tree_sitter::Node,
+        bytes: &[u8],
+    ) -> bool {
+        let mut w = params.walk();
+        let kids: Vec<tree_sitter::Node> = params.children(&mut w).collect();
+        let start = param.start_byte();
+        let end = kids
+            .iter()
+            .skip_while(|c| c.start_byte() < start)
+            .find(|c| c.kind() == "," || c.kind() == ")")
+            .map_or(params.end_byte(), |c| c.end_byte());
+        !bytes[start..end].contains(&b'\n')
+    }
+
+    /// Whether the collapsed signature (from the first non-annotation
+    /// modifier, or `fun`, to the parameter list's closing paren) fits within
+    /// max_line_length. Lines are trimmed and joined with no separator,
+    /// mirroring ktlint's own measurement (same convention as
+    /// class-signature, issue #182).
+    fn signature_fits(
+        &self,
+        node: &tree_sitter::Node,
+        params: &tree_sitter::Node,
+        bytes: &[u8],
+    ) -> bool {
+        let start = self.measure_start(node, bytes);
+        let end = params.end_byte();
+        if end <= start {
+            return false;
+        }
+        let text = match std::str::from_utf8(&bytes[start..end]) {
+            Ok(t) => t,
+            Err(_) => return false,
+        };
+        let decl_start = node.start_byte();
+        let line_start = bytes[..decl_start]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |i| i + 1);
+        let indent_len = bytes[line_start..decl_start]
+            .iter()
+            .filter(|&&b| b == b' ' || b == b'\t')
+            .count();
+        let collapsed_len = text
+            .lines()
+            .map(|l| l.trim().chars().count())
+            .sum::<usize>();
+        indent_len + collapsed_len <= self.max_length
+    }
+
+    /// Byte offset where the signature measurement starts: the first
+    /// non-annotation token of the `modifiers` node, else the `fun` keyword.
+    fn measure_start<'a>(&self, node: &tree_sitter::Node<'a>, bytes: &[u8]) -> usize {
+        if let Some(mods) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "modifiers")
+        {
+            let text = &bytes[mods.start_byte()..mods.end_byte()];
+            let mut i = 0usize;
+            while i < text.len() && text[i] == b'@' {
+                i += 1;
+                while i < text.len()
+                    && (text[i].is_ascii_alphanumeric() || text[i] == b'_' || text[i] == b'.')
+                {
+                    i += 1;
+                }
+                if i < text.len() && text[i] == b'(' {
+                    let mut depth = 1usize;
+                    i += 1;
+                    while i < text.len() && depth > 0 {
+                        match text[i] {
+                            b'(' => depth += 1,
+                            b')' => depth = depth.saturating_sub(1),
+                            _ => {}
+                        }
+                        i += 1;
+                    }
+                }
+                while i < text.len() && text[i].is_ascii_whitespace() {
+                    i += 1;
+                }
+            }
+            if i < text.len() {
+                return mods.start_byte() + i;
+            }
+        }
+        node.children(&mut node.walk())
+            .find(|c| c.kind() == "fun")
+            .map_or(node.start_byte(), |k| k.start_byte())
     }
 }
 
@@ -273,7 +501,89 @@ mod tests {
             .check(&tree, source)
     }
 
+    // Issue #184: multiline value parameter lists demand the single-line
+    // form when ktlint does.
+    fn fn_check(src: &str, style: crate::config::CodeStyle) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        FunctionSignatureSpacing::new(120, style).check(&tree, src)
+    }
+
     #[test]
+    fn single_param_multiline_reports_collapse() {
+        let src = "fun f(\n    a: Int,\n) {\n}\n";
+        let v = fn_check(src, crate::config::CodeStyle::AndroidStudio);
+        assert_eq!(
+            v.len(),
+            2,
+            "violations: {:?}",
+            v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+        assert!(v.iter().any(|x| x.message.contains("first parameter name")));
+        assert!(v
+            .iter()
+            .any(|x| x.message.contains("last parameter and closing")));
+    }
+
+    #[test]
+    #[test]
+    fn single_param_multiline_reports_under_official_too() {
+        let src = "fun f(\n    a: Int,\n) {\n}\n";
+        let v = fn_check(src, crate::config::CodeStyle::KtlintOfficial);
+        assert_eq!(v.len(), 2);
+    }
+
+    #[test]
+    #[test]
+    fn multi_param_collapse_is_android_studio_only() {
+        let src = "fun f(\n    a: Int,\n    b: String,\n) {\n}\n";
+        let android = fn_check(src, crate::config::CodeStyle::AndroidStudio);
+        assert_eq!(android.len(), 3, "3 messages under android_studio");
+        let official = fn_check(src, crate::config::CodeStyle::KtlintOfficial);
+        assert!(
+            official.is_empty(),
+            "multi-param multiline is legal under ktlint_official"
+        );
+    }
+
+    #[test]
+    #[test]
+    fn annotated_single_param_exempt_under_official() {
+        let src = "fun setup(\n    @TempDir tempDir: Path,\n) {\n}\n";
+        let official = fn_check(src, crate::config::CodeStyle::KtlintOfficial);
+        assert!(
+            official.is_empty(),
+            "annotated single param stays multiline under official"
+        );
+        let android = fn_check(src, crate::config::CodeStyle::AndroidStudio);
+        assert_eq!(android.len(), 2, "android_studio still collapses it");
+    }
+
+    #[test]
+    #[test]
+    fn empty_split_list_reports() {
+        let src = "fun f(\n) {\n}\n";
+        for style in [
+            crate::config::CodeStyle::AndroidStudio,
+            crate::config::CodeStyle::KtlintOfficial,
+        ] {
+            let v = fn_check(src, style);
+            assert!(
+                v.iter().any(|x| x.message.contains("empty parameter list")),
+                "violations: {:?}",
+                v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    #[test]
+    fn multiline_default_value_keeps_list_multiline() {
+        let src = "private fun newWebSocket(\n    request: Request =\n      Request\n        .Builder()\n        .url(\n            \"ws://example.com\"\n        ),\n) {\n}\n";
+        let v = fn_check(src, crate::config::CodeStyle::AndroidStudio);
+        assert!(v.is_empty(), "multiline default keeps the list multiline");
+    }
+
     #[test]
     fn multiline_body_never_reports_fits_on_same_line() {
         // Issue #160: a multiline expression body (`when { ... }`) must stay
