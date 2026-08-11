@@ -5,7 +5,7 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 
 [![Rust](https://img.shields.io/badge/rust-1.85+-orange.svg)](https://www.rust-lang.org)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Rules](https://badgen.net/badge/rules/264/blue)](https://github.com/qdsfdhvh/ktlint-rs)
+[![Rules](https://badgen.net/badge/rules/263/blue)](https://github.com/qdsfdhvh/ktlint-rs)
 [![Tests](https://badgen.net/badge/tests/447/green)](https://github.com/qdsfdhvh/ktlint-rs)
 [![CI](https://github.com/qdsfdhvh/ktlint-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/qdsfdhvh/ktlint-rs/actions)
 
