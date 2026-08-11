@@ -1321,6 +1321,12 @@ pub(crate) fn ast_expected(
                     kind = "no_lift";
                     break;
                 }
+                "getter" | "setter" | "property_accessors" => {
+                    // Allman accessor body: `get()\n{` — the `{` aligns
+                    // with the accessor's own row (oracle).
+                    kind = "no_lift";
+                    break;
+                }
                 // while/for/do bodies keep the standard indent (only
                 // if/when-entry/try/fun Allman blocks lift).
                 "while_statement" | "for_statement" | "do_while_statement" => {
@@ -1441,6 +1447,19 @@ pub(crate) fn ast_expected(
             | "function_value_parameters"
             | "class_parameters"
             | "primary_constructor" => {
+                // First row of a parameter default value
+                // (`request: Request =\n    Request`) sits one level deeper
+                // than the parameter row (oracle).
+                if row > 0 {
+                    let prev_raw = src.lines().nth(row - 1).unwrap_or("");
+                    let prev_code = prev_raw.trim().split("//").next().unwrap_or("").trim_end();
+                    if prev_code.ends_with('=')
+                        && !trimmed.starts_with('.')
+                        && !trimmed.starts_with("?:")
+                    {
+                        return ast_expected(tree, src, row - 1, is);
+                    }
+                }
                 if trimmed.starts_with(')') {
                     return ast_expected(tree, src, c.start_position().row, is);
                 }
@@ -1477,6 +1496,25 @@ pub(crate) fn ast_expected(
             }
             "statements" => {
                 if let Some(owner) = c.parent() {
+                    // The first row of a property value/assignment
+                    // continuation (`client =\n    client`) sits one level
+                    // deeper than the `=` row (oracle), but only when it is
+                    // the *first* value row (not a chain/elvis continuation,
+                    // which the navigation/`?:` branches handle).
+                    if row > 0 {
+                        let prev_raw = src.lines().nth(row - 1).unwrap_or("");
+                        let prev_line = prev_raw.trim();
+                        // Strip a trailing `// …` comment before the `=`
+                        // test (`writeByte(0xff) // == Indexed - Add ==`).
+                        let prev_code = prev_line.split("//").next().unwrap_or("").trim_end();
+                        if prev_code.ends_with('=')
+                            && !prev_line.starts_with("/*")
+                            && !trimmed.starts_with('.')
+                            && !trimmed.starts_with("?:")
+                        {
+                            return ast_expected(tree, src, row - 1, is);
+                        }
+                    }
                     let open_row = block_open_row(&owner, src);
                     let open_line = src.lines().nth(open_row).map(|l| l.trim()).unwrap_or("");
                     // A chain/elvis continuation lambda (`?: run {`) keeps
@@ -1520,8 +1558,33 @@ pub(crate) fn ast_expected(
                 }
                 return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
             }
-            "class_body" | "function_body" => {
+            "getter" | "setter" => {
+                // `get()`/`set(v)` on its own line: the accessor sits one
+                // level deeper than its property (`val a: Int\n    get()`).
+                if c.start_position().row == row {
+                    // Find the owning property declaration (a sibling of the
+                    // accessor under class_body).
+                    let prop_row = c.parent().and_then(|p| {
+                        p.children(&mut p.walk())
+                            .filter(|k| k.kind() == "property_declaration")
+                            .filter(|k| k.start_position().row <= row)
+                            .map(|k| k.start_position().row)
+                            .max()
+                    });
+                    if let Some(pr) = prop_row {
+                        return ast_expected(tree, src, pr, is).map(|e| e + is);
+                    }
+                }
+            }
+            "class_body" | "function_body" | "enum_class_body" => {
                 if trimmed.starts_with('}') {
+                    // A `}` inside an `init { }` block closes at the init
+                    // row (oracle: `init {\n    …\n}`).
+                    if let Some(init) = chain.iter().find(|n| {
+                        n.kind() == "anonymous_initializer" && n.start_position().row < row
+                    }) {
+                        return ast_expected(tree, src, init.start_position().row, is);
+                    }
                     // The closing `}` returns to the block's opening row —
                     // the Allman `{` row when it is alone, the header row
                     // otherwise.
@@ -1529,6 +1592,43 @@ pub(crate) fn ast_expected(
                 }
                 if let Some(owner) = c.parent() {
                     return ast_expected(tree, src, owner.start_position().row, is).map(|e| e + is);
+                }
+            }
+            "anonymous_initializer" => {
+                // `init {` body rows sit one level deeper than the init row.
+                if trimmed.starts_with('}') {
+                    return ast_expected(tree, src, c.start_position().row, is);
+                }
+                return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
+            }
+            "delegation_specifier" => {
+                // A supertype on its own line below the header end
+                // (`class Foo(\n    …\n) :\n    Base()`) sits one level
+                // deeper than the class row (oracle). A supertype sharing
+                // the header's last line (`) : Base()`) keeps the class
+                // row.
+                // Header end = the last row of the primary constructor's
+                // parameter list (or the class row when there is none). A
+                // supertype on its own line below that row sits one level
+                // deeper than the class row (oracle); `) : Base()` (sharing
+                // the `)` row) keeps the class row.
+                let header_end = chain
+                    .iter()
+                    .find(|n| n.kind() == "class_declaration")
+                    .and_then(|cd| {
+                        cd.children(&mut cd.walk())
+                            .find(|k| k.kind() == "class_parameters")
+                            .map(|cp| cp.end_position().row)
+                            .or(Some(cd.start_position().row))
+                    });
+                let class_row = chain
+                    .iter()
+                    .find(|n| n.kind() == "class_declaration")
+                    .map(|n| n.start_position().row);
+                if let (Some(he), Some(cr)) = (header_end, class_row) {
+                    if row > he {
+                        return ast_expected(tree, src, cr, is).map(|e| e + is);
+                    }
                 }
             }
             "catch_block" | "finally_block" => {
