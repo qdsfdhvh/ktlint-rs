@@ -1470,7 +1470,23 @@ pub(crate) fn ast_expected(
             }
             "lambda_literal" => {
                 if c.start_position().row != row {
+                    // A lambda whose row is a chain/elvis continuation
+                    // (`.takeIf { } ?: run {`) keeps its body at the lambda
+                    // row and closes one level below (oracle).
+                    let lambda_line = src
+                        .lines()
+                        .nth(c.start_position().row)
+                        .map(|l| l.trim())
+                        .unwrap_or("");
+                    let chainish = lambda_line.starts_with('.') || lambda_line.starts_with("?:");
                     if trimmed.starts_with('}') {
+                        if chainish {
+                            return ast_expected(tree, src, c.start_position().row, is)
+                                .map(|e| e.saturating_sub(is));
+                        }
+                        return ast_expected(tree, src, c.start_position().row, is);
+                    }
+                    if chainish {
                         return ast_expected(tree, src, c.start_position().row, is);
                     }
                     return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
@@ -1479,7 +1495,18 @@ pub(crate) fn ast_expected(
             "statements" => {
                 if let Some(owner) = c.parent() {
                     let open_row = block_open_row(&owner, src);
+                    let open_line = src.lines().nth(open_row).map(|l| l.trim()).unwrap_or("");
+                    // A chain/elvis continuation lambda (`?: run {`) keeps
+                    // its body at the lambda row and closes one level below
+                    // (oracle: `} ` at the chain start).
                     if trimmed.starts_with('}') {
+                        if open_line.starts_with('.') || open_line.starts_with("?:") {
+                            return ast_expected(tree, src, open_row, is)
+                                .map(|e| e.saturating_sub(is));
+                        }
+                        return ast_expected(tree, src, open_row, is);
+                    }
+                    if open_line.starts_with('.') || open_line.starts_with("?:") {
                         return ast_expected(tree, src, open_row, is);
                     }
                     return ast_expected(tree, src, open_row, is).map(|e| e + is);
@@ -1521,8 +1548,56 @@ pub(crate) fn ast_expected(
                     return ast_expected(tree, src, owner.start_position().row, is).map(|e| e + is);
                 }
             }
+            "catch_block" | "finally_block" => {
+                // `}` closes the catch/finally block at its own `{` row
+                // (Allman `{` on its own line stays standard for these).
+                if trimmed.starts_with('}') {
+                    let brace = c
+                        .children(&mut c.walk())
+                        .find(|cc| cc.kind() == "{")
+                        .map(|cc| cc.start_position().row)
+                        .unwrap_or(c.start_position().row);
+                    return ast_expected(tree, src, brace, is);
+                }
+            }
+            "catch_block" | "finally_block" => {
+                // `}` closes the catch/finally block at its own `{` row
+                // (Allman `{` on its own line stays standard for these).
+                if trimmed.starts_with('}') {
+                    let brace = c
+                        .children(&mut c.walk())
+                        .find(|cc| cc.kind() == "{")
+                        .map(|cc| cc.start_position().row)
+                        .unwrap_or(c.start_position().row);
+                    return ast_expected(tree, src, brace, is);
+                }
+            }
             "try_expression" => {
                 // `} catch (…) {` closes the try block at its `{` row.
+                if trimmed.starts_with('}') {
+                    let brace = c
+                        .children(&mut c.walk())
+                        .find(|cc| cc.kind() == "{")
+                        .map(|cc| cc.start_position().row)
+                        .unwrap_or(c.start_position().row);
+                    return ast_expected(tree, src, brace, is);
+                }
+            }
+            "catch_block" | "finally_block" => {
+                // `}` closes the catch/finally block at its own `{` row
+                // (Allman `{` on its own line stays standard for these).
+                if trimmed.starts_with('}') {
+                    let brace = c
+                        .children(&mut c.walk())
+                        .find(|cc| cc.kind() == "{")
+                        .map(|cc| cc.start_position().row)
+                        .unwrap_or(c.start_position().row);
+                    return ast_expected(tree, src, brace, is);
+                }
+            }
+            "catch_block" | "finally_block" => {
+                // `}` closes the catch/finally block at its own `{` row
+                // (Allman `{` on its own line stays standard for these).
                 if trimmed.starts_with('}') {
                     let brace = c
                         .children(&mut c.walk())
