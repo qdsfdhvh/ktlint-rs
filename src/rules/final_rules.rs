@@ -201,7 +201,9 @@ impl Rule for TrailingCommaOnDeclarationSite {
         while let Some(node) = stack.pop() {
             let (elem_kinds, close_msg, lambda) = match node.kind() {
                 "function_value_parameters" => (ELEM_PARAM, ")", false),
-                "class_parameters" => (ELEM_CLASS_PARAM, ")", false),
+                // tree-sitter-kotlin flattens class constructor params into
+                // primary_constructor (no class_parameters node)
+                "primary_constructor" => (ELEM_CLASS_PARAM, ")", false),
                 "lambda_parameters" => (ELEM_VAR_DECL, "->", true),
                 "enum_class_body" => (ELEM_ENUM_ENTRY, "}", false),
                 _ => (0, "", false),
