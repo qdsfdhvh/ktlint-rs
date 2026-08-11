@@ -171,16 +171,21 @@ impl Rule for EnumWrapping {
 }
 
 pub struct TrailingCommaOnDeclarationSite {
-    /// Oracle matrix: ktlint_official / intellij_idea always demand the
-    /// trailing comma on multiline declaration-site lists; android_studio
-    /// only does under `ij_kotlin_allow_trailing_comma = true`.
+    /// Missing direction: a multiline list without a trailing comma is
+    /// reported when the style demands it — ktlint_official/intellij_idea
+    /// always, android_studio under `ij_kotlin_allow_trailing_comma=true`.
     require_trailing_comma: bool,
+    /// Unnecessary direction (multiline lists): android_studio with
+    /// trailing commas disabled reports them. Single-line lists report the
+    /// comma as unnecessary under *every* style.
+    forbid_trailing_comma: bool,
 }
 
 impl TrailingCommaOnDeclarationSite {
     pub fn new(allow_trailing_comma: bool, is_android_studio: bool) -> Self {
         Self {
             require_trailing_comma: allow_trailing_comma || !is_android_studio,
+            forbid_trailing_comma: is_android_studio && !allow_trailing_comma,
         }
     }
 }
@@ -190,72 +195,105 @@ impl Rule for TrailingCommaOnDeclarationSite {
         "standard:trailing-comma-on-declaration-site"
     }
     fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
-        let mut v = Vec::new();
         let bytes = s.as_bytes();
+        let mut v = Vec::new();
         let mut stack = vec![tree.root_node()];
         while let Some(node) = stack.pop() {
-            let is_lambda_params = node.kind() == "lambda_parameters";
-            let multiline = node.start_position().row != node.end_position().row
-                || (is_lambda_params && lambda_arrow_on_next_line(&node, s));
-            if matches!(
-                node.kind(),
-                "function_value_parameters" | "class_parameters" | "lambda_parameters"
-            ) && multiline
-            {
-                // multiline list: the last parameter must be followed by a
-                // trailing comma (issue #204).
-                let mut w = node.walk();
-                let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
-                let params: Vec<&tree_sitter::Node> = kids
-                    .iter()
-                    .filter(|c| {
-                        matches!(
-                            c.kind(),
-                            "parameter" | "class_parameter" | "variable_declaration"
-                        )
-                    })
-                    .collect();
-                if let Some(last) = params.last() {
-                    let line_start = bytes[..last.end_byte()]
-                        .iter()
-                        .rposition(|&b| b == b'\n')
-                        .map_or(0, |i| i + 1);
-                    let line_end = bytes[last.end_byte()..]
-                        .iter()
-                        .position(|&b| b == b'\n')
-                        .map_or(bytes.len(), |i| last.end_byte() + i);
-                    let trimmed = bytes[line_start..line_end]
-                        .iter()
-                        .rposition(|&b| b != b' ' && b != b'\t')
-                        .map_or(line_start, |i| line_start + i);
-                    let has_comma = bytes.get(trimmed) == Some(&b',');
-                    // Oracle: ktlint_official always demands the trailing
-                    // comma; android_studio only under
-                    // `ij_kotlin_allow_trailing_comma = true`. (The
-                    // "unnecessary trailing comma" direction depends on the
-                    // enclosing class context in ktlint 1.8 and is left
-                    // unreported for now.)
-                    if self.require_trailing_comma && !has_comma {
+            let (elem_kinds, close_msg, lambda) = match node.kind() {
+                "function_value_parameters" => (ELEM_PARAM, ")", false),
+                // tree-sitter-kotlin flattens class constructor params into
+                // primary_constructor (no class_parameters node)
+                "primary_constructor" => (ELEM_CLASS_PARAM, ")", false),
+                "lambda_parameters" => (ELEM_VAR_DECL, "->", true),
+                "enum_class_body" => (ELEM_ENUM_ENTRY, "}", false),
+                _ => (0, "", false),
+            };
+            if elem_kinds != 0 {
+                let multiline = node.start_position().row != node.end_position().row
+                    || (lambda && lambda_arrow_on_next_line(&node, s));
+                let elem = element_kind(elem_kinds);
+                let mut kids = Vec::new();
+                for c in node.children(&mut node.walk()) {
+                    if c.kind() == elem {
+                        kids.push(c);
+                    }
+                }
+                if let Some(last) = kids.last() {
+                    let comma_pos = comma_after(last, bytes);
+                    if comma_pos.is_some() {
+                        // Unnecessary: single-line lists always; multiline
+                        // under android_studio without the allow flag.
+                        if !multiline || self.forbid_trailing_comma {
+                            v.push(Violation {
+                                file: String::new(),
+                                line: comma_pos.unwrap().row + 1,
+                                col: comma_pos.unwrap().column + 1,
+                                rule_id: self.id().into(),
+                                message: format!(
+                                    "Unnecessary trailing comma before \"{}\"",
+                                    close_msg
+                                ),
+                                auto_fixable: true,
+                            });
+                        }
+                    } else if multiline && self.require_trailing_comma {
+                        // Missing: multiline list that must end with a comma.
                         let pos = last.end_position();
                         v.push(Violation {
                             file: String::new(),
                             line: pos.row + 1,
                             col: pos.column + 1,
                             rule_id: self.id().into(),
-                            message: "Missing trailing comma before \")\"".into(),
+                            message: format!("Missing trailing comma before \"{}\"", close_msg),
                             auto_fixable: true,
                         });
                     }
                 }
             }
-            let mut w = node.walk();
-            let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
-            for k in kids.into_iter().rev() {
-                stack.push(k);
+            for i in (0..node.child_count()).rev() {
+                if let Some(c) = node.child(i) {
+                    stack.push(c);
+                }
             }
         }
         v
     }
+}
+
+const ELEM_PARAM: u8 = 1;
+const ELEM_CLASS_PARAM: u8 = 2;
+const ELEM_VAR_DECL: u8 = 3;
+const ELEM_ENUM_ENTRY: u8 = 4;
+
+fn element_kind(kind: u8) -> &'static str {
+    match kind {
+        ELEM_PARAM => "parameter",
+        ELEM_CLASS_PARAM => "class_parameter",
+        ELEM_VAR_DECL => "variable_declaration",
+        ELEM_ENUM_ENTRY => "enum_entry",
+        _ => "",
+    }
+}
+
+/// Byte offset/position of the trailing comma directly after `last` (same
+/// line), if any.
+fn comma_after(last: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_sitter::Point> {
+    let mut i = last.end_byte();
+    while i < bytes.len() && (bytes[i] == b' ' || bytes[i] == b'\t') {
+        i += 1;
+    }
+    if bytes.get(i) == Some(&b',') {
+        let line = bytes[..i].iter().filter(|&&b| b == b'\n').count();
+        let line_start = bytes[..i]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |x| x + 1);
+        return Some(tree_sitter::Point {
+            row: line,
+            column: i - line_start,
+        });
+    }
+    None
 }
 
 /// True when the lambda's `->` sits on a later line than its parameter list
@@ -284,30 +322,66 @@ fn lambda_arrow_on_next_line(params: &tree_sitter::Node, source: &str) -> bool {
     false
 }
 
-pub struct TrailingCommaOnCallSite;
+pub struct TrailingCommaOnCallSite {
+    require_trailing_comma: bool,
+    forbid_trailing_comma: bool,
+}
+
+impl TrailingCommaOnCallSite {
+    pub fn new(allow_trailing_comma: bool, is_android_studio: bool) -> Self {
+        Self {
+            require_trailing_comma: allow_trailing_comma || !is_android_studio,
+            forbid_trailing_comma: is_android_studio && !allow_trailing_comma,
+        }
+    }
+}
+
 impl Rule for TrailingCommaOnCallSite {
     fn id(&self) -> &'static str {
         "standard:trailing-comma-on-call-site"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+        let bytes = s.as_bytes();
         let mut v = Vec::new();
-        for (i, l) in s.lines().enumerate() {
-            if l.contains("(")
-                && l.contains(")")
-                && !l.trim().starts_with("fun ")
-                && !l.trim().starts_with("class ")
-            {
-                if let Some(rp) = l.rfind(')') {
-                    if rp > 1 && l.as_bytes()[rp - 1] == b',' {
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "value_arguments" {
+                let multiline = node.start_position().row != node.end_position().row;
+                let mut kids = Vec::new();
+                for c in node.children(&mut node.walk()) {
+                    if c.kind() == "value_argument" {
+                        kids.push(c);
+                    }
+                }
+                if let Some(last) = kids.last() {
+                    let comma_pos = comma_after(last, bytes);
+                    if comma_pos.is_some() {
+                        if !multiline || self.forbid_trailing_comma {
+                            v.push(Violation {
+                                file: String::new(),
+                                line: comma_pos.unwrap().row + 1,
+                                col: comma_pos.unwrap().column + 1,
+                                rule_id: self.id().into(),
+                                message: "Unnecessary trailing comma before \")\"".into(),
+                                auto_fixable: true,
+                            });
+                        }
+                    } else if multiline && self.require_trailing_comma {
+                        let pos = last.end_position();
                         v.push(Violation {
                             file: String::new(),
-                            line: i + 1,
-                            col: rp + 1,
+                            line: pos.row + 1,
+                            col: pos.column + 1,
                             rule_id: self.id().into(),
-                            message: "Missing trailing comma on call site".into(),
+                            message: "Missing trailing comma before \")\"".into(),
                             auto_fixable: true,
                         });
                     }
+                }
+            }
+            for i in (0..node.child_count()).rev() {
+                if let Some(c) = node.child(i) {
+                    stack.push(c);
                 }
             }
         }

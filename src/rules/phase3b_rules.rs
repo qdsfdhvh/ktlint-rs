@@ -158,6 +158,7 @@ impl FunctionSignatureSpacing {
         while let Some(node) = stack.pop() {
             if node.kind() == "function_declaration" {
                 self.check_params(&node, bytes, v);
+                self.check_expr_body_newline(&node, bytes, v);
             }
             let mut w = node.walk();
             let kids: Vec<tree_sitter::Node> = node.children(&mut w).collect();
@@ -165,6 +166,80 @@ impl FunctionSignatureSpacing {
                 stack.push(k);
             }
         }
+    }
+
+    /// "Newline expected before expression body": when the collapsed
+    /// signature (indent + `fun … =`) fits max_line_length but the
+    /// collapsed signature + first line of the body expression exceeds it,
+    /// ktlint demands the `=` move to its own line (oracle: single-line
+    /// signatures with long bodies, `): CoroutineScope = …` shapes).
+    fn check_expr_body_newline(
+        &self,
+        node: &tree_sitter::Node,
+        bytes: &[u8],
+        v: &mut Vec<Violation>,
+    ) {
+        let Some(body) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "function_body")
+        else {
+            return;
+        };
+        let Some(eq) = body.children(&mut body.walk()).find(|c| c.kind() == "=") else {
+            return; // block body
+        };
+        let Some(params) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "function_value_parameters")
+        else {
+            return;
+        };
+        let start = self.measure_start(node, bytes);
+        let sig_len = eq.end_byte() - start;
+        if sig_len > self.max_length {
+            return; // signature alone too long — ktlint keeps it multiline
+        }
+        let body_start = eq.end_byte() + 1;
+        let body_line_end = bytes[body_start..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .map_or(bytes.len(), |i| body_start + i);
+        let body_first = (body_line_end - body_start).max(1);
+        if sig_len + 1 + body_first <= self.max_length {
+            return; // everything fits collapsed
+        }
+        // Indent of the declaration line counts too.
+        let decl_start = node.start_byte();
+        let line_start = bytes[..decl_start]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |i| i + 1);
+        let indent_len = bytes[line_start..decl_start]
+            .iter()
+            .filter(|&&b| b == b' ' || b == b'\t')
+            .count();
+        if indent_len + sig_len + 1 + body_first <= self.max_length {
+            return;
+        }
+        // ktlint reports at the first token of the body expression (the
+        // token right after `=`).
+        let mut p = eq.end_byte();
+        while p < bytes.len() && (bytes[p] == b' ' || bytes[p] == b'\t') {
+            p += 1;
+        }
+        let line = bytes[..p].iter().filter(|&&b| b == b'\n').count();
+        let line_start = bytes[..p]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |x| x + 1);
+        v.push(Violation {
+            file: String::new(),
+            line: line + 1,
+            col: p - line_start + 1,
+            rule_id: self.id().into(),
+            message: "Newline expected before expression body".into(),
+            auto_fixable: true,
+        });
     }
 
     fn check_params(&self, node: &tree_sitter::Node, bytes: &[u8], v: &mut Vec<Violation>) {
@@ -177,6 +252,7 @@ impl FunctionSignatureSpacing {
         if params.start_position().row == params.end_position().row {
             return;
         }
+
         // Issue #198: an own-line parameter annotation (`@X\n    value: T`)
         // is a `parameter_modifiers` node on a different row than its
         // parameter, and a comment line is a `line_comment` child — both
@@ -234,6 +310,7 @@ impl FunctionSignatureSpacing {
         {
             return;
         }
+
         // ktlint reports the first parameter at its first token, including
         // parameter modifiers (`@TempDir tempDir: Path` reports at `@`) —
         // but only when the first parameter starts on its own line. A
@@ -321,12 +398,28 @@ impl FunctionSignatureSpacing {
         let mut w = params.walk();
         let kids: Vec<tree_sitter::Node> = params.children(&mut w).collect();
         let start = param.start_byte();
-        let end = kids
+        let line_end = bytes[start..]
             .iter()
-            .skip_while(|c| c.start_byte() < start)
-            .find(|c| c.kind() == "," || c.kind() == ")")
-            .map_or(params.end_byte(), |c| c.end_byte());
-        !bytes[start..end].contains(&b'\n')
+            .position(|&b| b == b'\n')
+            .map_or(bytes.len(), |i| start + i);
+        let trimmed_end = bytes[start..line_end]
+            .iter()
+            .rposition(|&b| b != b' ' && b != b'\t')
+            .map_or(start, |i| start + i + 1);
+        let tail = &bytes[start..trimmed_end];
+        if tail.ends_with(b",") {
+            // Trailing comma on the parameter line: the parameter (incl. a
+            // same-line default value) must fit one line.
+            !tail.contains(&b'\n')
+        } else if tail.ends_with(b"=") {
+            // Default value continues on the next line — the list stays
+            // multiline (`request: Request =\n    Request…`, oracle).
+            false
+        } else {
+            // No comma: the closing `)` may sit on the next line
+            // (`a: Int\n)` still collapses, oracle-verified).
+            !tail.contains(&b'\n')
+        }
     }
 
     /// Single-parameter variant of the fits check. Oracle boundary: the
@@ -348,6 +441,9 @@ impl FunctionSignatureSpacing {
         let mut e = line_end;
         while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
             e -= 1;
+        }
+        if let Some(eq) = bytes[byte..e].iter().position(|&b| b == b'=') {
+            e = byte + eq;
         }
         if e <= start {
             return false;
@@ -402,6 +498,11 @@ impl FunctionSignatureSpacing {
             let mut e = line_end;
             while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
                 e -= 1;
+            }
+            // An expression body (`) : Int = expr`) must not count: the
+            // collapse decision covers the signature only (oracle).
+            if let Some(eq) = bytes[byte..e].iter().position(|&b| b == b'=') {
+                e = byte + eq;
             }
             e
         };
@@ -485,52 +586,73 @@ impl Rule for FunctionExpressionBody {
     fn id(&self) -> &'static str {
         "standard:function-expression-body"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        let lines: Vec<&str> = s.lines().collect();
-        let mut i = 0;
-        while i < lines.len() {
-            let t = lines[i].trim();
-            // Find block-body functions: fun name(...): Type {
-            if t.starts_with("fun ") && t.ends_with('{') && !t.contains('=') {
-                let _fun_line = i;
-                i += 1;
-                let mut depth = 1usize;
-                let mut return_count = 0usize;
-                let mut return_line = 0usize;
-                let mut has_other_statements = false;
-                while i < lines.len() && depth > 0 {
-                    let body = lines[i].trim();
-                    let opens = body.matches('{').count();
-                    let closes = body.matches('}').count();
-                    depth = depth + opens - closes;
-                    if body.starts_with("return ") && !body.contains("//") {
-                        return_count += 1;
-                        return_line = i;
-                    } else if !body.is_empty() && !body.starts_with("//") && body != "}" {
-                        // Check if it's a real statement (not just a closing brace line)
-                        if closes == 0 || !body.trim_end_matches('}').trim().is_empty() {
-                            has_other_statements = true;
-                        }
-                    }
-                    i += 1;
+        let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "function_declaration" {
+                check_fn(&node, &mut v);
+            }
+            for i in (0..node.child_count()).rev() {
+                if let Some(c) = node.child(i) {
+                    stack.push(c);
                 }
-                // Flag if exactly one return and no other statements in body
-                if return_count == 1 && !has_other_statements {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: return_line + 1,
-                        col: 1,
-                        rule_id: self.id().into(),
-                        message: "Function body should be replaced with body expression".into(),
-                        auto_fixable: true,
-                    });
-                }
-            } else {
-                i += 1;
             }
         }
         v
+    }
+}
+
+/// ktlint: a block body containing exactly one `return <expr>` should be a
+/// body expression (`= <expr>`). Reported at the opening `{` (oracle
+/// positions: `fun get(): T {` -> the `{`; Allman `{` on its own line ->
+/// that line).
+fn check_fn(node: &tree_sitter::Node, violations: &mut Vec<Violation>) {
+    let Some(body) = node
+        .children(&mut node.walk())
+        .find(|c| c.kind() == "function_body")
+    else {
+        // expression-body functions already use `=`
+        return;
+    };
+    let Some(stmts) = body
+        .children(&mut body.walk())
+        .find(|c| c.kind() == "statements")
+    else {
+        return; // empty body
+    };
+    let mut returns = 0usize;
+    let mut has_expr = false;
+    for st in stmts.children(&mut stmts.walk()) {
+        // tree-sitter-kotlin parses `return <expr>` as jump_expression
+        if st.kind() == "jump_expression" {
+            let mut is_return = false;
+            let mut expr = false;
+            for c in st.children(&mut st.walk()) {
+                if c.kind() == "return" {
+                    is_return = true;
+                } else if c.kind() != ";" {
+                    expr = true;
+                }
+            }
+            if !is_return {
+                return; // throw / break / continue — not a body expression
+            }
+            returns += 1;
+            has_expr = expr;
+        } else {
+            return; // any other statement disqualifies
+        }
+    }
+    if returns == 1 && has_expr {
+        violations.push(Violation {
+            file: String::new(),
+            line: body.start_position().row + 1,
+            col: body.start_position().column + 1,
+            rule_id: "standard:function-expression-body".into(),
+            message: "Function body should be replaced with body expression".into(),
+            auto_fixable: true,
+        });
     }
 }
 
