@@ -412,11 +412,11 @@ impl ClassSignatureSpacing {
         // body", reported at the `{`).
         if let Some(body) = node
             .children(&mut node.walk())
-            .find(|c| c.kind() == "class_body")
+            .find(|c| c.kind() == "class_body" || c.kind() == "enum_class_body")
         {
             let header_end = node
                 .children(&mut node.walk())
-                .filter(|c| c.kind() != "class_body")
+                .filter(|c| c.kind() != "class_body" && c.kind() != "enum_class_body")
                 .filter_map(|c| Some(c.end_position().row))
                 .max()
                 .unwrap_or(node.start_position().row);

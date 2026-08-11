@@ -84,6 +84,26 @@ impl Rule for Filename {
             return Vec::new();
         }
         if public.len() != 1 {
+            if has_invalid_top_level(&tree, source) {
+                return Vec::new();
+            }
+            // Multiple public declarations: the file name must still conform
+            // PascalCase (oracle: `class-plus-fun.kt`, `two-public-classes.kt`
+            // report "File name should conform PascalCase").
+            let stem = file_name.rsplit('.').nth(1).unwrap_or(file_name);
+            let pascal_case = stem.chars().next().is_some_and(|c| c.is_uppercase())
+                && !stem.contains('_')
+                && !stem.contains('-');
+            if !pascal_case {
+                return vec![Violation {
+                    file: String::new(),
+                    line: 1,
+                    col: 1,
+                    rule_id: self.id().to_string(),
+                    message: format!("File name '{}' should conform PascalCase", file_name),
+                    auto_fixable: false,
+                }];
+            }
             return Vec::new();
         }
         let only = public[0];
