@@ -1400,9 +1400,30 @@ pub(crate) fn ast_expected(
         }
     }
     if trimmed.starts_with("?:") && row > 0 {
-        // Elvis continuation: the operand row sits at the previous row's
-        // level (`val x = foo()\n    ?: bar()`).
-        return ast_expected(tree, src, row - 1, is);
+        let prev_line = src.lines().nth(row - 1).map(|l| l.trim()).unwrap_or("");
+        // After a `?.` chain continuation the elvis stays on the chain's
+        // own level (`?.filter\n    ?: emptyList()`). After an expression
+        // first row (`= expr\n    ?: throw …`) it sits one level deeper
+        // than the statement's first row.
+        if prev_line.starts_with("?.") || prev_line.starts_with("?:") {
+            return ast_expected(tree, src, row - 1, is);
+        }
+        let stmt_row = chain
+            .iter()
+            .filter(|n| {
+                matches!(
+                    n.kind(),
+                    "property_declaration"
+                        | "expression_statement"
+                        | "return_statement"
+                        | "assignment_expression"
+                        | "function_declaration"
+                ) && n.start_position().row < row
+            })
+            .map(|n| n.start_position().row)
+            .max()
+            .unwrap_or(row - 1);
+        return ast_expected(tree, src, stmt_row, is).map(|e| e + is);
     }
     if trimmed == "{" && row >= 3 {
         let mut up = node;
