@@ -429,6 +429,7 @@ pub(crate) fn compute_line_expected(
     let mut pending_pops = 0usize;
     let mut prev_last_code: Option<char> = None;
     let mut in_block_comment = false;
+    let mut block_depth = 0usize;
     let mut in_raw_string = false;
     for (i, line) in lines.iter().enumerate() {
         let t = line.trim();
@@ -448,11 +449,14 @@ pub(crate) fn compute_line_expected(
         let mut last_code: Option<char> = None;
         let mut chars = t.chars().peekable();
         while let Some(c) = chars.next() {
-            if !in_string && !in_block_comment && !in_raw_string {
-                if c == '/' && chars.peek() == Some(&'/') {
+            if !in_string && !in_raw_string {
+                if c == '/' && chars.peek() == Some(&'/') && !in_block_comment {
                     break;
                 }
                 if c == '/' && chars.peek() == Some(&'*') {
+                    // Nested block comments (Kotlin allows them; a KDoc code
+                    // sample may contain `/* ... */`).
+                    block_depth += 1;
                     in_block_comment = true;
                     chars.next();
                     continue;
@@ -460,7 +464,10 @@ pub(crate) fn compute_line_expected(
             }
             if in_block_comment {
                 if c == '*' && chars.peek() == Some(&'/') {
-                    in_block_comment = false;
+                    block_depth = block_depth.saturating_sub(1);
+                    if block_depth == 0 {
+                        in_block_comment = false;
+                    }
                     chars.next();
                 }
                 continue;
@@ -542,12 +549,6 @@ pub(crate) fn compute_line_expected(
             last_code = Some(c);
         }
         let mut e = depth * is;
-        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {
-            eprintln!("  bp: depth={} e_init={}", depth, e);
-        }
-        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") && i == 1262 {
-            eprintln!("  bp FINAL: e={}", e);
-        }
         // Allman elevated blocks: the `{` line sits at the header's
         // expectation + one level (except `when`, whose `{` stays standard),
         // and every line inside the block (up to the closing `}`) one level
@@ -630,6 +631,9 @@ pub(crate) fn compute_line_expected(
         if let Some((open, _)) = closest_close {
             e = out[open];
         }
+        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {
+            eprintln!("  S2: e={}", e);
+        }
         if t.contains(".also") {}
         if paren_depth > 0 && !t.starts_with(')') && !t.starts_with('}') {
             if let Some(&(list, for_header, opener_row)) = paren_expected.last() {
@@ -652,6 +656,9 @@ pub(crate) fn compute_line_expected(
             if let Some(&(_, _, opener_row)) = paren_expected.last() {
                 e = e.max(out[opener_row]);
             }
+        }
+        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {
+            eprintln!("  i>0 enter: e={} prev_last={:?}", e, prev_last_code);
         }
         if i > 0 {
             let prev = lines[i - 1].trim_end();
@@ -720,6 +727,9 @@ pub(crate) fn compute_line_expected(
             }
         }
         if t.contains(".also") {}
+        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {
+            eprintln!("  S3: e={}", e);
+        }
         out[i] = e;
         prev_expected = e;
         prev_last_code = last_code;
