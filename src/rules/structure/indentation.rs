@@ -1284,18 +1284,42 @@ pub(crate) fn ast_expected(
     let _guard = DepthGuard;
     DEPTH.with(|c| c.set(c.get() + 1));
     if DEPTH.with(|c| c.get()) > 200 {
+        if row == 110 {
+            eprintln!("NONE110 depth>200");
+        }
         return None;
     }
     // A row already being computed higher in the recursion means a cyclic
     // expectation (nested block ↔ header) — bail to the fallback.
     if IN_PROGRESS.with(|c| c.borrow().contains(&row)) {
+        if row == 110 {
+            eprintln!(
+                "NONE110 in-progress {:?}",
+                IN_PROGRESS.with(|c| c.borrow().clone())
+            );
+        }
         return None;
+    }
+    if row >= 105 && row <= 112 {
+        eprintln!(
+            "AE row={row} depth={} prog={:?}",
+            DEPTH.with(|c| c.get()),
+            IN_PROGRESS.with(|c| c.borrow().clone())
+        );
     }
     IN_PROGRESS.with(|c| c.borrow_mut().push(row));
     let line = src.lines().nth(row)?;
     let col = line.len() - line.trim_start().len();
     let point = tree_sitter::Point { row, column: col };
-    let node = tree.root_node().descendant_for_point_range(point, point)?;
+    let node = match tree.root_node().descendant_for_point_range(point, point) {
+        Some(n) => n,
+        None => {
+            if row == 110 {
+                eprintln!("NONE110 no-node");
+            }
+            return None;
+        }
+    };
     let trimmed = line.trim();
     if trimmed == "{" {
         // A lambda argument `{` (inside a paren list) is handled by the
@@ -1425,6 +1449,23 @@ pub(crate) fn ast_expected(
             .unwrap_or(row - 1);
         return ast_expected(tree, src, stmt_row, is).map(|e| e + is);
     }
+    if trimmed == "runBlocking {" && row == 110 {
+        let mut up = node;
+        let mut ks: Vec<(String, usize)> = vec![];
+        loop {
+            ks.push((up.kind().to_string(), up.start_position().row));
+            match up.parent() {
+                Some(p) => up = p,
+                None => break,
+            }
+        }
+        eprintln!(
+            "RB111 chain={ks:?} self={:?} fun={:?} parent={:?}",
+            ast_expected(tree, src, 110, is),
+            ast_expected(tree, src, 105, is),
+            ast_expected(tree, src, 109, is)
+        );
+    }
     if trimmed == "{" && row >= 3 {
         let mut up = node;
         let mut ks: Vec<&str> = vec![];
@@ -1443,17 +1484,21 @@ pub(crate) fn ast_expected(
             "navigation_suffix" => {
                 // The chain root is the outermost navigation_expression
                 // (smallest start row) — the first chain member's row.
+                // Chain root: the navigation_expression whose start row is
+                // the *largest* below the current row — the innermost chain
+                // container (aSocket in `runBlocking { aSocket().tcp()
+                // .connect() }`), not an outer call wrapper.
                 let root = chain
                     .iter()
                     .filter(|n| n.kind() == "navigation_expression" && n.start_position().row < row)
-                    .min_by_key(|n| n.start_position().row)
+                    .max_by_key(|n| n.start_position().row)
                     .or_else(|| {
                         chain
                             .iter()
                             .filter(|n| {
                                 n.kind() == "call_expression" && n.start_position().row < row
                             })
-                            .min_by_key(|n| n.start_position().row)
+                            .max_by_key(|n| n.start_position().row)
                     })
                     .copied();
                 if let Some(r) = root {
