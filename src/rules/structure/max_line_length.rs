@@ -56,9 +56,9 @@ impl Rule for MaxLineLength {
             .map(|(i, _line)| Violation {
                 file: String::new(),
                 line: i + 1,
-                col: max_length + 1,
+                col: max_length,
                 rule_id: self.id().to_string(),
-                message: format!("Line exceeds {} characters", max_length),
+                message: format!("Exceeded max line length ({})", max_length),
                 auto_fixable: false, // wrapping requires manual intervention
             })
             .collect()

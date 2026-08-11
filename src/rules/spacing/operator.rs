@@ -123,7 +123,7 @@ impl OperatorSpacing {
                 col: pos.column + 1,
                 rule_id: "standard:op-spacing".into(),
                 auto_fixable: true,
-                message: format!("Missing space before \"{}\"", node.kind()),
+                message: format!("Missing spacing before \"{}\"", node.kind()),
             });
         }
         if e < bytes.len() && bytes[e] != b' ' && bytes[e] != b')' && bytes[e] != b'\n' {
@@ -133,7 +133,7 @@ impl OperatorSpacing {
                 col: pos.column + 1,
                 rule_id: "standard:op-spacing".into(),
                 auto_fixable: true,
-                message: format!("Missing space after \"{}\"", node.kind()),
+                message: format!("Missing spacing after \"{}\"", node.kind()),
             });
         }
     }

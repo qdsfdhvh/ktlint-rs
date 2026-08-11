@@ -55,13 +55,17 @@ impl Rule for FunctionLiteralRule {
                         // lambdas too).
                         let params = &text[lbrace + 1..arrow];
                         if params.contains('\n') {
-                            let pos = node.start_byte() + arrow;
-                            let line = source[..pos].bytes().filter(|&b| b == b'\n').count() + 1;
-                            let line_start = source[..pos].rfind('\n').map_or(0, |i| i + 1);
+                            // ktlint reports at the end of the parameter list
+                            // (oracle: `{ first: Int, second: Int\n ->` -> 3:72).
+                            let end_pos = node
+                                .children(&mut node.walk())
+                                .find(|c| c.kind() == "lambda_parameters")
+                                .map(|lp| lp.end_position())
+                                .unwrap_or_else(|| node.start_position());
                             violations.push(Violation {
                                 file: String::new(),
-                                line,
-                                col: pos - line_start + 1,
+                                line: end_pos.row + 1,
+                                col: end_pos.column + 1,
                                 rule_id: self.id().into(),
                                 message: "No newline expected after parameter".into(),
                                 auto_fixable: true,
