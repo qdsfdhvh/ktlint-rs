@@ -85,12 +85,15 @@ impl Rule for Indentation {
         // AST-driven expected indent (issue #202 rework): the first token's
         // container chain decides each code row. Falls back to the line-scan
         // model when the AST cannot classify the row.
-        // AST-driven expected indent (issue #202 rework): the classifier
-        // keeps improving (chains, lambda args, try/else, generics, elvis,
-        // for headers, cycle guard) but still trails the line-scan model on
-        // the full corpus, so the line-scan stays authoritative.
-        let _ = ast_expected;
-        let line_expected = compute_line_expected(&lines, is, &elevated);
+        // AST-driven expected indent (issue #202 rework): the first token's
+        // container chain decides each code row. Falls back to the line-scan
+        // model when the AST cannot classify the row.
+        let line_expected: Vec<usize> = (0..lines.len())
+            .map(|i| {
+                ast_expected(_tree, source, i, is)
+                    .unwrap_or_else(|| compute_line_expected(&lines, is, &elevated)[i])
+            })
+            .collect();
 
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
@@ -1296,14 +1299,47 @@ pub(crate) fn ast_expected(
     let trimmed = line.trim();
     if trimmed == "{" {
         // A lambda argument `{` (inside a paren list) is handled by the
-        // value_arguments classification; only a true block-opening Allman
-        // `{` sits at the previous row + one level.
+        // value_arguments classification. A true block-opening Allman `{`
+        // sits at the previous row + one level — except class/object bodies
+        // which stay at the header row (oracle: `class C\n{`).
         let mut up = node;
-        let mut in_args = false;
+        let mut kind = "";
         loop {
             match up.kind() {
                 "value_arguments" | "function_value_parameters" | "class_parameters" => {
-                    in_args = true;
+                    kind = "args";
+                    break;
+                }
+                "lambda_literal" => {
+                    // Allman lambda `{`: aligns with the lambda's own row —
+                    // a chained lambda (`list\n    .map\n    {`) with the
+                    // chain root (oracle: `{` at the `val r = list` row).
+                    kind = "lambda";
+                    break;
+                }
+                "class_body" | "enum_class_body" => {
+                    kind = "no_lift";
+                    break;
+                }
+                // while/for/do bodies keep the standard indent (only
+                // if/when-entry/try/fun Allman blocks lift).
+                "while_statement" | "for_statement" | "do_while_statement" => {
+                    kind = "no_lift";
+                    break;
+                }
+                "catch_block" | "finally_block" => {
+                    kind = "no_lift";
+                    break;
+                }
+                "when_expression" => {
+                    // A subjectless `when\n{` lifts; `when (x)\n{` keeps
+                    // its `{` standard (oracle: when-block-exempt).
+                    let has_subject = up
+                        .children(&mut up.walk())
+                        .any(|c| c.kind() == "when_subject");
+                    if has_subject {
+                        kind = "no_lift";
+                    }
                     break;
                 }
                 _ => {}
@@ -1313,9 +1349,29 @@ pub(crate) fn ast_expected(
                 None => break,
             }
         }
-        if !in_args {
-            return ast_expected(tree, src, row.saturating_sub(1), is).map(|e| e + is);
+        if kind == "lambda" {
+            // Chain root (outermost navigation_expression) when the lambda
+            // is chained; otherwise the lambda's own row.
+            let mut n2 = node;
+            let mut chain_root = None;
+            loop {
+                match n2.kind() {
+                    "navigation_expression" => chain_root = Some(n2.start_position().row),
+                    _ => {}
+                }
+                match n2.parent() {
+                    Some(p) => n2 = p,
+                    None => break,
+                }
+            }
+            let base = chain_root.unwrap_or_else(|| row.saturating_sub(1));
+            return ast_expected(tree, src, base, is);
         }
+        return match kind {
+            "args" => None,
+            "no_lift" => ast_expected(tree, src, row.saturating_sub(1), is),
+            _ => ast_expected(tree, src, row.saturating_sub(1), is).map(|e| e + is),
+        };
     }
     let mut n = node;
     let mut chain: Vec<tree_sitter::Node> = vec![];
@@ -1340,6 +1396,15 @@ pub(crate) fn ast_expected(
         // Elvis continuation: the operand row sits at the previous row's
         // level (`val x = foo()\n    ?: bar()`).
         return ast_expected(tree, src, row - 1, is);
+    }
+    if trimmed.trim() == ")" && row == 1188 {
+        eprintln!(
+            "CLOSE: chain={:?}",
+            chain.iter().map(|c| c.kind()).collect::<Vec<_>>()
+        );
+    }
+    if trimmed.starts_with("val matchingRegistrations") {
+        eprintln!("MR: row={} ret={:?}", row, ast_expected(tree, src, row, is));
     }
     for c in &chain {
         match c.kind() {
@@ -1369,7 +1434,10 @@ pub(crate) fn ast_expected(
                 // Chain root on the same row (standalone `.foo()`) — the
                 // outer container decides.
             }
-            "value_arguments" | "function_value_parameters" | "class_parameters" => {
+            "value_arguments"
+            | "function_value_parameters"
+            | "class_parameters"
+            | "primary_constructor" => {
                 if trimmed.starts_with(')') {
                     return ast_expected(tree, src, c.start_position().row, is);
                 }
@@ -1478,6 +1546,12 @@ pub(crate) fn ast_expected(
             }
             "property_declaration" | "assignment_expression" => {
                 if c.start_position().row != row && !is_decl_header(trimmed) {
+                    if trimmed.starts_with(')') || trimmed.starts_with('}') {
+                        // A closing `)`/`}` of a property value returns to the
+                        // property's own row (`val outFinished = (\n    …
+                        // \n)` closes at the val row).
+                        return ast_expected(tree, src, c.start_position().row, is);
+                    }
                     return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
                 }
             }
