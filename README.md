@@ -13,7 +13,7 @@ A blazingly fast pure-Rust [ktlint](https://github.com/pinterest/ktlint) — Kot
 
 Kotlin tooling in Rust — startup under 50ms, lint per file under 5ms.
 
-- **264 unique registry rules** (116 standard/ktlint-oriented + 148 detekt) — zero JVM dependency
+- **263 unique registry rules** (115 standard/ktlint-oriented + 148 detekt) — zero JVM dependency
 - **31 auto-fix passes** for spacing, wrapping, indentation
 - **Drop-in CLI** compatible with JVM ktlint
 - **6 reporters**: plain, JSON, SARIF, checkstyle, HTML, markdown
@@ -80,9 +80,9 @@ ktlint-rs --stdin --stdin-path Foo.kt --format < Foo.kt > Foo.fmt.kt
 | Inventory | Count | Meaning |
 |---|---:|---|
 | ktlint-rs standard/ktlint-oriented IDs | 116 | Includes compatibility helpers and rs-only IDs |
-| Enabled ktlint-compatible registry IDs | 101 | Unique IDs used by `--ruleset ktlint` |
+| Enabled ktlint-compatible registry IDs | 100 | Unique IDs used by `--ruleset ktlint` |
 | ktlint 1.8.0 standard oracle | 101 | Runtime inventory from the pinned JVM oracle |
-| Oracle rules matched to Rust owners | 100 | Registration only; behavior remains unverified until differential fixtures pass |
+| Oracle rules matched to Rust owners | 99 | Registration only; behavior remains unverified until differential fixtures pass |
 | Oracle rules currently missing | 0 | All pinned ktlint 1.8 providers have Rust owners |
 | Detekt registry IDs | 148 | Outside the Spotless replacement scope |
 | **Unique registry total** | **264** | **116 standard-oriented + 148 detekt** |
