@@ -171,16 +171,16 @@ impl Rule for EnumWrapping {
 }
 
 pub struct TrailingCommaOnDeclarationSite {
-    /// `ij_kotlin_allow_trailing_comma = true` forces the trailing comma on
-    /// multiline declaration-site lists; without it the comma is only
-    /// reported when it is unnecessary (single-parameter list).
-    allow_trailing_comma: bool,
+    /// Oracle matrix: ktlint_official / intellij_idea always demand the
+    /// trailing comma on multiline declaration-site lists; android_studio
+    /// only does under `ij_kotlin_allow_trailing_comma = true`.
+    require_trailing_comma: bool,
 }
 
 impl TrailingCommaOnDeclarationSite {
-    pub fn new(allow_trailing_comma: bool) -> Self {
+    pub fn new(allow_trailing_comma: bool, is_android_studio: bool) -> Self {
         Self {
-            allow_trailing_comma,
+            require_trailing_comma: allow_trailing_comma || !is_android_studio,
         }
     }
 }
@@ -229,12 +229,13 @@ impl Rule for TrailingCommaOnDeclarationSite {
                         .rposition(|&b| b != b' ' && b != b'\t')
                         .map_or(line_start, |i| line_start + i);
                     let has_comma = bytes.get(trimmed) == Some(&b',');
-                    // Oracle: with `ij_kotlin_allow_trailing_comma = true` a
-                    // multiline declaration-site list must end with a comma.
-                    // (The "unnecessary trailing comma" direction depends on
-                    // the enclosing class context in ktlint 1.8 and is left
+                    // Oracle: ktlint_official always demands the trailing
+                    // comma; android_studio only under
+                    // `ij_kotlin_allow_trailing_comma = true`. (The
+                    // "unnecessary trailing comma" direction depends on the
+                    // enclosing class context in ktlint 1.8 and is left
                     // unreported for now.)
-                    if self.allow_trailing_comma && !has_comma {
+                    if self.require_trailing_comma && !has_comma {
                         let pos = last.end_position();
                         v.push(Violation {
                             file: String::new(),

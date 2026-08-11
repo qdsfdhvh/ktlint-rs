@@ -58,6 +58,31 @@ impl Rule for Filename {
                 _ => {}
             }
         }
+        let has_type = public
+            .iter()
+            .any(|n| matches!(n.kind(), "class_declaration" | "object_declaration"));
+        if !has_type && !has_invalid_top_level(&tree, source) {
+            // Class-less file (top-level functions/properties only): ktlint
+            // still demands the file name conform PascalCase (issue #202
+            // follow-up — `for-header-chained.kt`). Invalid files (a bare
+            // top-level call expression, parse errors) are reported as
+            // parse errors, not naming issues.
+            let stem = file_name.trim_end_matches(".kt");
+            let pascal_case = stem.chars().next().is_some_and(|c| c.is_uppercase())
+                && !stem.contains('_')
+                && !stem.contains('-');
+            if !pascal_case {
+                return vec![Violation {
+                    file: String::new(),
+                    line: 1,
+                    col: 1,
+                    rule_id: self.id().to_string(),
+                    message: format!("File name '{}' should conform PascalCase", file_name),
+                    auto_fixable: false,
+                }];
+            }
+            return Vec::new();
+        }
         if public.len() != 1 {
             return Vec::new();
         }
@@ -93,6 +118,35 @@ impl Rule for Filename {
 
 /// True when the declaration is excluded from the filename convention
 /// (`private` declarations don't count as the file's public class).
+
+/// True when the file carries top-level code that is not a declaration
+/// (a bare call expression, an ERROR node) — ktlint reports it as "Not a
+/// valid Kotlin file" and the filename convention does not apply.
+fn has_invalid_top_level(tree: &tree_sitter::Tree, source: &str) -> bool {
+    if tree.root_node().has_error() {
+        return true;
+    }
+    let mut w = tree.root_node().walk();
+    for child in tree.root_node().children(&mut w) {
+        match child.kind() {
+            "package_header" | "comment" | "multiline_comment" | "line_comment" => {}
+            "class_declaration"
+            | "object_declaration"
+            | "function_declaration"
+            | "property_declaration" => {}
+            "import_header" => {}
+            _ => {
+                // any other top-level node — e.g. a bare call_expression —
+                // is not valid Kotlin at the top level.
+                if child.kind() != "ERROR" || child.utf8_text(source.as_bytes()).is_ok() {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
 fn is_ignored(node: &tree_sitter::Node, source: &str) -> bool {
     node.children(&mut node.walk()).any(|c| {
         c.kind() == "modifiers"
