@@ -1449,7 +1449,8 @@ pub(crate) fn ast_expected(
             | "primary_constructor" => {
                 // First row of a parameter default value
                 // (`request: Request =\n    Request`) sits one level deeper
-                // than the parameter row (oracle).
+                // than the parameter row (oracle). Call-site named arguments
+                // (`required =\n    annotations`) keep the argument row.
                 if row > 0 {
                     let prev_raw = src.lines().nth(row - 1).unwrap_or("");
                     let prev_code = prev_raw.trim().split("//").next().unwrap_or("").trim_end();
@@ -1457,6 +1458,12 @@ pub(crate) fn ast_expected(
                         && !trimmed.starts_with('.')
                         && !trimmed.starts_with("?:")
                     {
+                        if c.kind() == "function_value_parameters"
+                            || c.kind() == "class_parameters"
+                            || c.kind() == "primary_constructor"
+                        {
+                            return ast_expected(tree, src, row - 1, is).map(|e| e + is);
+                        }
                         return ast_expected(tree, src, row - 1, is);
                     }
                 }
@@ -1512,22 +1519,30 @@ pub(crate) fn ast_expected(
                             && !trimmed.starts_with('.')
                             && !trimmed.starts_with("?:")
                         {
-                            return ast_expected(tree, src, row - 1, is);
+                            // A statement-level `=` continuation
+                            // (`client =\n    client`) sits one level deeper
+                            // than the `=` row (oracle). Parameter default
+                            // values inside value_arguments keep the
+                            // parameter row (handled before this branch).
+                            return ast_expected(tree, src, row - 1, is).map(|e| e + is);
                         }
                     }
                     let open_row = block_open_row(&owner, src);
                     let open_line = src.lines().nth(open_row).map(|l| l.trim()).unwrap_or("");
-                    // A chain/elvis continuation lambda (`?: run {`) keeps
-                    // its body at the lambda row and closes one level below
-                    // (oracle: `} ` at the chain start).
+                    let chainish = open_line.starts_with('.') || open_line.starts_with("?:");
+                    // A parameterized chain lambda (`.combine(...) { a, b ->`
+                    // with the body on the next line) sits one level deeper
+                    // than the lambda row (oracle); an inline-body chain
+                    // lambda (`.takeIf { it.isNotEmpty() }`) keeps the row.
+                    let chain_param_lambda = chainish && open_line.contains("->");
                     if trimmed.starts_with('}') {
-                        if open_line.starts_with('.') || open_line.starts_with("?:") {
+                        if chainish && !chain_param_lambda {
                             return ast_expected(tree, src, open_row, is)
                                 .map(|e| e.saturating_sub(is));
                         }
                         return ast_expected(tree, src, open_row, is);
                     }
-                    if open_line.starts_with('.') || open_line.starts_with("?:") {
+                    if chainish && !chain_param_lambda {
                         return ast_expected(tree, src, open_row, is);
                     }
                     return ast_expected(tree, src, open_row, is).map(|e| e + is);
