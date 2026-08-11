@@ -17,8 +17,8 @@ impl Rule for WhenEntryBracing {
 fn walk(root: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
     let mut stack: Vec<tree_sitter::Node> = vec![root];
     while let Some(node) = stack.pop() {
-        if node.kind() == "when_entry" {
-            check_entry(&node, bytes, violations);
+        if node.kind() == "when_expression" {
+            check_when(&node, bytes, violations);
         }
         for i in (0..node.child_count()).rev() {
             if let Some(c) = node.child(i) {
@@ -28,38 +28,51 @@ fn walk(root: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) 
     }
 }
 
-fn check_entry(entry: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
-    let entry_line = entry.start_position().row;
-    let entry_end_line = entry.end_position().row;
-    if entry_end_line <= entry_line {
+/// Oracle: "Body of when entry should be surrounded by braces if any when
+/// entry body is surrounded by braces or has a multiline body". A `when`
+/// mixes braced and unbraced entries — or holds any multiline entry — then
+/// every unbraced entry is reported at its body's first token.
+fn check_when(when: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    let entries: Vec<tree_sitter::Node> = when
+        .children(&mut when.walk())
+        .filter(|c| c.kind() == "when_entry")
+        .collect();
+    if entries.len() < 2 {
         return;
     }
-
-    let mut found_arrow = false;
-    for i in 0..entry.child_count() {
-        let Some(child) = entry.child(i) else {
-            continue;
-        };
-        if child.kind() == "->" {
-            found_arrow = true;
-            continue;
-        }
-        if found_arrow && !child.is_extra() {
-            if child.start_position().row > entry_line && child.kind() != "{" {
-                let s = child.start_byte();
-                let e = (s + 5).min(bytes.len());
-                if !bytes[s..e].contains(&b'{') {
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: entry_line + 1,
-                        col: 1,
-                        rule_id: "standard:when-entry-bracing".into(),
-                        message: "When entry with multi-line body should use braces".into(),
-                        auto_fixable: true,
-                    });
-                }
+    let has_braced_or_multiline = entries.iter().any(|e| {
+        let mut w = e.walk();
+        let children: Vec<tree_sitter::Node> = e.children(&mut w).collect();
+        let braced = children.iter().any(|c| c.kind() == "{");
+        let multiline = e.start_position().row != e.end_position().row;
+        braced || multiline
+    });
+    if !has_braced_or_multiline {
+        return;
+    }
+    for entry in &entries {
+        let mut w = entry.walk();
+        let children: Vec<tree_sitter::Node> = entry.children(&mut w).collect();
+        let mut after_arrow = false;
+        for child in children {
+            if child.kind() == "->" {
+                after_arrow = true;
+                continue;
             }
-            break;
+            if after_arrow && child.kind() != "{" && child.kind() != "}" {
+                let pos = child.start_position();
+                violations.push(Violation {
+                    file: String::new(),
+                    line: pos.row + 1,
+                    col: pos.column + 1,
+                    rule_id: "standard:when-entry-bracing".into(),
+                    message:
+                        "Body of when entry should be surrounded by braces if any when entry body is surrounded by braces or has a multiline body"
+                            .into(),
+                    auto_fixable: true,
+                });
+                break;
+            }
         }
     }
 }
