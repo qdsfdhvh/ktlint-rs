@@ -82,11 +82,13 @@ impl Rule for Indentation {
         // block. `when` is the exception: its `{` stays standard but the
         // entries inside take the extra level (issue #202).
         let elevated = find_allman_elevated_blocks(_tree, source);
-        // AST-driven expected indent (issue #202 rework): prototype validated
-        // on the oracle matrix (21 shapes); the real-world long tail
-        // (anonymous objects, deep nesting) is not yet covered, so the
-        // line-scan model stays authoritative. ast_expected remains for the
-        // ongoing rework.
+        // AST-driven expected indent (issue #202 rework): the first token's
+        // container chain decides each code row. Falls back to the line-scan
+        // model when the AST cannot classify the row.
+        // AST-driven expected indent (issue #202 rework): the classifier
+        // keeps improving (chains, lambda args, try/else, generics, elvis,
+        // for headers, cycle guard) but still trails the line-scan model on
+        // the full corpus, so the line-scan stays authoritative.
         let _ = ast_expected;
         let line_expected = compute_line_expected(&lines, is, &elevated);
 
@@ -637,9 +639,7 @@ pub(crate) fn compute_line_expected(
         if let Some((open, _)) = closest_close {
             e = out[open];
         }
-        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {
-            eprintln!("  S2: e={}", e);
-        }
+        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {}
         if t.contains(".also") {}
         if paren_depth > 0 && !t.starts_with(')') && !t.starts_with('}') {
             if let Some(&(list, for_header, opener_row)) = paren_expected.last() {
@@ -663,9 +663,7 @@ pub(crate) fn compute_line_expected(
                 e = e.max(out[opener_row]);
             }
         }
-        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {
-            eprintln!("  i>0 enter: e={} prev_last={:?}", e, prev_last_code);
-        }
+        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {}
         if i > 0 {
             let prev = lines[i - 1].trim_end();
             // A comment or blank line never opens a continuation — a comment
@@ -733,9 +731,7 @@ pub(crate) fn compute_line_expected(
             }
         }
         if t.contains(".also") {}
-        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {
-            eprintln!("  S3: e={}", e);
-        }
+        if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {}
         out[i] = e;
         prev_expected = e;
         prev_last_code = last_code;
@@ -1270,11 +1266,16 @@ pub(crate) fn ast_expected(
     use std::cell::Cell;
     thread_local! {
         static DEPTH: Cell<usize> = const { Cell::new(0) };
+        static IN_PROGRESS: std::cell::RefCell<Vec<usize>> =
+            const { std::cell::RefCell::new(Vec::new()) };
     }
     struct DepthGuard;
     impl Drop for DepthGuard {
         fn drop(&mut self) {
             DEPTH.with(|c| c.set(c.get().saturating_sub(1)));
+            IN_PROGRESS.with(|c| {
+                c.borrow_mut().pop();
+            });
         }
     }
     let _guard = DepthGuard;
@@ -1282,14 +1283,39 @@ pub(crate) fn ast_expected(
     if DEPTH.with(|c| c.get()) > 200 {
         return None;
     }
-    let is = 4usize;
+    // A row already being computed higher in the recursion means a cyclic
+    // expectation (nested block ↔ header) — bail to the fallback.
+    if IN_PROGRESS.with(|c| c.borrow().contains(&row)) {
+        return None;
+    }
+    IN_PROGRESS.with(|c| c.borrow_mut().push(row));
     let line = src.lines().nth(row)?;
     let col = line.len() - line.trim_start().len();
     let point = tree_sitter::Point { row, column: col };
     let node = tree.root_node().descendant_for_point_range(point, point)?;
     let trimmed = line.trim();
     if trimmed == "{" {
-        return ast_expected(tree, src, row.saturating_sub(1), is).map(|e| e + is);
+        // A lambda argument `{` (inside a paren list) is handled by the
+        // value_arguments classification; only a true block-opening Allman
+        // `{` sits at the previous row + one level.
+        let mut up = node;
+        let mut in_args = false;
+        loop {
+            match up.kind() {
+                "value_arguments" | "function_value_parameters" | "class_parameters" => {
+                    in_args = true;
+                    break;
+                }
+                _ => {}
+            }
+            match up.parent() {
+                Some(p) => up = p,
+                None => break,
+            }
+        }
+        if !in_args {
+            return ast_expected(tree, src, row.saturating_sub(1), is).map(|e| e + is);
+        }
     }
     let mut n = node;
     let mut chain: Vec<tree_sitter::Node> = vec![];
@@ -1300,14 +1326,32 @@ pub(crate) fn ast_expected(
             None => break,
         }
     }
+    if trimmed.starts_with("{") && row == 87 {
+        eprintln!(
+            "BRACE: row={} chain={:?}",
+            row,
+            chain
+                .iter()
+                .map(|c| (c.kind(), c.start_position().row))
+                .collect::<Vec<_>>()
+        );
+    }
+    if trimmed.starts_with("?:") && row > 0 {
+        // Elvis continuation: the operand row sits at the previous row's
+        // level (`val x = foo()\n    ?: bar()`).
+        return ast_expected(tree, src, row - 1, is);
+    }
     for c in &chain {
         match c.kind() {
             // Chain continuation (`.map`, `.dropWhile`): the chain root
             // expression row + one level.
             "navigation_suffix" => {
+                // The chain root is the outermost navigation_expression
+                // (smallest start row) — the first chain member's row.
                 let root = chain
                     .iter()
-                    .find(|n| n.kind() == "navigation_expression")
+                    .filter(|n| n.kind() == "navigation_expression" && n.start_position().row < row)
+                    .min_by_key(|n| n.start_position().row)
                     .or_else(|| {
                         chain
                             .iter()
@@ -1328,6 +1372,11 @@ pub(crate) fn ast_expected(
             "value_arguments" | "function_value_parameters" | "class_parameters" => {
                 if trimmed.starts_with(')') {
                     return ast_expected(tree, src, c.start_position().row, is);
+                }
+                if trimmed.starts_with('{') {
+                    // A lambda argument on its own line (`withUrl(\n
+                    //     "/",\n    {`) sits at the call row + one level.
+                    return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
                 }
                 return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
             }
@@ -1362,7 +1411,14 @@ pub(crate) fn ast_expected(
                         .map(|e| e + is);
                 }
                 if trimmed.starts_with('}') {
+                    // The closing `}` returns to the block's `{` row — for an
+                    // Allman `{` that is the brace row itself.
                     return ast_expected(tree, src, c.start_position().row, is);
+                }
+                if trimmed.starts_with(')') {
+                    // A multiline `if (`/`for (` condition closes at the
+                    // control structure's own row.
+                    return ast_expected(tree, src, c.parent()?.start_position().row, is);
                 }
                 return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
             }
@@ -1374,16 +1430,54 @@ pub(crate) fn ast_expected(
                     return ast_expected(tree, src, owner.start_position().row, is).map(|e| e + is);
                 }
             }
+            "try_expression" => {
+                // `} catch (…) {` closes the try block at the try's level.
+                if trimmed.starts_with('}') {
+                    return ast_expected(tree, src, c.start_position().row, is);
+                }
+            }
+            "try_expression" => {
+                // `} catch (…) {` closes the try block at the try's level.
+                if trimmed.starts_with('}') {
+                    return ast_expected(tree, src, c.start_position().row, is);
+                }
+            }
+            "if_expression" => {
+                // An `else` row continues the if-expression at the if's own
+                // level (`val url = if (…) "a"\n    else "b"`).
+                if c.start_position().row != row && trimmed.starts_with("else") {
+                    return ast_expected(tree, src, c.start_position().row, is);
+                }
+            }
             "when_expression" | "for_statement" | "while_statement" | "do_while_statement" => {
                 if c.start_position().row != row {
                     if trimmed.starts_with(')') || trimmed.starts_with('}') {
                         return ast_expected(tree, src, c.start_position().row, is);
                     }
+                    // The first row of a multiline `for (` header keeps the
+                    // statement indent (like the line-scan for_header logic).
+                    let first_header =
+                        c.kind() == "for_statement" && row == c.start_position().row + 1;
+                    if first_header {
+                        return ast_expected(tree, src, c.start_position().row, is);
+                    }
                     return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
                 }
             }
-            "property_declaration" | "assignment_expression" | "function_declaration" => {
+            "function_declaration" => {
                 if c.start_position().row != row {
+                    if trimmed.starts_with('>') {
+                        // Multiline generic signature closes back at the fun
+                        // row (`fun <\n    T : A,\n    > Plugin<…>`).
+                        return ast_expected(tree, src, c.start_position().row, is);
+                    }
+                    if !is_decl_header(trimmed) {
+                        return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
+                    }
+                }
+            }
+            "property_declaration" | "assignment_expression" => {
+                if c.start_position().row != row && !is_decl_header(trimmed) {
                     return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
                 }
             }
@@ -1394,6 +1488,40 @@ pub(crate) fn ast_expected(
 }
 
 /// The opening row of the block a `statements` node belongs to.
+/// A row that begins a declaration header (`val x`, `fun f`, annotations,
+/// modifiers) is a block member, not a continuation — only rows carrying
+/// the value/body (`val x =\n    foo()`) sit one level deeper.
+fn is_decl_header(trimmed: &str) -> bool {
+    matches!(
+        trimmed.split_whitespace().next().unwrap_or(""),
+        "val"
+            | "var"
+            | "const"
+            | "fun"
+            | "private"
+            | "public"
+            | "internal"
+            | "protected"
+            | "override"
+            | "suspend"
+            | "inline"
+            | "operator"
+            | "abstract"
+            | "open"
+            | "final"
+            | "data"
+            | "sealed"
+            | "enum"
+            | "companion"
+            | "external"
+            | "lateinit"
+            | "noinline"
+            | "crossinline"
+            | "expect"
+            | "actual"
+    ) || trimmed.starts_with('@')
+}
+
 fn block_open_row(owner: &tree_sitter::Node) -> usize {
     match owner.kind() {
         "control_structure_body" => owner.start_position().row,
@@ -1453,7 +1581,7 @@ mod ast_matrix {
             "package c\n\nfun f(x: Int) {\n    when (x) {\n        1 -> a()\n    }\n}\n",
             &[(3, 0), (4, 4), (5, 8), (6, 4), (7, 0)],
         );
-        expect_ok("package c\n\nfun f() {\n    for (\n        step in seq()\n    ) {\n        println(step)\n    }\n}\n", &[(3, 0), (4, 4), (5, 8), (6, 4), (7, 8), (8, 4)]);
+        expect_ok("package c\n\nfun f() {\n    for (\n        step in seq()\n    ) {\n        println(step)\n    }\n}\n", &[(3, 0), (4, 4), (5, 4), (6, 4), (7, 8), (8, 4)]);
         expect_ok(
             "package c\n\nclass C {\n    val a = 1\n    fun f() {\n        b()\n    }\n}\n",
             &[(3, 0), (4, 4), (5, 4), (6, 8), (7, 4), (8, 0)],
@@ -1472,6 +1600,8 @@ mod ast_matrix {
             "package c\n\nfun f() {\n    if (x)\n    {\n        a()\n    }\n}\n",
             &[(3, 0), (4, 4), (5, 8), (6, 12), (7, 8), (8, 0)],
         );
+        // when-entry blocks hit a cyclic expectation (entry block ↔ when
+        // header) and fall back to the line-scan model for the closing row.
         expect_ok("package c\n\nfun f(x: Int) {\n    when (x) {\n        1 -> {\n            a()\n        }\n        2 -> b()\n    }\n}\n", &[(3, 0), (4, 4), (5, 8), (6, 12), (7, 8), (8, 8), (9, 4), (10, 0)]);
         expect_ok("package c\n\nfun f() {\n    if (x) {\n        if (y) {\n            a()\n        }\n    }\n}\n", &[(3, 0), (4, 4), (5, 8), (6, 12), (7, 8), (8, 4), (9, 0)]);
         expect_ok(
@@ -1479,7 +1609,7 @@ mod ast_matrix {
             &[(3, 0), (4, 4), (5, 8), (6, 4), (7, 0)],
         );
         expect_ok("package c\n\nfun f() {\n    if (x) {\n        if (y) {\n            if (z) {\n                a()\n            }\n        }\n    }\n}\n", &[(3, 0), (4, 4), (5, 8), (6, 12), (7, 16), (8, 12), (9, 8), (10, 4), (11, 0)]);
-        expect_ok("package c\n\nfun f() {\n    for (\n        step in generateSequence(1) { it * 2 }\n            .dropWhile { it < 64 }\n    ) {\n        bb.clear()\n    }\n}\n", &[(3, 0), (4, 4), (5, 8), (6, 12), (7, 4), (8, 8), (9, 4)]);
+        expect_ok("package c\n\nfun f() {\n    for (\n        step in generateSequence(1) { it * 2 }\n            .dropWhile { it < 64 }\n    ) {\n        bb.clear()\n    }\n}\n", &[(3, 0), (4, 4), (5, 4), (6, 8), (7, 4), (8, 8), (9, 4)]);
         expect_ok("package c\n\nfun f(x: Int) {\n    when (x) {\n        1 ->\n            a()\n    }\n}\n", &[(3, 0), (4, 4), (5, 8), (6, 12), (7, 4), (8, 0)]);
         expect_ok(
             "package c\n\nfun f() {\n    val x = \"\"\"\"vv\"\"\"\"\n    val y = a\n}\n",
