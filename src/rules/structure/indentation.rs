@@ -1510,7 +1510,7 @@ pub(crate) fn ast_expected(
                         .unwrap_or("");
                     let chainish = lambda_line.starts_with('.') || lambda_line.starts_with("?:");
                     if trimmed.starts_with('}') {
-                        if chainish {
+                        if lambda_line.contains("?:") {
                             return ast_expected(tree, src, c.start_position().row, is)
                                 .map(|e| e.saturating_sub(is));
                         }
@@ -1557,7 +1557,7 @@ pub(crate) fn ast_expected(
                     // lambda (`.takeIf { it.isNotEmpty() }`) keeps the row.
                     let chain_param_lambda = chainish && open_line.contains("->");
                     if trimmed.starts_with('}') {
-                        if chainish && !chain_param_lambda {
+                        if open_line.contains("?:") {
                             return ast_expected(tree, src, open_row, is)
                                 .map(|e| e.saturating_sub(is));
                         }
