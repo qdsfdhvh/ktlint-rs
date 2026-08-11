@@ -19,14 +19,14 @@ impl Rule for MultilineIfElse {
                 if !prev_trimmed.ends_with('}') || !prev_trimmed.contains("else") {
                     // Oracle: "Unexpected newline before else" at the `else`
                     // keyword (after the leading whitespace).
-                    let indent = trimmed.len() - trimmed.trim_start().len();
+                    let indent = line.len() - line.trim_start().len();
                     violations.push(Violation {
                         file: String::new(),
                         line: i + 1,
                         col: indent + 1,
                         rule_id: self.id().to_string(),
                         auto_fixable: true,
-                        message: "Unexpected newline before else".into(),
+                        message: "Unexpected newline before \"else\"".into(),
                     });
                 }
             }

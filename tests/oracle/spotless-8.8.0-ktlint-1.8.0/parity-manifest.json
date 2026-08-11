@@ -3285,10 +3285,12 @@
       "id": "standard:try-catch-finally-spacing",
       "knownDirtyMismatchHits": 0,
       "oracleEnabled": false,
-      "ownerRustRuleIds": [],
+      "ownerRustRuleIds": [
+        "standard:try-catch-finally-spacing"
+      ],
       "priority": "P2",
-      "registeredAutoFixable": false,
-      "registrationMatch": "missing",
+      "registeredAutoFixable": true,
+      "registrationMatch": "exact",
       "requiresTypeResolution": false,
       "status": "disabled-by-oracle"
     },
@@ -3589,11 +3591,11 @@
   "schemaVersion": 1,
   "summary": {
     "extraRustRuleIds": 1,
-    "matchedOracleRules": 99,
+    "matchedOracleRules": 100,
     "registeredDetekt": 148,
-    "registeredKtlintRuleIds": 100,
-    "registeredStandardOriented": 115,
-    "registeredUniqueAll": 263,
+    "registeredKtlintRuleIds": 101,
+    "registeredStandardOriented": 116,
+    "registeredUniqueAll": 264,
     "statuses": {
       "disabled-by-oracle": 68,
       "parity-verified": 33

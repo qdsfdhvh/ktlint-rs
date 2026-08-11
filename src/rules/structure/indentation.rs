@@ -1369,7 +1369,13 @@ pub(crate) fn ast_expected(
                     None => break,
                 }
             }
-            let base = chain_root.unwrap_or_else(|| row.saturating_sub(1));
+            let base = chain_root.unwrap_or_else(|| {
+                // No navigation chain (tree-sitter groups a chained lambda
+                // differently): fall back to the carrying statement — the
+                // chain root for `val r = list\n .map\n {` (oracle: `{` at
+                // the val row), the call row for `items.forEach\n{`.
+                statement_line_of(&node).unwrap_or_else(|| row.saturating_sub(1))
+            });
             return ast_expected(tree, src, base, is);
         }
         return match kind {
@@ -1387,29 +1393,10 @@ pub(crate) fn ast_expected(
             None => break,
         }
     }
-    if trimmed.starts_with("{") && row == 87 {
-        eprintln!(
-            "BRACE: row={} chain={:?}",
-            row,
-            chain
-                .iter()
-                .map(|c| (c.kind(), c.start_position().row))
-                .collect::<Vec<_>>()
-        );
-    }
     if trimmed.starts_with("?:") && row > 0 {
         // Elvis continuation: the operand row sits at the previous row's
         // level (`val x = foo()\n    ?: bar()`).
         return ast_expected(tree, src, row - 1, is);
-    }
-    if trimmed.trim() == ")" && row == 1188 {
-        eprintln!(
-            "CLOSE: chain={:?}",
-            chain.iter().map(|c| c.kind()).collect::<Vec<_>>()
-        );
-    }
-    if trimmed.starts_with("val matchingRegistrations") {
-        eprintln!("MR: row={} ret={:?}", row, ast_expected(tree, src, row, is));
     }
     if trimmed == "{" && row >= 3 {
         let mut up = node;
@@ -1421,10 +1408,6 @@ pub(crate) fn ast_expected(
                 None => break,
             }
         }
-        eprintln!(
-            "BRACE-{row}: chain={ks:?} ret={:?}",
-            ret = ast_expected(tree, src, row, is)
-        );
     }
     for c in &chain {
         match c.kind() {

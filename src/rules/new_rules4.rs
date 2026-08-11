@@ -197,6 +197,24 @@ impl StatementWrappingRule {
             }
         }
         let _ = in_enum_tail;
+        // Ranges of string/template literals (a `;` inside a string — e.g.
+        // `"; ${joinToString(";")}"` — is not a statement separator).
+        let mut string_ranges: Vec<(usize, usize)> = Vec::new();
+        let mut st = vec![tree.root_node()];
+        while let Some(node) = st.pop() {
+            if matches!(
+                node.kind(),
+                "string_literal" | "string_template" | "char_literal"
+            ) {
+                string_ranges.push((node.start_byte(), node.end_byte()));
+            }
+            for k in (0..node.child_count()).rev() {
+                if let Some(c) = node.child(k) {
+                    st.push(c);
+                }
+            }
+        }
+        string_ranges.sort_unstable();
         while i < bytes.len() {
             // Advance over multi-byte characters so byte indexes stay on
             // char boundaries (e.g. `\u2192` in KDoc/strings).
@@ -251,6 +269,21 @@ impl StatementWrappingRule {
                 continue;
             }
             if bytes[i] == b';' {
+                if string_ranges
+                    .binary_search_by(|&(a, b)| {
+                        if i < a {
+                            std::cmp::Ordering::Greater
+                        } else if i >= b {
+                            std::cmp::Ordering::Less
+                        } else {
+                            std::cmp::Ordering::Equal
+                        }
+                    })
+                    .is_ok()
+                {
+                    i += 1;
+                    continue;
+                }
                 let row = source[..i].bytes().filter(|&b| b == b'\n').count();
                 // Skip enum-class trailing semicolons.
                 if enum_lines.contains(&row) {
@@ -304,22 +337,21 @@ impl StatementWrappingRule {
                 .is_some_and(|p| {
                     let mut pw = p.walk();
                     let kids: Vec<tree_sitter::Node> = p.children(&mut pw).collect();
-                    for (i, kid) in kids.iter().enumerate() {
-                        if kid == node && i > 0 {
-                            let prev = kids[i - 1];
-                            if prev.kind() == "function_value_parameters" {
-                                // tree-sitter bug: `by remember(...) { }`
-                                // swallows the delegation (and its `{`) into
-                                // the parameter list; a real parameter list
-                                // never contains `{`.
-                                let params_text = &source[prev.start_byte()..prev.end_byte()];
-                                if params_text.contains('{') {
-                                    return false;
-                                }
-                                return source[prev.end_byte()..node.start_byte()]
-                                    .chars()
-                                    .all(|c| c.is_whitespace());
+                    for kid in &kids {
+                        if kid.kind() == "function_value_parameters" {
+                            // tree-sitter bug: `by remember(...) { }`
+                            // swallows the delegation (and its `{`) into
+                            // the parameter list; a real parameter list
+                            // never contains `{`.
+                            let params_text = &source[kid.start_byte()..kid.end_byte()];
+                            if params_text.contains('{') {
+                                return false;
                             }
+                            // Between the parameter list and the body
+                            // `{` there may be a return type (`): Int `)
+                            // but never a `{` (the `by remember(...)`
+                            // mis-parse puts its lambda `{` in between).
+                            return !source[kid.end_byte()..node.start_byte()].contains('{');
                         }
                     }
                     false
@@ -367,9 +399,9 @@ impl StatementWrappingRule {
                 && node.start_position().row == source[..next.0].matches('\n').count()
             {
                 // `{` and the first statement share a line. Oracle reports
-                // at the `{` itself ("Missing newline after \"{\"",
-                // wrapping).
-                violations.push(self.v(lbrace + 1, source, "Missing newline after \"{\""));
+                // at the first code token after `{` ("Missing newline after
+                // '{'", statement-wrapping).
+                violations.push(self.v(next.0, source, "Missing newline after '{'"));
             }
         }
         // The last code token before `}`.

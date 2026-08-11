@@ -177,12 +177,13 @@ fn report_after(
         if delim == '{' && bytes.get(pos) == Some(&b'}') {
             return;
         }
-        let line = source[..pos].bytes().filter(|&b| b == b'\n').count() + 1;
-        let line_start = source[..pos].rfind('\n').map_or(0, |i| i + 1);
+        // Oracle reports at the delimiter itself: `{ x` → the `{` column.
+        let line = source[..start].bytes().filter(|&b| b == b'\n').count() + 1;
+        let line_start = source[..start].rfind('\n').map_or(0, |i| i + 1);
         violations.push(Violation {
             file: String::new(),
             line,
-            col: pos - line_start + 1,
+            col: start - line_start + 1,
             rule_id: "standard:wrapping".into(),
             message: format!("Missing newline after \"{delim}\""),
             auto_fixable: true,

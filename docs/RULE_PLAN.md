@@ -6,7 +6,7 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **99**
+- Matched to ktlint-rs registrations: **100**
 - Missing: **0**
 - Partial/unverified: **0**
 - Disabled by oracle config: **68**
@@ -117,7 +117,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P2 | `standard:no-wildcard-imports` | no | disabled-by-oracle | `standard:no-wildcard-imports` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:package-name` | no | disabled-by-oracle | `standard:package-name` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:string-template-indent` | no | disabled-by-oracle | `standard:string-template-indent` | not-evaluated | 0/6 | 0 | 0 |
-| P2 | `standard:try-catch-finally-spacing` | no | disabled-by-oracle | — | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:try-catch-finally-spacing` | no | disabled-by-oracle | `standard:try-catch-finally-spacing` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:when-entry-bracing` | no | disabled-by-oracle | `standard:when-entry-bracing` | not-evaluated | 0/6 | 0 | 0 |
 
 ## Extra ktlint-rs standard IDs

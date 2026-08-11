@@ -68,8 +68,21 @@ impl FunctionSignatureSpacing {
                             let any = p.children(&mut w).any(|c| c.kind() == "value_parameter");
                             any
                         });
-                        let remaining = if has_params && (param_multiline || sig_len > max_length) {
-                            max_length.saturating_sub(eq.end_position().column)
+                        // Oracle's `signatureLength` runs from the first
+                        // signature node (annotations included) to the `=`.
+                        // When annotations sit on their own lines the length
+                        // grows past the limit and never merges; ktlint
+                        // instead measures from the last signature line
+                        // (`lengthOfLastLine`) for any signature that spans
+                        // multiple lines. A single-line signature (annotation
+                        // lines excluded) measures the `=` line itself.
+                        let eq_line_start = s[..eq.start_byte()].rfind('\n').map_or(0, |i| i + 1);
+                        let eq_line_len = eq.end_byte() - eq_line_start;
+                        let sig_multiline = s[func_start..eq.end_byte()].contains('\n');
+                        let remaining = if sig_multiline
+                            || (has_params && (param_multiline || sig_len > max_length))
+                        {
+                            max_length.saturating_sub(eq_line_len)
                         } else {
                             max_length.saturating_sub(sig_len)
                         };
@@ -133,7 +146,48 @@ impl Rule for FunctionSignatureSpacing {
         let mut v = Vec::new();
         self.check_multiline_parameters(tree, s, &mut v);
         self.check_body_merge(tree, s, &mut v);
+        self.check_allman_body(tree, &mut v);
         v
+    }
+}
+
+impl FunctionSignatureSpacing {
+    /// Allman block body: `fun f()\n{` — the `{` must sit on the same line
+    /// as the signature. Oracle: "Expected a single space before body block"
+    /// at the `{`.
+    fn check_allman_body(&self, tree: &tree_sitter::Tree, v: &mut Vec<Violation>) {
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "function_declaration" {
+                if let Some(body) = node
+                    .children(&mut node.walk())
+                    .find(|c| c.kind() == "function_body")
+                {
+                    let header_end = node
+                        .children(&mut node.walk())
+                        .filter(|c| c.kind() != "function_body")
+                        .filter_map(|c| Some(c.end_position().row))
+                        .max()
+                        .unwrap_or(node.start_position().row);
+                    if body.start_position().row > header_end {
+                        let pos = body.start_position();
+                        v.push(Violation {
+                            file: String::new(),
+                            line: pos.row + 1,
+                            col: pos.column + 1,
+                            rule_id: self.id().to_string(),
+                            message: "Expected a single space before body block".into(),
+                            auto_fixable: true,
+                        });
+                    }
+                }
+            }
+            for i in (0..node.child_count()).rev() {
+                if let Some(child) = node.child(i) {
+                    stack.push(child);
+                }
+            }
+        }
     }
 }
 
@@ -683,6 +737,26 @@ impl Rule for KeywordSpacing {
                     message: format!("Missing spacing after \"{}\"", node.kind()),
                     auto_fixable: true,
                 });
+            }
+            // `catch`/`finally` on their own line after a `}` (Allman) —
+            // oracle: "Unexpected newline before \"catch\"" at the keyword.
+            if matches!(node.kind(), "catch" | "finally") {
+                let start = node.start_byte();
+                let line_start = s[..start].rfind('\n').map_or(0, |i| i + 1);
+                let prev_line_end = line_start.saturating_sub(1);
+                let prev_line_start = s[..prev_line_end].rfind('\n').map_or(0, |i| i + 1);
+                let prev_trimmed = s[prev_line_start..prev_line_end].trim();
+                if prev_trimmed.ends_with('}') {
+                    let pos = node.start_position();
+                    violations.push(Violation {
+                        file: String::new(),
+                        line: pos.row + 1,
+                        col: pos.column + 1,
+                        rule_id: self.id().into(),
+                        message: format!("Unexpected newline before \"{}\"", node.kind()),
+                        auto_fixable: true,
+                    });
+                }
             }
             for index in (0..node.child_count()).rev() {
                 if let Some(child) = node.child(index) {
