@@ -1331,6 +1331,11 @@ pub(crate) fn ast_expected(
                     kind = "no_lift";
                     break;
                 }
+                "when_entry" => {
+                    // A when-entry body block lifts (`1 ->\n{`).
+                    kind = "";
+                    break;
+                }
                 "when_expression" => {
                     // A subjectless `when\n{` lifts; `when (x)\n{` keeps
                     // its `{` standard (oracle: when-block-exempt).
@@ -1406,6 +1411,21 @@ pub(crate) fn ast_expected(
     if trimmed.starts_with("val matchingRegistrations") {
         eprintln!("MR: row={} ret={:?}", row, ast_expected(tree, src, row, is));
     }
+    if trimmed == "{" && row >= 3 {
+        let mut up = node;
+        let mut ks: Vec<&str> = vec![];
+        loop {
+            ks.push(up.kind());
+            match up.parent() {
+                Some(p) => up = p,
+                None => break,
+            }
+        }
+        eprintln!(
+            "BRACE-{row}: chain={ks:?} ret={:?}",
+            ret = ast_expected(tree, src, row, is)
+        );
+    }
     for c in &chain {
         match c.kind() {
             // Chain continuation (`.map`, `.dropWhile`): the chain root
@@ -1458,7 +1478,7 @@ pub(crate) fn ast_expected(
             }
             "statements" => {
                 if let Some(owner) = c.parent() {
-                    let open_row = block_open_row(&owner);
+                    let open_row = block_open_row(&owner, src);
                     if trimmed.starts_with('}') {
                         return ast_expected(tree, src, open_row, is);
                     }
@@ -1491,23 +1511,36 @@ pub(crate) fn ast_expected(
                 return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
             }
             "class_body" | "function_body" => {
+                if trimmed.starts_with('}') {
+                    // The closing `}` returns to the block's opening row —
+                    // the Allman `{` row when it is alone, the header row
+                    // otherwise.
+                    return ast_expected(tree, src, block_open_row(c, src), is);
+                }
                 if let Some(owner) = c.parent() {
-                    if trimmed.starts_with('}') {
-                        return ast_expected(tree, src, owner.start_position().row, is);
-                    }
                     return ast_expected(tree, src, owner.start_position().row, is).map(|e| e + is);
                 }
             }
             "try_expression" => {
-                // `} catch (…) {` closes the try block at the try's level.
+                // `} catch (…) {` closes the try block at its `{` row.
                 if trimmed.starts_with('}') {
-                    return ast_expected(tree, src, c.start_position().row, is);
+                    let brace = c
+                        .children(&mut c.walk())
+                        .find(|cc| cc.kind() == "{")
+                        .map(|cc| cc.start_position().row)
+                        .unwrap_or(c.start_position().row);
+                    return ast_expected(tree, src, brace, is);
                 }
             }
             "try_expression" => {
-                // `} catch (…) {` closes the try block at the try's level.
+                // `} catch (…) {` closes the try block at its `{` row.
                 if trimmed.starts_with('}') {
-                    return ast_expected(tree, src, c.start_position().row, is);
+                    let brace = c
+                        .children(&mut c.walk())
+                        .find(|cc| cc.kind() == "{")
+                        .map(|cc| cc.start_position().row)
+                        .unwrap_or(c.start_position().row);
+                    return ast_expected(tree, src, brace, is);
                 }
             }
             "if_expression" => {
@@ -1519,6 +1552,23 @@ pub(crate) fn ast_expected(
             }
             "when_expression" | "for_statement" | "while_statement" | "do_while_statement" => {
                 if c.start_position().row != row {
+                    if c.kind() == "when_expression" {
+                        let body_brace = c
+                            .children(&mut c.walk())
+                            .find(|cc| cc.kind() == "{")
+                            .or_else(|| {
+                                c.children(&mut c.walk())
+                                    .find(|cc| cc.kind() == "control_structure_body")
+                            });
+                        if let Some(br) = body_brace {
+                            if trimmed.starts_with(')') || trimmed.starts_with('}') {
+                                // A `}` closes at the body's `{` row (Allman).
+                                return ast_expected(tree, src, br.start_position().row, is);
+                            }
+                            return ast_expected(tree, src, br.start_position().row, is)
+                                .map(|e| e + is);
+                        }
+                    }
                     if trimmed.starts_with(')') || trimmed.starts_with('}') {
                         return ast_expected(tree, src, c.start_position().row, is);
                     }
@@ -1596,13 +1646,34 @@ fn is_decl_header(trimmed: &str) -> bool {
     ) || trimmed.starts_with('@')
 }
 
-fn block_open_row(owner: &tree_sitter::Node) -> usize {
+fn block_open_row(owner: &tree_sitter::Node, src: &str) -> usize {
     match owner.kind() {
-        "control_structure_body" => owner.start_position().row,
-        "function_body" | "class_body" | "lambda_literal" => owner
-            .parent()
-            .map(|p| p.start_position().row)
-            .unwrap_or(owner.start_position().row),
+        // function/class bodies and lambdas open at their own `{` row when
+        // it is Allman (`{` alone on its line); an inline `{` (`fun f(x,\n
+        //     y: String) {`) opens at the header row.
+        "function_body" | "class_body" => {
+            let own = owner.start_position().row;
+            let parent_row = owner
+                .parent()
+                .map(|p| p.start_position().row)
+                .unwrap_or(own);
+            let brace_line = src.lines().nth(own).map(|l| l.trim()).unwrap_or("");
+            if brace_line == "{" {
+                own
+            } else {
+                parent_row
+            }
+        }
+        "control_structure_body" | "lambda_literal" => owner.start_position().row,
+        "when_expression" | "try_expression" => {
+            // A `when`/`try` body opens at its `{` row (Allman `{` on its
+            // own line sits below the header).
+            owner
+                .children(&mut owner.walk())
+                .find(|c| c.kind() == "{")
+                .map(|c| c.start_position().row)
+                .unwrap_or(owner.start_position().row)
+        }
         _ => owner.start_position().row,
     }
 }
