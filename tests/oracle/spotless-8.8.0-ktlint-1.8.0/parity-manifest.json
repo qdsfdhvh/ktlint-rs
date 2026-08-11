@@ -322,12 +322,10 @@
       "id": "standard:chain-method-continuation",
       "knownDirtyMismatchHits": 0,
       "oracleEnabled": false,
-      "ownerRustRuleIds": [
-        "standard:chain-method-continuation"
-      ],
+      "ownerRustRuleIds": [],
       "priority": "P2",
-      "registeredAutoFixable": true,
-      "registrationMatch": "exact",
+      "registeredAutoFixable": false,
+      "registrationMatch": "missing",
       "requiresTypeResolution": false,
       "status": "disabled-by-oracle"
     },
@@ -3591,11 +3589,11 @@
   "schemaVersion": 1,
   "summary": {
     "extraRustRuleIds": 1,
-    "matchedOracleRules": 100,
+    "matchedOracleRules": 99,
     "registeredDetekt": 148,
-    "registeredKtlintRuleIds": 101,
-    "registeredStandardOriented": 116,
-    "registeredUniqueAll": 264,
+    "registeredKtlintRuleIds": 100,
+    "registeredStandardOriented": 115,
+    "registeredUniqueAll": 263,
     "statuses": {
       "disabled-by-oracle": 68,
       "parity-verified": 33

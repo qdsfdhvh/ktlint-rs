@@ -6,7 +6,7 @@
 ## Summary
 
 - Oracle rules: **101**
-- Matched to ktlint-rs registrations: **100**
+- Matched to ktlint-rs registrations: **99**
 - Missing: **0**
 - Partial/unverified: **0**
 - Disabled by oracle config: **68**
@@ -103,7 +103,7 @@ Registration is not parity evidence. Only byte/diagnostic differential fixtures 
 | P1 | `standard:property-naming` | yes | disabled-by-oracle | `standard:property-naming` | not-fixable | 0/6 | 0 | 0 |
 | P1 | `standard:unnecessary-parentheses-before-trailing-lambda` | yes | disabled-by-oracle | `standard:unnecessary-parentheses-before-trailing-lambda` | unverified | 0/6 | 0 | 0 |
 | P2 | `standard:blank-line-before-declaration` | no | disabled-by-oracle | `standard:blank-line-before-declaration` | not-evaluated | 0/6 | 0 | 0 |
-| P2 | `standard:chain-method-continuation` | no | disabled-by-oracle | `standard:chain-method-continuation` | not-evaluated | 0/6 | 0 | 0 |
+| P2 | `standard:chain-method-continuation` | no | disabled-by-oracle | — | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:filename` | no | disabled-by-oracle | `standard:filename` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:function-expression-body` | no | disabled-by-oracle | `standard:function-expression-body` | not-evaluated | 0/6 | 0 | 0 |
 | P2 | `standard:function-naming` | no | disabled-by-oracle | `standard:function-naming` | not-evaluated | 0/6 | 0 | 0 |

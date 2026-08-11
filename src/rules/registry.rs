@@ -1,7 +1,7 @@
 //! Rule registry — single source of truth for all rule instances.
 //! RuleEngine::new() delegates here.
 
-use crate::config::KtlintConfig;
+use crate::config::{CodeStyle, KtlintConfig};
 use crate::rules::Rule;
 
 pub struct Registry;
@@ -132,7 +132,6 @@ impl Registry {
             Box::new(wrapping::WhenExpressionLineBreak),
             // ── Wrapping (more) ────────────────────────────────────────
             Box::new(wrapping::WhenEntryBracing),
-            Box::new(new_rules4::ChainMethodContinuationRule),
             Box::new(new_rules4::CommentWrappingRule),
             Box::new(new_rules4::IfElseWrappingRule),
             Box::new(new_rules4::KdocWrappingRule),
@@ -167,6 +166,7 @@ impl Registry {
                             .is_some_and(|v| v == "true")
                     })
                     .unwrap_or(false),
+                config.code_style == CodeStyle::AndroidStudio,
             )),
             Box::new(final_rules::TrailingCommaOnCallSite),
             // ── detekt empty-blocks ───────────────────────────────────

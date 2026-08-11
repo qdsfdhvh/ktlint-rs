@@ -441,17 +441,72 @@ impl Rule for ChainMethodContinuationRule {
     fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
-        for (i, ln) in l.iter().enumerate() {
-            if ln.trim().starts_with('.') && i > 0 && !l[i - 1].trim().is_empty() {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Chain continuation '.' should align with previous line".into(),
-                    auto_fixable: true,
-                });
+        fn indent(line: &str) -> usize {
+            line.len() - line.trim_start().len()
+        }
+        // Every link of a chained call must align: the chain's start
+        // expression line indent + one level. The old implementation
+        // reported *every* '.' line regardless of alignment (thousands of
+        // false positives on the consumer fixtures).
+        let mut i = 0usize;
+        while i < l.len() {
+            let t = l[i].trim_start();
+            if !t.starts_with('.') || t.starts_with("...") {
+                i += 1;
+                continue;
             }
+            // The chain's alignment: every link sits at the same indent as
+            // the chain start expression + one level. When the previous
+            // lines are themselves links (`).setHeader(…`, `}`), the
+            // expectation is their own indent (chain members align).
+            let mut j = i;
+            let mut prev_link: Option<usize> = None;
+            while j > 0 {
+                let pt = l[j - 1].trim_start();
+                if pt.starts_with('.') {
+                    prev_link = Some(j - 1);
+                    break;
+                }
+                if (pt.starts_with(')') || pt.starts_with('}')) && pt.contains('.') {
+                    // `).setHeader(…` / `}.also { … }` — a link that starts
+                    // with its closing delimiter; it defines the alignment.
+                    prev_link = Some(j - 1);
+                    break;
+                }
+                if pt.starts_with(')') || pt.starts_with('}') {
+                    j -= 1;
+                } else {
+                    break;
+                }
+            }
+            let want = match prev_link {
+                Some(link) => indent(l[link]),
+                None => {
+                    let start_line = if j > 0 { j - 1 } else { j };
+                    if start_line == i || l[start_line].trim().is_empty() {
+                        i += 1;
+                        continue;
+                    }
+                    indent(l[start_line]).saturating_add(2)
+                }
+            };
+            // Walk forward through the chain's '.' links, starting at the
+            // current line (never behind it).
+            let mut k = i;
+            while k < l.len() && l[k].trim_start().starts_with('.') {
+                if !l[k].trim_start().starts_with("...") && indent(l[k]) != want {
+                    v.push(Violation {
+                        file: String::new(),
+                        line: k + 1,
+                        col: 1,
+                        rule_id: self.id().into(),
+                        message: "Chain continuation '.' should align with previous line".into(),
+                        auto_fixable: true,
+                    });
+                }
+                k += 1;
+            }
+            i = k;
         }
         v
     }
