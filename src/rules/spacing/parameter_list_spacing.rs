@@ -59,10 +59,13 @@ impl ParameterListSpacing {
                     if index + 1 < node.child_count() {
                         if let Some(next) = node.child(index + 1) {
                             if next.kind() == ")" && end < bytes.len() {
-                                // `( )` — whitespace inside empty list
+                                // `( )` / `(\n)` — any whitespace inside an
+                                // empty list (oracle: "Unexpected whitespace").
                                 let gap = &bytes[end..next.start_byte()];
-                                if gap.contains(&b' ') {
-                                    violations.push(self.v(start, end, bytes, source));
+                                if gap.iter().any(|b| *b == b' ' || *b == b'\t' || *b == b'\n') {
+                                    // Oracle: "Unexpected whitespace" at the
+                                    // column right after `(`.
+                                    violations.push(self.v_empty(end, source));
                                 }
                             }
                         }
@@ -161,6 +164,25 @@ impl ParameterListSpacing {
                 }
                 break;
             }
+        }
+    }
+
+    fn v_empty(&self, after_paren: usize, source: &str) -> Violation {
+        let line = source[..after_paren.min(source.len())]
+            .bytes()
+            .filter(|&b| b == b'\n')
+            .count()
+            + 1;
+        let line_start = source[..after_paren.min(source.len())]
+            .rfind('\n')
+            .map_or(0, |i| i + 1);
+        Violation {
+            file: String::new(),
+            line,
+            col: after_paren - line_start + 1,
+            rule_id: self.id().into(),
+            message: "Unexpected whitespace".into(),
+            auto_fixable: true,
         }
     }
 

@@ -16,13 +16,17 @@ impl Rule for TryCatchFinallyWrapping {
             if (t.starts_with("catch") || t.starts_with("finally")) && i > 0 {
                 let prev = lines[i - 1].trim();
                 if !prev.contains("catch") && !prev.contains("finally") {
+                    let indent = line.len() - line.trim_start().len();
                     v.push(Violation {
                         file: String::new(),
                         line: i + 1,
-                        col: 1,
+                        col: indent + 1,
                         rule_id: "standard:try-catch-finally-wrapping".into(),
                         auto_fixable: true,
-                        message: "\"catch\"/\"finally\" should be on same line as \"}\"".into(),
+                        message: format!(
+                            "Unexpected newline before \"{}\"",
+                            t.split_whitespace().next().unwrap_or("catch")
+                        ),
                     });
                 }
             }

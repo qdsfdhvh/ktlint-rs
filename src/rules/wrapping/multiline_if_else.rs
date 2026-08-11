@@ -17,13 +17,16 @@ impl Rule for MultilineIfElse {
             if trimmed.starts_with("else") && i > 0 && !trimmed.starts_with("else ->") {
                 let prev_trimmed = lines[i - 1].trim();
                 if !prev_trimmed.ends_with('}') || !prev_trimmed.contains("else") {
+                    // Oracle: "Unexpected newline before else" at the `else`
+                    // keyword (after the leading whitespace).
+                    let indent = trimmed.len() - trimmed.trim_start().len();
                     violations.push(Violation {
                         file: String::new(),
                         line: i + 1,
-                        col: 1,
+                        col: indent + 1,
                         rule_id: self.id().to_string(),
                         auto_fixable: true,
-                        message: "\"else\" should be on same line as preceding \"}\"".into(),
+                        message: "Unexpected newline before else".into(),
                     });
                 }
             }

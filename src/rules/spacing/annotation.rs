@@ -47,7 +47,9 @@ impl Rule for AnnotationSpacing {
                         v.push(Violation {
                             file: String::new(),
                             line: pos.row + 1,
-                            col: pos.column + 1,
+                            // Oracle reports one column before the second @
+                            // (the whitespace between the two annotations).
+                            col: pos.column,
                             rule_id: self.id().into(),
                             message: "Expected newline before annotation".into(),
                             auto_fixable: true,

@@ -219,7 +219,7 @@ impl Rule for TrailingCommaOnDeclarationSite {
                     }
                 }
                 if let Some(last) = kids.last() {
-                    let comma_pos = comma_after(last, bytes);
+                    let comma_pos = list_trailing_comma(&node, bytes);
                     if comma_pos.is_some() {
                         // Unnecessary: single-line lists always; multiline
                         // under android_studio without the allow flag.
@@ -277,6 +277,40 @@ fn element_kind(kind: u8) -> &'static str {
 
 /// Byte offset/position of the trailing comma directly after `last` (same
 /// line), if any.
+
+/// The trailing comma of a list — the token directly before the closing
+/// `)`/`}`/`->`. Works for parameters with multiline default values
+/// (`request: Request = url(\n    …,\n),` — the comma sits before `)`).
+fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_sitter::Point> {
+    let close = node
+        .children(&mut node.walk())
+        .find(|c| matches!(c.kind(), ")" | "}" | "->"))?;
+    // Last non-whitespace char before the close.
+    let mut i = close.start_byte();
+    let mut last = None;
+    let mut j = node.start_byte();
+    while j < i {
+        let b = bytes[j];
+        if b != b' ' && b != b'\t' && b != b'\n' && b != b'\r' {
+            last = Some((j, b));
+        }
+        j += 1;
+    }
+    if last.map(|(_, b)| b) == Some(b',') {
+        let (ci, _) = last.unwrap();
+        let line = bytes[..ci].iter().filter(|&&b| b == b'\n').count();
+        let line_start = bytes[..ci]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |x| x + 1);
+        return Some(tree_sitter::Point {
+            row: line,
+            column: ci - line_start,
+        });
+    }
+    None
+}
+
 fn comma_after(last: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_sitter::Point> {
     let mut i = last.end_byte();
     while i < bytes.len() && (bytes[i] == b' ' || bytes[i] == b'\t') {
@@ -354,7 +388,7 @@ impl Rule for TrailingCommaOnCallSite {
                     }
                 }
                 if let Some(last) = kids.last() {
-                    let comma_pos = comma_after(last, bytes);
+                    let comma_pos = list_trailing_comma(&node, bytes);
                     if comma_pos.is_some() {
                         if !multiline || self.forbid_trailing_comma {
                             v.push(Violation {

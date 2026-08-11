@@ -366,8 +366,10 @@ impl StatementWrappingRule {
             if !source[lbrace..next.0].contains('\n')
                 && node.start_position().row == source[..next.0].matches('\n').count()
             {
-                // `{` and the first statement share a line.
-                violations.push(self.v(next.0, source, "Missing newline after '{'"));
+                // `{` and the first statement share a line. Oracle reports
+                // at the `{` itself ("Missing newline after \"{\"",
+                // wrapping).
+                violations.push(self.v(lbrace + 1, source, "Missing newline after \"{\""));
             }
         }
         // The last code token before `}`.
