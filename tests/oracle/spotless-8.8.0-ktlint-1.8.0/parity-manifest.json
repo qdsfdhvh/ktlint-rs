@@ -3591,7 +3591,7 @@
     "extraRustRuleIds": 1,
     "matchedOracleRules": 99,
     "registeredDetekt": 148,
-    "registeredKtlintRuleIds": 100,
+    "registeredKtlintRuleIds": 101,
     "registeredStandardOriented": 115,
     "registeredUniqueAll": 263,
     "statuses": {

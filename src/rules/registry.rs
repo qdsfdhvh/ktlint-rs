@@ -129,6 +129,7 @@ impl Registry {
             Box::new(wrapping::MultilineExpressionWrapping),
             Box::new(wrapping::MultilineIfElse),
             Box::new(wrapping::TryCatchFinallyWrapping),
+            Box::new(wrapping::try_catch::TryCatchFinallySpacing),
             Box::new(wrapping::WhenExpressionLineBreak),
             // ── Wrapping (more) ────────────────────────────────────────
             Box::new(wrapping::WhenEntryBracing),

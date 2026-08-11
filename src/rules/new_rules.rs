@@ -207,15 +207,30 @@ impl Rule for NoLineBreakAfterElse {
         let mut v = Vec::new();
         let l: Vec<&str> = s.lines().collect();
         for (i, ln) in l.iter().enumerate() {
-            if ln.trim() == "else" && i + 1 < l.len() && l[i + 1].trim().is_empty() {
-                v.push(Violation {
-                    file: String::new(),
-                    line: i + 2,
-                    col: 1,
-                    rule_id: self.id().into(),
-                    message: "Unexpected blank line after else".into(),
-                    auto_fixable: true,
-                });
+            if ln.trim() == "else" && i + 1 < l.len() {
+                let next = l[i + 1].trim();
+                if next.is_empty() {
+                    v.push(Violation {
+                        file: String::new(),
+                        line: i + 2,
+                        col: 1,
+                        rule_id: self.id().into(),
+                        message: "Unexpected blank line after else".into(),
+                        auto_fixable: true,
+                    });
+                } else if next == "{" {
+                    // Allman: `else` on its own line, `{` on the next.
+                    // Oracle: "Unexpected line break after else" at the
+                    // `{` line, col 1.
+                    v.push(Violation {
+                        file: String::new(),
+                        line: i + 2,
+                        col: 1,
+                        rule_id: self.id().into(),
+                        message: "Unexpected line break after \"else\"".into(),
+                        auto_fixable: true,
+                    });
+                }
             }
         }
         v
