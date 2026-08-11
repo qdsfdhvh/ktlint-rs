@@ -1,5 +1,25 @@
 //! standard:multiline-expression-wrapping — JVM ktlint parity.
-//! Only flags when/if/try/function/class bodies where content starts on same line as `{`.
+//!
+//! Oracle semantics (verified against ktlint 1.8.0): when the right-hand
+//! side of an `=` (property initializer, expression-body function,
+//! parameter default value) spans multiple lines, the first token of that
+//! expression must start on a new line — i.e. it must not share the line
+//! with `=`:
+//!
+//! ```text
+//! val x = foo(     // reported at `foo` (4:13)
+//!     1,
+//! )
+//! val x =          // OK
+//!     foo(1)
+//! fun f() = foo(   // reported at `foo` (3:11)
+//!     1,
+//! )
+//! ```
+//!
+//! `return` statements and plain call statements are exempt; only the
+//! top-level RHS expression is checked (nested multiline expressions inside
+//! a qualifying RHS are not reported separately).
 
 use crate::rules::{Rule, Violation};
 
@@ -10,131 +30,104 @@ impl Rule for MultilineExpressionWrapping {
         "standard:multiline-expression-wrapping"
     }
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        let bytes = source.as_bytes();
         let mut v = Vec::new();
-        walk(tree.root_node(), source.as_bytes(), &mut v);
+        let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            match node.kind() {
+                // property initializer: val x = <rhs>
+                // parameter default value: a: Int = <rhs> (the `=` lives on
+                //   function_value_parameters, next to the parameter)
+                "property_declaration" | "function_value_parameters" => {
+                    check_rhs(&node, bytes, &mut v);
+                }
+                // expression-body function: fun f() = <rhs> — the `=`
+                // appears as the first child of its function_body
+                "function_body" => {
+                    check_eq_first(&node, bytes, &mut v);
+                }
+                _ => {}
+            }
+            for i in (0..node.child_count()).rev() {
+                if let Some(c) = node.child(i) {
+                    stack.push(c);
+                }
+            }
+        }
         v
     }
 }
 
-fn walk(root: tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
-    let mut stack: Vec<tree_sitter::Node> = vec![root];
-    while let Some(node) = stack.pop() {
-        let kind = node.kind();
-        let is_target = matches!(
-            kind,
-            "when_expression"
-                | "if_expression"
-                | "try_expression"
-                | "function_declaration"
-                | "class_declaration"
-        );
-        if is_target {
-            check_node(&node, bytes, violations);
+/// Scan siblings for `=` followed by the first named expression node.
+fn check_rhs(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    let mut after_eq = false;
+    for c in node.children(&mut node.walk()) {
+        if c.kind() == "=" {
+            after_eq = true;
+            continue;
         }
-        for i in (0..node.child_count()).rev() {
-            if let Some(c) = node.child(i) {
-                stack.push(c);
-            }
+        if after_eq && c.is_named() {
+            report_if_multiline_share_line(&c, bytes, violations);
+            return;
         }
     }
 }
 
-fn check_node(node: &tree_sitter::Node, _bytes: &[u8], violations: &mut Vec<Violation>) {
-    let sr = node.start_position().row;
-    let er = node.end_position().row;
-    if sr >= er {
-        return;
-    }
-
-    for i in 0..node.child_count() {
-        let Some(child) = node.child(i) else { continue };
-        let ck = child.kind();
-
-        if ck == "function_body" || ck == "class_body" || ck == "statements" {
-            let body_row = child.start_position().row;
-            let mut saw_open = false;
-            for j in 0..child.child_count() {
-                let Some(bc) = child.child(j) else { continue };
-                if bc.kind() == "{" {
-                    saw_open = true;
-                    continue;
-                }
-                if saw_open && !bc.is_extra() {
-                    if bc.start_position().row == body_row {
-                        violations.push(Violation {
-                            file: String::new(),
-                            line: body_row + 1,
-                            col: 1,
-                            rule_id: "standard:multiline-expression-wrapping".into(),
-                            auto_fixable: true,
-                            message: "A multiline expression should start on a new line".into(),
-                        });
-                    }
-                    break;
-                }
-            }
+/// function_body whose first named child follows a leading `=` —
+/// expression-body function. Exempt when the function signature itself
+/// spans multiple lines (oracle: `fun f(\n    a: Int,\n) = foo(\n    1,\n)`
+/// is not reported — the `=` then sits on the `)` line).
+fn check_eq_first(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+    if let Some(parent) = node.parent() {
+        let sig_multiline = parent.children(&mut parent.walk()).any(|c| {
+            c.kind() == "function_value_parameters"
+                && c.start_position().row != c.end_position().row
+        });
+        if sig_multiline {
+            return;
         }
-
-        if ck == "{" {
-            let open_row = child.start_position().row;
-            for n in (i + 1)..node.child_count() {
-                let Some(nc) = node.child(n) else { continue };
-                if !nc.is_extra() && nc.kind() != "}" {
-                    if nc.start_position().row == open_row {
-                        violations.push(Violation {
-                            file: String::new(),
-                            line: open_row + 1,
-                            col: 1,
-                            rule_id: "standard:multiline-expression-wrapping".into(),
-                            auto_fixable: true,
-                            message: "A multiline expression should start on a new line".into(),
-                        });
-                    }
-                    break;
-                }
-            }
+    }
+    let mut after_eq = false;
+    for c in node.children(&mut node.walk()) {
+        if c.kind() == "=" {
+            after_eq = true;
+            continue;
+        }
+        if after_eq && c.is_named() {
+            report_if_multiline_share_line(&c, bytes, violations);
+            return;
+        }
+        if c.kind() == "{" {
+            return; // block body — not this rule
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::parser::KotlinParser;
-    fn check(src: &str) -> Vec<Violation> {
-        let mut p = KotlinParser::new();
-        MultilineExpressionWrapping.check(&p.parse(src), src)
+/// Report when the expression spans multiple lines but its first token is
+/// not the first token of its line (it shares the line with `=`).
+fn report_if_multiline_share_line(
+    rhs: &tree_sitter::Node,
+    bytes: &[u8],
+    violations: &mut Vec<Violation>,
+) {
+    if rhs.start_position().row == rhs.end_position().row {
+        return; // single-line RHS is fine
     }
-    #[test]
-    fn content_on_newline_ok() {
-        assert!(check("fun foo() {\n    return 1\n}\n").is_empty());
+    let start = rhs.start_byte();
+    let precedes_ws_only = bytes[..start]
+        .iter()
+        .rev()
+        .take_while(|&&b| b != b'\n')
+        .all(|&b| b == b' ' || b == b'\t');
+    if precedes_ws_only {
+        return; // starts a fresh line — OK
     }
-    #[test]
-    fn content_same_line_bad() {
-        assert!(!check("fun foo() { return 1\n}\n").is_empty());
-    }
-    #[test]
-    fn when_multiline_ok() {
-        assert!(check("when (x) {\n    1 -> a()\n    2 -> b()\n}\n").is_empty());
-    }
-    #[test]
-    fn when_content_same_line_bad() {
-        assert!(!check("when (x) { 1 -> a()\n    2 -> b()\n}\n").is_empty());
-    }
-    #[test]
-    fn if_multiline_ok() {
-        assert!(check("if (x) {\n    a()\n}\n").is_empty());
-    }
-    #[test]
-    fn inline_call_expression_not_flagged() {
-        assert!(check("fun foo() {\n    bar(\n        x,\n        y\n    )\n}\n").is_empty());
-    }
-    #[test]
-    fn binary_expression_not_flagged() {
-        assert!(check("val x = a +\n    b\n").is_empty());
-    }
-    #[test]
-    fn dot_qualified_not_flagged() {
-        assert!(check("val x = obj\n    .method()\n").is_empty());
-    }
+    violations.push(Violation {
+        file: String::new(),
+        line: rhs.start_position().row + 1,
+        col: rhs.start_position().column + 1,
+        rule_id: "standard:multiline-expression-wrapping".into(),
+        message: "A multiline expression should start on a new line".into(),
+        auto_fixable: true,
+    });
 }

@@ -168,7 +168,18 @@ impl Registry {
                     .unwrap_or(false),
                 config.code_style == CodeStyle::AndroidStudio,
             )),
-            Box::new(final_rules::TrailingCommaOnCallSite),
+            Box::new(final_rules::TrailingCommaOnCallSite::new(
+                config
+                    .rules
+                    .get("ij_kotlin_properties")
+                    .map(|rc| {
+                        rc.properties
+                            .get("ij_kotlin_allow_trailing_comma")
+                            .is_some_and(|v| v == "true")
+                    })
+                    .unwrap_or(false),
+                config.code_style == CodeStyle::AndroidStudio,
+            )),
             // ── detekt empty-blocks ───────────────────────────────────
             Box::new(detekt::empty_blocks::EmptyFunctionBlock),
             Box::new(detekt::empty_blocks::EmptyClassBlock),

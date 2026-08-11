@@ -485,52 +485,73 @@ impl Rule for FunctionExpressionBody {
     fn id(&self) -> &'static str {
         "standard:function-expression-body"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, _s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
-        let lines: Vec<&str> = s.lines().collect();
-        let mut i = 0;
-        while i < lines.len() {
-            let t = lines[i].trim();
-            // Find block-body functions: fun name(...): Type {
-            if t.starts_with("fun ") && t.ends_with('{') && !t.contains('=') {
-                let _fun_line = i;
-                i += 1;
-                let mut depth = 1usize;
-                let mut return_count = 0usize;
-                let mut return_line = 0usize;
-                let mut has_other_statements = false;
-                while i < lines.len() && depth > 0 {
-                    let body = lines[i].trim();
-                    let opens = body.matches('{').count();
-                    let closes = body.matches('}').count();
-                    depth = depth + opens - closes;
-                    if body.starts_with("return ") && !body.contains("//") {
-                        return_count += 1;
-                        return_line = i;
-                    } else if !body.is_empty() && !body.starts_with("//") && body != "}" {
-                        // Check if it's a real statement (not just a closing brace line)
-                        if closes == 0 || !body.trim_end_matches('}').trim().is_empty() {
-                            has_other_statements = true;
-                        }
-                    }
-                    i += 1;
+        let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind() == "function_declaration" {
+                check_fn(&node, &mut v);
+            }
+            for i in (0..node.child_count()).rev() {
+                if let Some(c) = node.child(i) {
+                    stack.push(c);
                 }
-                // Flag if exactly one return and no other statements in body
-                if return_count == 1 && !has_other_statements {
-                    v.push(Violation {
-                        file: String::new(),
-                        line: return_line + 1,
-                        col: 1,
-                        rule_id: self.id().into(),
-                        message: "Function body should be replaced with body expression".into(),
-                        auto_fixable: true,
-                    });
-                }
-            } else {
-                i += 1;
             }
         }
         v
+    }
+}
+
+/// ktlint: a block body containing exactly one `return <expr>` should be a
+/// body expression (`= <expr>`). Reported at the opening `{` (oracle
+/// positions: `fun get(): T {` -> the `{`; Allman `{` on its own line ->
+/// that line).
+fn check_fn(node: &tree_sitter::Node, violations: &mut Vec<Violation>) {
+    let Some(body) = node
+        .children(&mut node.walk())
+        .find(|c| c.kind() == "function_body")
+    else {
+        // expression-body functions already use `=`
+        return;
+    };
+    let Some(stmts) = body
+        .children(&mut body.walk())
+        .find(|c| c.kind() == "statements")
+    else {
+        return; // empty body
+    };
+    let mut returns = 0usize;
+    let mut has_expr = false;
+    for st in stmts.children(&mut stmts.walk()) {
+        // tree-sitter-kotlin parses `return <expr>` as jump_expression
+        if st.kind() == "jump_expression" {
+            let mut is_return = false;
+            let mut expr = false;
+            for c in st.children(&mut st.walk()) {
+                if c.kind() == "return" {
+                    is_return = true;
+                } else if c.kind() != ";" {
+                    expr = true;
+                }
+            }
+            if !is_return {
+                return; // throw / break / continue — not a body expression
+            }
+            returns += 1;
+            has_expr = expr;
+        } else {
+            return; // any other statement disqualifies
+        }
+    }
+    if returns == 1 && has_expr {
+        violations.push(Violation {
+            file: String::new(),
+            line: body.start_position().row + 1,
+            col: body.start_position().column + 1,
+            rule_id: "standard:function-expression-body".into(),
+            message: "Function body should be replaced with body expression".into(),
+            auto_fixable: true,
+        });
     }
 }
 
