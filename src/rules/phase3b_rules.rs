@@ -846,7 +846,6 @@ mod tests {
     fn multiline_default_value_keeps_list_multiline() {
         let src = "private fun newWebSocket(\n    request: Request =\n      Request\n        .Builder()\n        .url(\n            \"ws://example.com\"\n        ),\n) {\n}\n";
         let v = fn_check(src, crate::config::CodeStyle::AndroidStudio);
-        eprintln!("v={:?}", v.iter().map(|x| (x.line, x.col, &x.message)).collect::<Vec<_>>());
         assert!(v.is_empty(), "multiline default keeps the list multiline");
     }
 
