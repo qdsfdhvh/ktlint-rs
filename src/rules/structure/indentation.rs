@@ -1513,6 +1513,17 @@ pub(crate) fn ast_expected(
             | "function_value_parameters"
             | "class_parameters"
             | "primary_constructor" => {
+                // A `constructor(` keyword on its own line below the class
+                // row (`class C\n    @X\n    constructor(...)`) sits one
+                // level deeper than the class row (oracle).
+                if trimmed.starts_with("constructor(") {
+                    if let Some(cd) = chain.iter().find(|n| n.kind() == "class_declaration") {
+                        if cd.start_position().row < row {
+                            return ast_expected(tree, src, cd.start_position().row, is)
+                                .map(|e| e + is);
+                        }
+                    }
+                }
                 // First row of a parameter default value
                 // (`request: Request =\n    Request`) sits one level deeper
                 // than the parameter row (oracle). Call-site named arguments
