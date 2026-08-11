@@ -1616,11 +1616,14 @@ pub(crate) fn ast_expected(
                     let open_row = block_open_row(&owner, src);
                     let open_line = src.lines().nth(open_row).map(|l| l.trim()).unwrap_or("");
                     let chainish = open_line.starts_with('.') || open_line.starts_with("?:");
-                    // A parameterized chain lambda (`.combine(...) { a, b ->`
-                    // with the body on the next line) sits one level deeper
-                    // than the lambda row (oracle); an inline-body chain
-                    // lambda (`.takeIf { it.isNotEmpty() }`) keeps the row.
-                    let chain_param_lambda = chainish && open_line.contains("->");
+                    // A chain lambda whose body starts on the next line
+                    // (`.combine(...) { a, b ->`, `.tls(...) {`) sits one
+                    // level deeper than the lambda row (oracle); an
+                    // inline-body lambda (`.takeIf { it.isNotEmpty() }`)
+                    // and elvis lambdas (`.takeIf { } ?: run {`) keep it.
+                    let chain_param_lambda = chainish
+                        && !open_line.contains("?:")
+                        && (open_line.contains("->") || open_line.ends_with('{'));
                     if trimmed.starts_with('}') {
                         if open_line.contains("?:") {
                             return ast_expected(tree, src, open_row, is)
