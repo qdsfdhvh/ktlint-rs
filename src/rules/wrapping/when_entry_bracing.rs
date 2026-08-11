@@ -53,6 +53,17 @@ fn check_when(when: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Viola
     for entry in &entries {
         let mut w = entry.walk();
         let children: Vec<tree_sitter::Node> = entry.children(&mut w).collect();
+        // Braced entry: control_structure_body whose content opens with `{`
+        // (a bare expression body like `else -> 0` is wrapped too).
+        let braced = children.iter().any(|c| {
+            if c.kind() != "control_structure_body" {
+                return false;
+            }
+            c.children(&mut c.walk()).any(|cc| cc.kind() == "{")
+        });
+        if braced {
+            continue;
+        }
         let mut after_arrow = false;
         for child in children {
             if child.kind() == "->" {

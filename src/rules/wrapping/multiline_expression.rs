@@ -67,6 +67,11 @@ fn check_rhs(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violat
             continue;
         }
         if after_eq && c.is_named() {
+            // A lambda literal directly assigned (`val f = { x ->`) is
+            // exempt — ktlint does not demand the `{` move (oracle).
+            if c.kind() == "lambda_literal" {
+                return;
+            }
             report_if_multiline_share_line(&c, bytes, violations);
             return;
         }

@@ -1387,7 +1387,7 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
     // lines are preserved.
     let lines_owned: Vec<&str> = masked.split('\n').collect();
     let expected =
-        crate::rules::structure::indentation::compute_line_expected(&lines_owned, indent_size);
+        crate::rules::structure::indentation::compute_line_expected(&lines_owned, indent_size, &[]);
     let lines: Vec<&str> = masked.split_inclusive('\n').collect();
     let mut output = String::with_capacity(masked.len());
     for (row, line) in lines.iter().enumerate() {

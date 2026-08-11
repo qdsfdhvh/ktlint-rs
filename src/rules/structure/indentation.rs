@@ -76,7 +76,13 @@ impl Rule for Indentation {
         // standard blocks and continuation blocks — a `when {` on a `=`
         // continuation line puts its body one level deeper than the raw brace
         // depth would suggest (issue #152).
-        let line_expected = compute_line_expected(&lines, is);
+        // Oracle: an Allman block (`{` on its own line) belonging to an
+        // if/when/try/function header takes an extra level — the block sits
+        // at the header's indent + one, its body one deeper, its `}` at the
+        // block. `when` is the exception: its `{` stays standard but the
+        // entries inside take the extra level (issue #202).
+        let elevated = find_allman_elevated_blocks(_tree, source);
+        let line_expected = compute_line_expected(&lines, is, &elevated);
 
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
@@ -130,11 +136,7 @@ impl Rule for Indentation {
             // except a mis-indented brace (non-multiple) which is reported at
             // the block's depth (covers continuation blocks like a `when {`
             // on a `=` continuation line).
-            let expected_for_line = if trimmed.starts_with('}') && !too_shallow {
-                depth_expected.saturating_sub(is)
-            } else {
-                depth_expected
-            };
+            let expected_for_line = depth_expected;
             if expected_for_line > spaces {
                 let full_level_short = expected_for_line - spaces >= is;
                 if too_shallow || full_level_short {
@@ -195,7 +197,180 @@ fn is_for_header(t: &str) -> bool {
     t.starts_with("for ") || t.starts_with("for(")
 }
 
-pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
+/// Oracle (issue #202): an Allman block — `{` alone on its line — that
+/// opens the body of an `if`/`when`/`try` takes an extra indentation level:
+///
+/// ```text
+/// if (x)        // 4
+/// {             // expected 8  (block = header + 1)
+///     a()       // expected 12
+/// }             // expected 8
+/// ```
+///
+/// while/for/do/class/object/lambda blocks keep the standard indentation.
+/// Returns (open_line, close_line) pairs (0-based) for such blocks. The
+/// `{` must be alone on its line (Allman); `if (x) {` never matches.
+/// The nearest statement-level ancestor of a lambda literal — the line its
+/// block aligns with (`val r = list\n    .map\n    {` -> the `val r` line).
+fn statement_line_of(node: &tree_sitter::Node) -> Option<usize> {
+    let mut n = *node;
+    while let Some(p) = n.parent() {
+        if matches!(
+            p.kind(),
+            "property_declaration"
+                | "expression_statement"
+                | "function_declaration"
+                | "return_statement"
+                | "assignment_expression"
+                | "if_expression"
+                | "when_expression"
+                | "when_entry"
+                | "for_statement"
+                | "while_statement"
+                // A bare statement in a block — `run\n{` inside an if body.
+                | "statements"
+        ) {
+            return Some(p.start_position().row);
+        }
+        n = p;
+    }
+    None
+}
+
+fn find_allman_elevated_blocks(
+    tree: &tree_sitter::Tree,
+    source: &str,
+) -> Vec<(usize, usize, bool, Option<usize>)> {
+    let mut out = Vec::new();
+    let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        // (open_line, close_line, open_elevated, statement_line)
+        let mut blocks: Vec<(usize, usize, bool, Option<usize>)> = Vec::new();
+        match node.kind() {
+            "if_expression" => {
+                // The if body and any else body are control_structure_body
+                // children; `else if` chains nest their own if_expression.
+                for c in node.children(&mut node.walk()) {
+                    if c.kind() == "control_structure_body" {
+                        blocks.push((c.start_position().row, c.end_position().row, true, None));
+                    }
+                }
+            }
+            "when_expression" => {
+                // `when\n{` (no subject) — the whole when body elevates,
+                // including its own `{`. `when (x)\n{` keeps the `{`
+                // standard (entries inside still elevate via when_entry).
+                let has_subject = node
+                    .children(&mut node.walk())
+                    .any(|c| c.kind() == "when_subject");
+                if !has_subject {
+                    if let Some(open) = node.children(&mut node.walk()).find(|c| c.kind() == "{") {
+                        let close = node
+                            .children(&mut node.walk())
+                            .find(|c| c.kind() == "}")
+                            .map(|c| c.start_position().row)
+                            .unwrap_or(node.end_position().row);
+                        blocks.push((open.start_position().row, close, true, None));
+                    }
+                }
+            }
+            "when_entry" => {
+                // `1 ->\n{` — the entry body is a control_structure_body
+                // like an if body.
+                if let Some(body) = node
+                    .children(&mut node.walk())
+                    .find(|c| c.kind() == "control_structure_body")
+                {
+                    blocks.push((
+                        body.start_position().row,
+                        body.end_position().row,
+                        true,
+                        None,
+                    ));
+                }
+            }
+            "try_expression" => {
+                if let Some(open) = node.children(&mut node.walk()).find(|c| c.kind() == "{") {
+                    let close = node
+                        .children(&mut node.walk())
+                        .find(|c| c.kind() == "}")
+                        .map(|c| c.start_position().row)
+                        .unwrap_or(node.end_position().row);
+                    blocks.push((open.start_position().row, close, true, None));
+                }
+            }
+            "function_declaration" => {
+                if let Some(body) = node
+                    .children(&mut node.walk())
+                    .find(|c| c.kind() == "function_body")
+                {
+                    blocks.push((
+                        body.start_position().row,
+                        body.end_position().row,
+                        true,
+                        None,
+                    ));
+                }
+            }
+            "while_statement" | "for_statement" => {
+                if let Some(body) = node
+                    .children(&mut node.walk())
+                    .find(|c| c.kind() == "control_structure_body")
+                {
+                    blocks.push((
+                        body.start_position().row,
+                        body.end_position().row,
+                        false,
+                        None,
+                    ));
+                }
+            }
+            "catch_block" | "finally_block" | "class_body" => {
+                if let Some(open) = node.children(&mut node.walk()).find(|c| c.kind() == "{") {
+                    let close = node
+                        .children(&mut node.walk())
+                        .find(|c| c.kind() == "}")
+                        .map(|c| c.start_position().row)
+                        .unwrap_or(node.end_position().row);
+                    blocks.push((open.start_position().row, close, false, None));
+                }
+            }
+            "lambda_literal" => {
+                if let Some(open) = node.children(&mut node.walk()).find(|c| c.kind() == "{") {
+                    let close = node
+                        .children(&mut node.walk())
+                        .find(|c| c.kind() == "}")
+                        .map(|c| c.start_position().row)
+                        .unwrap_or(node.end_position().row);
+                    // Oracle: a lambda's `{` aligns with the statement that
+                    // carries the lambda (`val r = list\n    .map\n    {` ->
+                    // the block sits at `val r = list`'s indent, issue #202).
+                    let stmt = statement_line_of(&node);
+                    blocks.push((open.start_position().row, close, false, stmt));
+                }
+            }
+            _ => {}
+        }
+        for (open, close, open_elevated, stmt) in blocks {
+            let line = source.lines().nth(open).map(|l| l.trim()).unwrap_or("");
+            if line == "{" {
+                out.push((open, close, open_elevated, stmt));
+            }
+        }
+        for i in (0..node.child_count()).rev() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    out
+}
+
+pub(crate) fn compute_line_expected(
+    lines: &[&str],
+    is: usize,
+    elevated: &[(usize, usize, bool, Option<usize>)],
+) -> Vec<usize> {
     let mut out = vec![0usize; lines.len()];
     let mut depth = 0usize;
     let mut prev_expected = 0usize;
@@ -313,6 +488,37 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
             last_code = Some(c);
         }
         let mut e = depth * is;
+        // Allman elevated blocks: the `{` line sits at the header's
+        // expectation + one level (except `when`, whose `{` stays standard),
+        // and every line inside the block (up to the closing `}`) one level
+        // deeper than the raw brace depth suggests.
+        // Every frame containing `i` contributes:
+        //  - a frame's *body* lines (open < i < close) are raised one level
+        //    only when that frame is itself elevated (if/when-entry/try/fun);
+        //    non-elevated blocks (while/lambda/class...) rely on the raw
+        //    brace depth, which already matches
+        //  - a frame's own `{` line (i == open) is raised when elevated
+        //  - the innermost frame's closing line (i == close) aligns with
+        //    that block's opening `{` (out[open])
+        let mut closest_close: Option<(usize, usize)> = None;
+        for &(open, close, open_elevated, stmt) in elevated.iter() {
+            if i > open && i < close && open_elevated {
+                e = e.saturating_add(is);
+            } else if i == open {
+                if let Some(stmt) = stmt {
+                    // lambda block: align with the carrying statement
+                    e = out[stmt];
+                } else if open_elevated {
+                    e = prev_expected.saturating_add(is);
+                }
+            }
+            if i == close && closest_close.map(|(_, c)| open > c).unwrap_or(true) {
+                closest_close = Some((open, close));
+            }
+        }
+        if let Some((open, _)) = closest_close {
+            e = out[open];
+        }
         if paren_depth > 0 {
             if let Some(&(list, for_header, opener_row)) = paren_expected.last() {
                 // ktlint keeps a multiline `for (` header's structure at the
@@ -345,10 +551,16 @@ pub(crate) fn compute_line_expected(lines: &[&str], is: usize) -> Vec<usize> {
                 && lines[i - 2].trim_end().ends_with(':')
                 && !lines[i - 2].trim_end().ends_with(":=");
             if t.starts_with('}') {
-                // A closing brace sits at the block's indent: the previous
-                // line's expectation minus one level (handles `} else if {`
-                // and continuation blocks like a `when {` on a `=` line).
-                e = prev_expected.saturating_sub(is);
+                // A closing brace sits at its own block's indent: one level
+                // shallower than the current brace depth (the `}` line's own
+                // depth). prev_expected is unreliable here — a nested `}`
+                // would subtract from the inner block, not the outer one.
+                // The frame loop above already aligned Allman-block closing
+                // lines with their `{` (closest_close); only standard
+                // blocks reach this branch.
+                if closest_close.is_none() {
+                    e = depth.saturating_sub(1) * is;
+                }
             } else if t.starts_with(')') {
                 // A closing-paren line (`)`, `) {`, `),`) closes the list it
                 // belongs to — the paren stack already popped it, and a prev
