@@ -407,6 +407,57 @@ impl ClassSignatureSpacing {
     /// signature runs from the `class` keyword to the end of the primary
     /// constructor — annotations, modifiers and the supertype list are not
     fn check_class(&self, node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec<Violation>) {
+        // Allman body: `class C\n{` — ktlint demands the body `{` sit on the
+        // same line as the header ("Expected a single space before class
+        // body", reported at the `{`).
+        if let Some(body) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "class_body")
+        {
+            let header_end = node
+                .children(&mut node.walk())
+                .filter(|c| c.kind() != "class_body")
+                .filter_map(|c| Some(c.end_position().row))
+                .max()
+                .unwrap_or(node.start_position().row);
+            if body.start_position().row > header_end {
+                let pos = body.start_position();
+                violations.push(Violation {
+                    file: String::new(),
+                    line: pos.row + 1,
+                    col: pos.column + 1,
+                    rule_id: self.id().to_string(),
+                    message: "Expected a single space before class body".into(),
+                    auto_fixable: true,
+                });
+            }
+        }
+        // Empty primary constructor: `class C()` — ktlint wants the bare
+        // parentheses removed ("No parenthesis expected", at the `(`).
+        if let Some(ctor) = node
+            .children(&mut node.walk())
+            .find(|c| c.kind() == "primary_constructor")
+        {
+            let has_param = ctor
+                .children(&mut ctor.walk())
+                .any(|c| c.kind() == "class_parameter");
+            if !has_param {
+                for c in ctor.children(&mut ctor.walk()) {
+                    if c.kind() == "(" {
+                        let pos = c.start_position();
+                        violations.push(Violation {
+                            file: String::new(),
+                            line: pos.row + 1,
+                            col: pos.column + 1,
+                            rule_id: self.id().to_string(),
+                            message: "No parenthesis expected".into(),
+                            auto_fixable: true,
+                        });
+                        break;
+                    }
+                }
+            }
+        }
         let mut saw_class_keyword = false;
 
         for i in 0..node.child_count() {
