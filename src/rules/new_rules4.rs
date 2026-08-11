@@ -202,7 +202,10 @@ impl StatementWrappingRule {
         let mut string_ranges: Vec<(usize, usize)> = Vec::new();
         let mut st = vec![tree.root_node()];
         while let Some(node) = st.pop() {
-            if matches!(node.kind(), "string_literal" | "string_template" | "char_literal") {
+            if matches!(
+                node.kind(),
+                "string_literal" | "string_template" | "char_literal"
+            ) {
                 string_ranges.push((node.start_byte(), node.end_byte()));
             }
             for k in (0..node.child_count()).rev() {
@@ -268,7 +271,13 @@ impl StatementWrappingRule {
             if bytes[i] == b';' {
                 if string_ranges
                     .binary_search_by(|&(a, b)| {
-                        if i < a { std::cmp::Ordering::Greater } else if i >= b { std::cmp::Ordering::Less } else { std::cmp::Ordering::Equal }
+                        if i < a {
+                            std::cmp::Ordering::Greater
+                        } else if i >= b {
+                            std::cmp::Ordering::Less
+                        } else {
+                            std::cmp::Ordering::Equal
+                        }
                     })
                     .is_ok()
                 {

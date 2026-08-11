@@ -79,7 +79,9 @@ impl FunctionSignatureSpacing {
                         let eq_line_start = s[..eq.start_byte()].rfind('\n').map_or(0, |i| i + 1);
                         let eq_line_len = eq.end_byte() - eq_line_start;
                         let sig_multiline = s[func_start..eq.end_byte()].contains('\n');
-                        let remaining = if sig_multiline || (has_params && (param_multiline || sig_len > max_length)) {
+                        let remaining = if sig_multiline
+                            || (has_params && (param_multiline || sig_len > max_length))
+                        {
                             max_length.saturating_sub(eq_line_len)
                         } else {
                             max_length.saturating_sub(sig_len)
