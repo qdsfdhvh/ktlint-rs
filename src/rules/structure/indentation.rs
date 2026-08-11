@@ -1321,6 +1321,15 @@ pub(crate) fn ast_expected(
         }
     };
     let trimmed = line.trim();
+    // A lambda `{` right after an open `(` (`call(\n    { … }`) sits one
+    // level deeper than the call row (oracle).
+    if trimmed == "{" && row > 0 {
+        let prev_raw = src.lines().nth(row - 1).unwrap_or("");
+        let prev_code = prev_raw.split("//").next().unwrap_or("").trim_end();
+        if prev_code.ends_with('(') {
+            return ast_expected(tree, src, row - 1, is).map(|e| e + is);
+        }
+    }
     if trimmed == "{" {
         // A lambda argument `{` (inside a paren list) is handled by the
         // value_arguments classification. A true block-opening Allman `{`
