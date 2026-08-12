@@ -1380,14 +1380,24 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
     // Per-line expected indentation — the same rolling computation the
     // check uses (`compute_line_expected`: brace depth, continuation after
     // `{`/`:`/`=`, closing-brace correction, supertype class bodies), so
-    // `--format` fixes exactly what `check` reports. Runs on the masked
-    // text: SENTINELs are inert (no `{`/`:`/`=`), comments are already
-    // masked. We only *raise* lines whose current indent is clearly too
-    // shallow — never lower existing indentation, so continuation/wrapped
-    // lines are preserved.
-    let lines_owned: Vec<&str> = masked.split('\n').collect();
-    let expected =
-        crate::rules::structure::indentation::compute_line_expected(&lines_owned, indent_size, &[]);
+    // `--format` fixes exactly what `check` reports. Runs on the original
+    // text with the AST expectations alongside: raising too-shallow lines
+    // uses the line-scan expectation, and *lowering* over-indented lines is
+    // gated on the AST classifier AND the line-scan model agreeing on the
+    // value AND the row starting a fresh statement — the same confidence
+    // the over-indent probe uses (issue #202) — so continuation and
+    // alignment indents are never mangled.
+    let lines_src: Vec<&str> = source.split('\n').collect();
+    let elevated = crate::rules::structure::indentation::find_allman_elevated_blocks(&tree, source);
+    let scan = crate::rules::structure::indentation::compute_line_expected(
+        &lines_src,
+        indent_size,
+        &elevated,
+    );
+    let ast: Vec<Option<usize>> = (0..lines_src.len())
+        .map(|r| crate::rules::structure::indentation::ast_expected(&tree, source, r, indent_size))
+        .collect();
+    let tree_clean = !tree.root_node().has_error();
     let lines: Vec<&str> = masked.split_inclusive('\n').collect();
     let mut output = String::with_capacity(masked.len());
     for (row, line) in lines.iter().enumerate() {
@@ -1401,7 +1411,15 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
             output.push_str(line);
             continue;
         }
-        if let Some(&want) = expected.get(row) {
+        let mut write_indent = |want: usize| {
+            let has_nl = line.ends_with('\n');
+            output.push_str(&" ".repeat(want));
+            output.push_str(trimmed.trim_end_matches('\n'));
+            if has_nl {
+                output.push('\n');
+            }
+        };
+        if let Some(&want) = scan.get(row) {
             // Raise clearly-too-shallow lines: either the indent is not a
             // multiple of indent_size (explicitly wrong — matches the rule's
             // "should be multiple of N" report), or it is at least a full
@@ -1412,16 +1430,24 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
             let non_multiple = current % indent_size != 0;
             let full_level_short = current.saturating_add(indent_size) <= want;
             if current < want && (non_multiple || full_level_short) {
-                // Only *raise* too-shallow lines. Never lower: continuation
-                // and alignment indents that the line-based expectation does
-                // not model (operator/chain continuations) must be preserved,
-                // and over-indented lines would otherwise be mangled.
-                let has_nl = line.ends_with('\n');
-                output.push_str(&" ".repeat(want));
-                output.push_str(trimmed.trim_end_matches('\n'));
-                if has_nl {
-                    output.push('\n');
-                }
+                write_indent(want);
+                continue;
+            }
+            // Lower clearly-over-indented lines — only when the AST
+            // classifier and the line-scan model agree on the expected
+            // value, the tree is clean, and the row starts a fresh
+            // statement (the over-indent probe's confidence gate). Never
+            // lower a continuation or alignment row whose true indent the
+            // models do not pin down.
+            if current > want
+                && tree_clean
+                && ast.get(row) == Some(&Some(want))
+                && crate::rules::structure::indentation::row_starts_statement(&tree, source, row)
+                && !crate::rules::structure::indentation::lambda_in_unconstrained_argument(
+                    &tree, source, row,
+                )
+            {
+                write_indent(want);
                 continue;
             }
         }

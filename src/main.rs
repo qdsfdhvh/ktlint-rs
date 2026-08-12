@@ -222,12 +222,45 @@ fn main() -> anyhow::Result<()> {
 
     let reporter = DiagnosticReporter::new(&cli);
 
-    let exit_code = if cli.format && !violations.is_empty() {
+    let exit_code = if cli.format {
+        // Over-indent repair: the non-probe check only reports
+        // under-indentation, but `--format` must also lower over-indented
+        // lines (JVM does). Re-lint each file with the over-indent probe
+        // enabled and use its indent reports as the fixer's driver — the
+        // probe's confidence gate (AST + line-scan agree, fresh statement)
+        // is exactly what fix_indentation's lowering branch requires, so
+        // `--format` fixes precisely the over-indentation JVM fixes
+        // (issue #202). The probe runs are not written to the cache.
+        std::env::set_var("KTLINT_RS_INDENT_PROBE", "1");
+        let mut probe_indent: Vec<Violation> = Vec::new();
+        for file in &files {
+            let file_config = KtlintConfig::load_for_file_with_base(file, &base_config)
+                .unwrap_or_else(|_| base_config.clone());
+            let engine = RuleEngine::new(&file_config);
+            let source = std::fs::read_to_string(file).unwrap_or_default();
+            let mut parser = KotlinParser::new();
+            let tree = parser.parse(&source);
+            probe_indent.extend(
+                engine
+                    .check(&file.to_string_lossy(), &tree, &source)
+                    .into_iter()
+                    .filter(|v| v.rule_id == "standard:indent"),
+            );
+        }
+        std::env::remove_var("KTLINT_RS_INDENT_PROBE");
+        // The probe reports supersede the non-probe indent reports (they
+        // contain under-indent too); other rules keep their reports.
+        let format_violations: Vec<Violation> = violations
+            .iter()
+            .filter(|v| v.rule_id != "standard:indent")
+            .cloned()
+            .chain(probe_indent)
+            .collect();
         for file in &files {
             let file_config = KtlintConfig::load_for_file_with_base(file, &base_config)
                 .unwrap_or_else(|_| base_config.clone());
             let file_name = file.to_string_lossy();
-            let file_violations: Vec<Violation> = violations
+            let file_violations: Vec<Violation> = format_violations
                 .iter()
                 .filter(|violation| violation.file == file_name)
                 .cloned()

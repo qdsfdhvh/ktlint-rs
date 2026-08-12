@@ -437,7 +437,7 @@ fn statement_line_of(node: &tree_sitter::Node) -> Option<usize> {
     None
 }
 
-fn find_allman_elevated_blocks(
+pub(crate) fn find_allman_elevated_blocks(
     tree: &tree_sitter::Tree,
     source: &str,
 ) -> Vec<(usize, usize, bool, Option<usize>)> {
@@ -2211,7 +2211,7 @@ pub(crate) fn ast_expected(
 /// args). Over-indentation is only probed on statement-start rows: a
 /// continuation's legitimate indent is alignment, which the classifier does
 /// not model exactly (issue #202).
-fn row_starts_statement(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+pub(crate) fn row_starts_statement(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
     let line = src.lines().nth(row).unwrap_or("");
     let col = line.len() - line.trim_start().len();
     let point = tree_sitter::Point { row, column: col };
@@ -2312,7 +2312,11 @@ fn lambda_in_condition(lambda: &tree_sitter::Node) -> bool {
 /// these rows (oracle: any indent is accepted), so over-indentation cannot
 /// be reported on them. A bare positional lambda argument (`call(\n    {`)
 /// stays strict.
-fn lambda_in_unconstrained_argument(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+pub(crate) fn lambda_in_unconstrained_argument(
+    tree: &tree_sitter::Tree,
+    src: &str,
+    row: usize,
+) -> bool {
     let line = src.lines().nth(row).unwrap_or("");
     let col = line.len() - line.trim_start().len();
     let point = tree_sitter::Point { row, column: col };
