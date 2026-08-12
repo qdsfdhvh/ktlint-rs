@@ -49,26 +49,25 @@ annotation 及其多行参数）。副作用修复：
 - **`//` comment 行检查**（同缩进豁免规则 13/13 探针吻合，但 ktor 91 FP，
   如 accessor 前注释）→ 回退，记录为残余。
 
-## 当前状态（LC_ALL=C，probe 模式，未提交 B 步）
+## 当前状态（LC_ALL=C，probe 模式，C/D 步完成）
 
 | 语料 | JVM 报 | 我们报 | agree | FP | missed |
 |---|---|---|---|---|---|
-| ktor | 4 | 0 | 0 | **0** | 4 |
-| okhttp | 2 | 0 | 0 | **0** | 2 |
-| nowinandroid | 7360 | 7346 | 7346 | **0** | **14** |
+| ktor | 4 | 4 | 4 | **0** | **0** |
+| okhttp | 2 | 2 | 2 | **0** | **0** |
+| nowinandroid | 7360 | 7360 | 7360 | **0** | **0** |
+
+**三语料全对齐（7366/7366）**。非 probe（发货模式）同样 0 FP。
+门禁：cargo test 768 全绿、oracle-diff 108 ALL MATCH、mutation 40 files
+通过、spotless oracle match、fmt clean；perf-gates 的 per-file lint 在本机
+噪声下基线同样 fail（非回归）。
 
 NavigationTest.kt 单文件：147/147 全对齐。非 probe（发货模式）全语料 0 FP。
 门禁：cargo test 全绿、oracle-diff 108 ALL MATCH、mutation 40 files 通过、
 spotless oracle match、fmt clean；perf-gates 的 per-file lint 在本机噪声下
 基线同样 fail（非回归）。
 
-## 差距分类（剩余 missed 20 = nowinandroid 14 + ktor 4 + okhttp 2）
-
-### nowinandroid 14（B 步残余）
-- TestUserDataRepository.kt:81-85 — `viewedNewsResources =\nif (viewed) {`
-  命名参数 `=` 值（JVM lift +1，见回退教训）
-- ForYouScreenTest.kt:157-162, 204-206 — `onboardingUiState =\n
-  OnboardingUiState.Shown(` 同形状（含 `// Follow one topic` comment 行）
+## 差距分类（全部清零）
 
 ### C. ktor-compiler-plugin（4 条，与 D 可能同源）
 OpenApiAnalysisExtension.kt:89、ResourceRouteCallInference.kt:58/59、
@@ -96,14 +95,37 @@ probe 置信度放宽。失败原因：
 ### D. okhttp android-test（2 条）
 OkHttpTest.kt:558/559 — (10)should be(8)，错 1 层。
 
-## 修复顺序（每步跑 scripts/indent-diff.sh 全量对比，注意 LC_ALL=C）
+## 修复顺序（全部完成 ✅）
 
-1. ~~A. annotation 行~~ ✅
-2. ~~B. nowinandroid 深层 continuation~~ ✅（14 残余为 `=` 值 lift 形状）
-3. **C. ktor-compiler-plugin 4 条**（下一步）
-4. **D. okhttp 2 条**
-5. 全量验证：indent-diff 三语料全 0 FP + 0 missed（或记录残余）
-   + cargo test + oracle-diff + mutation + perf-gates
+1. ~~A. annotation 行~~ ✅（31e300b）
+2. ~~B. nowinandroid 深层 continuation~~ ✅（fc1bc56）
+3. ~~C. ktor-compiler-plugin 4 条~~ ✅（本轮）
+4. ~~D. okhttp 2 条~~ ✅（本轮，与 C 同源）
+5. 全量验证 ✅：三语料 7366/7366 全对齐（0 FP / 0 missed），
+   cargo test 768 全绿 + oracle-diff 108 ALL MATCH + mutation 40 通过
+   + spotless oracle match + fmt clean
+
+## C/D 步修复内容（本轮）
+
+关键发现：**命名参数 `=`-值 lift 与二进制 continuation 都是
+code-style 相关的**（探针+真实文件比对+反编译确认）：
+- ktor fixture 的 `.editorconfig` 有 `ktlint_code_style = intellij_idea`
+  → 对齐的命名参数值被接受（不 lift）；nowinandroid/okhttp 用默认
+  （KtlintOfficial）→ lift。此前的「TestEngineMultipart 之谜」是 code
+  style 差异，不是形状差异。
+- 实现：`Indentation` 持有 `code_style`（registry 传入），`ast_expected`
+  用 thread_local `CODE_STYLE` 读取；`=`-值 lift 仅非 IntelliJIdea 生效，
+  裸标识符/数字字面量仍不 lift。
+- 二进制 continuation（EOL 运算符 `a() &&` 或行首运算符 `+ second`）：
+  AST 分支 = 表达式首行 + 1，`binary_continuation_row` 限定「statement
+  直接表达式」（return/jump_expression、property、fun-body、expression
+  statement、assignment），排除 if/while 条件、调用参数、链式；scan 模型
+  加运算符检测（排除 `.*` 导入、`*/` KDoc、`++`/`--`、`::`）+ 链行保持
+  层级；probe 置信度对二进制续行放宽。
+- `//` comment 行：按下一代码行期望检查，仅报 under-indent；豁免：
+  注释块内、上一非空行同缩进、下一行是闭合括号、注释掉的代码
+  （`//` 后 2+ 空格）。
+
 
 ## 关键命令 / 陷阱
 

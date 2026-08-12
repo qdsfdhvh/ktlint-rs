@@ -57,7 +57,8 @@ impl Registry {
             // ── Structure ─────────────────────────────────────────────
             Box::new(structure::BlankLineBeforeDeclaration),
             Box::new(structure::IJTrailingComma),
-            Box::new(structure::Indentation::new(config.indent_size)),
+            Box::new(structure::Indentation::new(config.indent_size)
+                .with_code_style(config.code_style)),
             Box::new(structure::KdocFormatting),
             Box::new(structure::KdocNoEmptyFirstLine),
             Box::new(structure::KdocNoTrailingSpace),
