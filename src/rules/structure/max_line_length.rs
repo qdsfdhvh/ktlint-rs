@@ -26,9 +26,15 @@ impl Rule for MaxLineLength {
     fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let max_length = self.max_length;
 
-        // Collect rows that are inside a multiline (raw) string literal. Those
-        // lines are data content — ktlint does not measure them.
+        // Rows covered by a multiline (raw) string literal are data content —
+        // not measured.
         let raw_string_rows = raw_string_rows(tree.root_node());
+        // Rows holding an over-long string literal segment: ktlint only
+        // reports a long line when it contains a string literal longer than
+        // the limit — a long code line that wrapping rules can repair is
+        // never reported (oracle: 140-char `= delegate.dispatch(…)` bodies
+        // stay untouched; `val x = "aaa…"` reports).
+        let long_string_rows = long_string_rows(tree.root_node(), source, max_length);
 
         source
             .lines()
@@ -47,6 +53,7 @@ impl Rule for MaxLineLength {
                 };
                 line.chars().count() > max_length
                     && !only_string
+                    && long_string_rows.contains(i)
                     && !trimmed.starts_with("package ")
                     && !trimmed.starts_with("import ")
                     && !trimmed.starts_with("//")
@@ -63,6 +70,33 @@ impl Rule for MaxLineLength {
             })
             .collect()
     }
+}
+
+/// Rows containing a string literal longer than the limit on that row. Only
+/// these rows can trigger max-line-length — a long pure-code line is
+/// reported by the wrapping rules instead (JVM oracle).
+fn long_string_rows(
+    node: tree_sitter::Node,
+    source: &str,
+    max_length: usize,
+) -> std::collections::HashSet<usize> {
+    let mut rows = std::collections::HashSet::new();
+    let mut stack = vec![node];
+    while let Some(current) = stack.pop() {
+        if current.kind() == "string_literal" && current.end_position().row == current.start_position().row {
+            let start = current.start_byte();
+            let end = current.end_byte().min(source.len());
+            if source[start..end].chars().count() > max_length {
+                rows.insert(current.start_position().row);
+            }
+        }
+        for i in (0..current.child_count()).rev() {
+            if let Some(child) = current.child(i) {
+                stack.push(child);
+            }
+        }
+    }
+    rows
 }
 
 /// Rows covered by a multiline string literal (`""" ... """`).

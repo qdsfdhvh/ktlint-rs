@@ -253,28 +253,28 @@ impl FunctionSignatureSpacing {
         if sig_len > self.max_length {
             return; // signature alone too long — ktlint keeps it multiline
         }
-        let body_start = eq.end_byte() + 1;
-        let body_line_end = bytes[body_start..]
-            .iter()
-            .position(|&b| b == b'\n')
-            .map_or(bytes.len(), |i| body_start + i);
-        let body_first = (body_line_end - body_start).max(1);
-        if sig_len + 1 + body_first <= self.max_length {
-            return; // everything fits collapsed
+        let mut after_eq = false;
+        let mut body_expr: Option<tree_sitter::Node> = None;
+        for c in body.children(&mut body.walk()) {
+            if c.kind() == "=" {
+                after_eq = true;
+                continue;
+            }
+            if after_eq && c.is_named() {
+                body_expr = Some(c);
+                break;
+            }
         }
-        // Indent of the declaration line counts too.
-        let decl_start = node.start_byte();
-        let line_start = bytes[..decl_start]
-            .iter()
-            .rposition(|&b| b == b'\n')
-            .map_or(0, |i| i + 1);
-        let indent_len = bytes[line_start..decl_start]
-            .iter()
-            .filter(|&&b| b == b' ' || b == b'\t')
-            .count();
-        if indent_len + sig_len + 1 + body_first <= self.max_length {
+        let Some(body_expr) = body_expr else {
+            return;
+        };
+        // The expression body must span multiple lines — a single-line body
+        // is never reported, however long it is (oracle: 140-char single-line
+        // expression bodies stay untouched; a `= launch {\n…` body reports).
+        if body_expr.start_position().row == body_expr.end_position().row {
             return;
         }
+        let body_start = eq.end_byte() + 1;
         // ktlint reports at the first token of the body expression (the
         // token right after `=`).
         let mut p = eq.end_byte();
