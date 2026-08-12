@@ -74,6 +74,25 @@ spotless oracle match、fmt clean；perf-gates 的 per-file lint 在本机噪声
 OpenApiAnalysisExtension.kt:89、ResourceRouteCallInference.kt:58/59、
 OpenApiTestRunner.kt:52 — 深层 continuation 形状（错 1 层）。
 
+#### C 步调查记录（2026-08-12，全部尝试已回退，保持 0 FP）
+二进制表达式 continuation 的 JVM 规则（探针实证）：
+- **EOL 运算符**（`a() &&\n    b()`、`"a" +\n    "b"`）→ continuation = 表达式
+  首行 + 1 层，双向严格检查（8 正确，12 报 should-be-8，0 报 should-be-8）。
+- **行首运算符**（`first\n    + second`）→ 期望 = 语句行，+1 层容忍
+  （4/8 接受，0/12 报 should-be-4）。`return` 下则严格 4（8 报错）——
+  val/return 行为不一致，原因未定位。
+- 首行锚点：`byteString =\n  (\n    "a" +` → 括号子行 12，cont 14（is=2）。
+
+尝试的实现（均回退）：AST 二进制分支（首行+1）、scan 运算符列表 lift、
+probe 置信度放宽。失败原因：
+- scan 运算符列表误伤 `import libcurl.*`（`*`）、`configuration++`（`+`）、
+  行首 `-`/`+` 字面量。
+- AST 分支对二进制表达式任意后代（块内 `}`、`ByteReadChannel.Empty` 等）
+  都 lift → under-indent FP。需限定“行开始新 operand”+直接父节点。
+- probe 置信度放宽暴露所有未建模锚点（括号-after-`=` 形状的 paren 上下文
+  期望本身就不对：is=2 时 `(` 应 10 我们给 8）。
+- 结论：4 条 ktor + 2 条 okhttp 维持 residual，0 FP 优先（parity gate）。
+
 ### D. okhttp android-test（2 条）
 OkHttpTest.kt:558/559 — (10)should be(8)，错 1 层。
 
