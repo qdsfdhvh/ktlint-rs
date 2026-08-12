@@ -29,6 +29,7 @@ while IFS= read -r f; do
     total=$((total+1))
     [ "$total" -gt "$SAMPLE" ] && break
     rel="${f#./}"
+    rm -rf "$TMP/.cache"
     cp "$FIX/$rel" "$TMP/j.kt"
     cp "$FIX/$rel" "$TMP/r.kt"
     (cd "$TMP" && ktlint --format j.kt >/dev/null 2>&1)
