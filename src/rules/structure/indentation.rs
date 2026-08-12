@@ -107,7 +107,29 @@ impl Rule for Indentation {
             .map(|i| ast_expected(_tree, source, i, is))
             .collect();
         let line_expected: Vec<usize> = (0..lines.len())
-            .map(|i| ast[i].unwrap_or(scan_expected[i]))
+            .map(|i| {
+                if tree_clean {
+                    ast[i].unwrap_or(scan_expected[i])
+                } else {
+                    // Error files: tree-sitter error recovery produces
+                    // garbage ancestry, so the AST classifier's expectations
+                    // are not trustworthy — use the line-scan model for all
+                    // rows (issue #202).
+                    scan_expected[i]
+                }
+            })
+            .collect();
+        // For each annotation row, the row of the declaration it annotates —
+        // the next code line after the annotation (JVM reports a mis-indented
+        // annotation against its declaration's expected indent, issue #202).
+        let annotation_target: Vec<Option<usize>> = (0..lines.len())
+            .map(|i| {
+                if lines[i].trim_start().starts_with('@') {
+                    annotation_target_row(&lines, i)
+                } else {
+                    None
+                }
+            })
             .collect();
 
         for (i, line) in lines.iter().enumerate() {
@@ -134,16 +156,21 @@ impl Rule for Indentation {
                 continue;
             }
 
-            // Skip: blank, comments, annotations, KDoc markers, string-only lines
+            // Skip: blank, comments, KDoc markers, string-only lines,
+            // accessor headers. A standalone annotation row (annotation on
+            // its own line) is only skipped when it has no declaration to
+            // annotate (corrupt file) — otherwise it is checked against its
+            // declaration's expected indent below (issue #202). Rows that
+            // mix an annotation with declaration content (`@JvmField val
+            // x`) are ordinary rows and follow the normal expectation.
             if trimmed.is_empty()
                 || trimmed.starts_with("//")
-                || trimmed.starts_with('@')
                 || trimmed == "*/"
                 || trimmed.starts_with("* ")
                 || trimmed.starts_with("*/")
                 || trimmed.starts_with('"')
-                || trimmed.contains("get(")
-                || trimmed.contains("set(")
+                || accessor_row(trimmed)
+                || (standalone_annotation_row(trimmed) && annotation_target[i].is_none())
             {
                 continue;
             }
@@ -162,7 +189,20 @@ impl Rule for Indentation {
             // except a mis-indented brace (non-multiple) which is reported at
             // the block's depth (covers continuation blocks like a `when {`
             // on a `=` continuation line).
-            let expected_for_line = depth_expected;
+            // A standalone annotation row takes the expected indent of the
+            // declaration it annotates — the next code row (JVM oracle:
+            // `@Test` at the wrong depth is reported against the fun's
+            // indent, issue #202). Rows mixing an annotation with their
+            // declaration (`@JvmField val x: T`) keep the row's own
+            // expectation.
+            let expected_for_line = if standalone_annotation_row(trimmed) {
+                match annotation_target[i] {
+                    Some(d) => line_expected[d],
+                    None => depth_expected,
+                }
+            } else {
+                depth_expected
+            };
             if expected_for_line > spaces {
                 let full_level_short = expected_for_line - spaces >= is;
                 if too_shallow || full_level_short {
@@ -184,11 +224,39 @@ impl Rule for Indentation {
             // over-indented rows are rare, so the tree walk is almost never
             // paid.
             if probe && spaces > expected_for_line {
-                let confident = tree_clean
-                    && ast[i].is_some()
-                    && expected_for_line == scan_expected[i]
-                    && row_starts_statement(_tree, source, i)
-                    && !lambda_in_unconstrained_argument(_tree, source, i);
+                // Confidence for the over-indent probe: the AST classifier
+                // AND the line-scan model must agree on the expected value
+                // AND the row starts a fresh statement (never a continuation
+                // — alignment indents are not modelled exactly). Standalone
+                // annotation rows inherit their declaration row's confidence.
+                let (ast_some, scan_agree, stmt, unconstrained) =
+                    if standalone_annotation_row(trimmed) {
+                        match annotation_target[i] {
+                            Some(d) => (
+                                ast[d].is_some(),
+                                line_expected[d] == scan_expected[d],
+                                // The annotated declaration's node starts at the
+                                // annotation row (tree-sitter), so the statement
+                                // check runs on the annotation row itself.
+                                row_starts_statement(_tree, source, i),
+                                lambda_in_unconstrained_argument(_tree, source, i),
+                            ),
+                            None => (
+                                ast[i].is_some(),
+                                expected_for_line == scan_expected[i],
+                                row_starts_statement(_tree, source, i),
+                                lambda_in_unconstrained_argument(_tree, source, i),
+                            ),
+                        }
+                    } else {
+                        (
+                            ast[i].is_some(),
+                            expected_for_line == scan_expected[i],
+                            row_starts_statement(_tree, source, i),
+                            lambda_in_unconstrained_argument(_tree, source, i),
+                        )
+                    };
+                let confident = tree_clean && ast_some && scan_agree && stmt && !unconstrained;
                 if confident {
                     too_shallow = true;
                     expected_indent = Some(expected_for_line);
@@ -2005,9 +2073,29 @@ fn row_starts_statement(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool
             Some(p) => {
                 if matches!(
                     p.kind(),
-                    "statements" | "class_body" | "enum_class_body" | "secondary_constructor"
+                    "statements"
+                        | "class_body"
+                        | "enum_class_body"
+                        | "secondary_constructor"
+                        | "source_file"
                 ) {
-                    return n.start_position().row == row;
+                    // An annotated declaration's node starts at its first
+                    // annotation row, so the declaration row below an
+                    // annotation fails the start-row equality. Accept a row
+                    // that is itself a standalone annotation, or a row
+                    // directly below a standalone annotation that begins a
+                    // declaration header (issue #202). A bare `suspend …`
+                    // continuation (generic/type argument) is not a
+                    // statement start.
+                    let prev_is_ann = row > 0
+                        && src
+                            .lines()
+                            .nth(row - 1)
+                            .map(|l| l.trim().starts_with('@'))
+                            .unwrap_or(false);
+                    return n.start_position().row == row
+                        || line.trim_start().starts_with('@')
+                        || (prev_is_ann && is_decl_header(line.trim()));
                 }
                 n = p;
             }
@@ -2120,6 +2208,163 @@ fn lambda_in_unconstrained_argument(tree: &tree_sitter::Tree, src: &str, row: us
     named || !lambda_direct
 }
 
+/// True when the trimmed row is a property accessor header: `get() =`,
+/// `get() {`, `set(value) {`, a bare `get`/`set` keyword, optionally after
+/// a visibility modifier or an annotation on the same row (`@InternalAPI
+/// set(value) {`). A `get(`/`set(` substring elsewhere is NOT an accessor —
+/// `@Target(...)` contains `get(` but must be checked (issue #202), and
+/// `.get(0)`/`map.get(k)` calls follow chain rules. Accessor rows stay
+/// unchecked: their indent expectations are not modelled.
+fn accessor_row(trimmed: &str) -> bool {
+    let body = trimmed.trim_start();
+    let stripped = if body.starts_with('@') {
+        body.split_once(' ')
+            .map(|(_, r)| r.trim_start())
+            .unwrap_or("")
+    } else {
+        body
+    };
+    let mut words = stripped.split_whitespace();
+    let first = words.next().unwrap_or("");
+    let second = words.next().unwrap_or("");
+    let is_accessor =
+        |w: &str| w == "get" || w == "set" || w.starts_with("get(") || w.starts_with("set(");
+    is_accessor(first)
+        || (matches!(
+            first,
+            "private" | "public" | "internal" | "protected" | "inline"
+        ) && is_accessor(second))
+}
+
+/// True when the trimmed row is a standalone annotation: an `@` annotation
+/// (optionally with a use-site target like `@get:`) followed only by its own
+/// argument list and nothing else — `@Test`, `@get: Rule(order = 0)`,
+/// `@Deprecated(` (multi-line args). A row that mixes an annotation with
+/// declaration content (`@JvmField val x: T`, `@Deprecated(...) public val
+/// realm`) is an ordinary declaration row, not a standalone annotation
+/// (issue #202).
+fn standalone_annotation_row(t: &str) -> bool {
+    let body = t.trim_start();
+    if !body.starts_with('@') {
+        return false;
+    }
+    let mut depth: isize = 0;
+    let mut end = body.len();
+    for (i, c) in body.char_indices() {
+        if i == 0 {
+            continue;
+        }
+        match c {
+            '(' => depth += 1,
+            ')' => depth = depth.saturating_sub(1),
+            c if c.is_whitespace() && depth == 0 => {
+                // A use-site target (`@get: Rule(...)`) has a space between
+                // the target and the annotation name — keep scanning.
+                if body[1..i].ends_with(':') {
+                    continue;
+                }
+                end = i;
+                break;
+            }
+            _ => {}
+        }
+    }
+    if depth > 0 {
+        // `@Deprecated(` — the argument list continues on later rows.
+        return true;
+    }
+    body[end..].trim().is_empty()
+}
+
+/// The row of the declaration an annotation row annotates: the next code
+/// line after the annotation, skipping blank lines, comments, KDoc markers,
+/// string-only rows, and further annotation rows (`@A\n@B\nfun f` — both
+/// annotations share `fun f`'s indent). Rows inside the annotation's own
+/// multi-line argument list (`@Foo(\n    arg\n)` are annotation
+/// continuations, not the declaration. None when no declaration follows
+/// (annotation at EOF or before a closing brace — corrupt file, uncheckable).
+fn annotation_target_row(lines: &[&str], row: usize) -> Option<usize> {
+    let mut depth: isize = 0;
+    let mut in_args = false;
+    for (j, l) in lines.iter().enumerate().skip(row) {
+        let code = l.split("//").next().unwrap_or("");
+        if j == row {
+            // The annotation row itself: count its own parens so a
+            // multi-line argument list is skipped below.
+            depth = count_parens(code);
+            in_args = depth > 0;
+            continue;
+        }
+        if in_args {
+            // Inside an annotation's argument list — includes the row that
+            // closes it (`)`): annotation continuations are not the
+            // declaration.
+            depth += count_parens(code);
+            if depth <= 0 {
+                in_args = false;
+            }
+            continue;
+        }
+        let t = l.trim();
+        if t.starts_with('@') {
+            if standalone_annotation_row(t) {
+                // A further stacked annotation (`@A\n@B(...)`): its own args
+                // must also be skipped before reaching the declaration.
+                depth = count_parens(code);
+                if depth > 0 {
+                    in_args = true;
+                }
+                continue;
+            }
+            // A row mixing an annotation with declaration content
+            // (`@JvmField val x`, `@Synchronized fun f`) IS the declaration
+            // itself — it is the annotation's target.
+            if accessor_row(t) {
+                return None;
+            }
+            return Some(j);
+        }
+        if t.is_empty()
+            || t.starts_with("//")
+            || t.starts_with("/*")
+            || t.starts_with('*')
+            || t.starts_with('"')
+        {
+            continue;
+        }
+        // An accessor header is not a declaration row the annotation can
+        // inherit an indent from (accessor expectations are unmodelled) —
+        // treat the annotation as uncheckable (issue #202).
+        if accessor_row(t) {
+            return None;
+        }
+        return Some(j);
+    }
+    None
+}
+
+/// Paren balance of a code slice, ignoring string literals (single `"`
+/// toggles, backslash-escaped chars skipped) so `@Suppress("a(b)")` stays
+/// balanced and multi-line annotation args are tracked correctly (issue
+/// #202).
+fn count_parens(code: &str) -> isize {
+    let mut depth: isize = 0;
+    let mut in_str = false;
+    let mut chars = code.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                chars.next();
+            }
+            '"' => in_str = !in_str,
+            '(' if !in_str => depth += 1,
+            ')' if !in_str => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    depth
+}
+
 /// The opening row of the block a `statements` node belongs to.
 /// A row that begins a declaration header (`val x`, `fun f`, annotations,
 /// modifiers) is a block member, not a continuation — only rows carrying
@@ -2192,6 +2437,11 @@ mod ast_matrix {
     use crate::parser::KotlinParser;
     use crate::rules::structure::indentation::ast_expected;
     use crate::rules::structure::indentation::lambda_in_unconstrained_argument;
+    use crate::rules::structure::indentation::Indentation;
+    use crate::rules::Rule;
+    // Tests toggle KTLINT_RS_INDENT_PROBE via the process env; a shared lock
+    // keeps the concurrent test threads from clobbering each other.
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn issue202_lambda_arg_brace_aligns_with_args() {
@@ -2311,6 +2561,78 @@ mod ast_matrix {
     }
 
     #[test]
+    fn issue202_annotation_under_indent_reported() {
+        // A standalone annotation at the wrong (too shallow) depth is
+        // reported against its declaration's expected indent, like JVM
+        // ktlint: `@Test` at 0 inside a class body (should be 4).
+        let src = "class Foo {\n    fun ok() {}\n@Test\nfun bad() {}\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        // JVM reports both the annotation and its mis-indented declaration.
+        assert_eq!(rows, vec![3, 4]);
+    }
+
+    #[test]
+    fn issue202_annotation_over_indent_reported() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Probe mode (issue #202 measurement): over-indented standalone
+        // annotations are reported when the declaration's expectation is
+        // confident (`@Test` at 8 should be 4).
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let src = "class Foo {\n    fun ok() {}\n        @Test\n    fun bad() {}\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert_eq!(rows, vec![3]);
+    }
+
+    #[test]
+    fn issue202_annotation_stack_and_multiline_args() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Stacked standalone annotations share the declaration's expected
+        // indent: `@Marker` / `@Target(...)` at 8 above `val prop` at 4 are
+        // both reported.
+        let src = "@Target(AnnotationTarget.FUNCTION)\nannotation class Marker\n\nclass Baz {\n        @Marker\n        @Target(AnnotationTarget.FUNCTION)\n    val prop: Int = 1\n}\n";
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert_eq!(rows, vec![5, 6]);
+    }
+
+    #[test]
+    fn issue202_combined_annotation_row_uses_own_expectation() {
+        // A row mixing an annotation with its declaration (`@JvmField val
+        // x`) is an ordinary declaration row — correctly indented combined
+        // rows in a class parameter list produce no report.
+        let src = "class C(\n    @JvmField val node: Node,\n) {\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        assert!(violations.is_empty(), "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_accessor_annotation_skipped() {
+        // An annotation on a property accessor (`@Deprecated` above `set`)
+        // stays unchecked — accessor indent expectations are not modelled.
+        let src =
+            "class C {\n    public var x: Int = 1\n        @Deprecated(\"old\")\n        set\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        assert!(violations.is_empty(), "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_top_level_annotated_class() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Top-level annotations (`@Marker` before `class TopLevelBad`) are
+        // checked against the class's expected indent (0).
+        let src = "class Foo {}\n\n        @Marker\nclass TopLevelBad {}\n";
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert_eq!(rows, vec![3]);
+    }
+
     fn matrix() {
         expect_ok(
             "package c\n\nfun f() {\n    val x = 1\n    if (x) {\n        a()\n    }\n}\n",
