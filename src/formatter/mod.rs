@@ -610,6 +610,15 @@ fn format_once(
             fix_statement_wrapping(input, indent_size)
         })?;
     }
+    if rule_enabled(
+        rule_configs,
+        "standard:multiline-expression-wrapping",
+        code_style,
+    ) {
+        text = safe_transform("standard:multiline-expression-wrapping", &text, |input| {
+            fix_multiline_expression_wrapping(input, indent_size)
+        })?;
+    }
     if rule_enabled(rule_configs, "standard:indent", code_style) {
         text = safe_transform("standard:indent", &text, |input| {
             fix_indentation(input, indent_size)
@@ -1361,6 +1370,117 @@ fn fix_semicolon_newlines(source: &str, _indent_size: usize) -> String {
         text.replace_range(start..end, &repl);
     }
     text
+}
+
+/// standard:multiline-expression-wrapping — move a multiline RHS of `=`
+/// (property initializer, expression-body function, parameter default) onto
+/// its own line when its first token shares the `=` line, and indent the
+/// whole RHS one level deeper (JVM oracle, issue #202). A bare lambda RHS
+/// (`val f = { x ->`) is exempt, matching the check rule.
+fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    // (rhs_col, rhs_start_row, rhs_end_row)
+    let mut rewrites: Vec<(usize, usize, usize)> = Vec::new();
+    let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        match node.kind() {
+            "property_declaration" | "function_value_parameters" | "function_body" => {
+                find_multiline_rhs(&node, source, &mut rewrites);
+            }
+            _ => {}
+        }
+        for i in (0..node.child_count()).rev() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if rewrites.is_empty() {
+        return source.to_string();
+    }
+    let lines: Vec<&str> = source.split_inclusive('\n').collect();
+    let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+    // Apply bottom-up so earlier row edits do not shift later rows.
+    rewrites.sort_by_key(|&(_, start, _)| std::cmp::Reverse(start));
+    for &(eq_col, start, end) in &rewrites {
+        let first = &out[start];
+        let base_indent = first.len() - first.trim_start().len();
+        let col = eq_col.min(first.len());
+        let before = &first[..col].trim_end(); // `... =`
+        let rhs_head = first[col..].trim_start().trim_end_matches('\n');
+        let indent = " ".repeat(base_indent + indent_size);
+        let mut first_line = format!("{}\n{}{}", before, indent, rhs_head);
+        if first.ends_with('\n') {
+            first_line.push('\n');
+        }
+        out[start] = first_line;
+        // Shift the remaining RHS rows one level deeper than their current
+        // indent (the whole RHS block moves right by one level).
+        for row in (start + 1)..=end {
+            let l = &out[row];
+            let cur_indent = l.len() - l.trim_start().len();
+            let body = l.trim_start().trim_end_matches('\n');
+            if !body.is_empty() {
+                out[row] = format!(
+                    "{}{}{}",
+                    " ".repeat(cur_indent + indent_size),
+                    body,
+                    if l.ends_with('\n') { "\n" } else { "" }
+                );
+            }
+        }
+    }
+    out.concat()
+}
+
+/// Find the first named node after `=` in a property/parameter/expression-body
+/// container and record its `=` end byte plus the RHS row span when the
+/// expression is multiline while its first token shares the `=` line. A bare
+/// lambda literal is exempt.
+fn find_multiline_rhs(
+    node: &tree_sitter::Node,
+    source: &str,
+    rewrites: &mut Vec<(usize, usize, usize)>,
+) {
+    // Expression-body function whose signature itself spans multiple lines
+    // (`fun f(\n    a: Int,\n) = apply {`) is exempt — the check rule
+    // reports nothing there either (oracle), so the fixer must not split.
+    if node.kind() == "function_body"
+        && node.parent().is_some_and(|p| {
+            p.children(&mut p.walk()).any(|c| {
+                c.kind() == "function_value_parameters"
+                    && c.start_position().row != c.end_position().row
+            })
+        })
+    {
+        return;
+    }
+    let mut after_eq = false;
+    for c in node.children(&mut node.walk()) {
+        if c.kind() == "=" {
+            after_eq = true;
+            continue;
+        }
+        if after_eq && c.is_named() {
+            if c.kind() == "lambda_literal" {
+                return;
+            }
+            let start = c.start_position().row;
+            let end = c.end_position().row;
+            if end > start {
+                // First token must share the `=` line (not already on its
+                // own line).
+                let line = source.lines().nth(start).unwrap_or("");
+                let col = c.start_position().column.min(line.len());
+                if line[..col].trim().is_empty() {
+                    return;
+                }
+                rewrites.push((col, start, end));
+            }
+            return;
+        }
+    }
 }
 
 fn fix_indentation(source: &str, indent_size: usize) -> String {
@@ -3002,6 +3122,8 @@ mod tests {
         let end_op = "val x = a +\n    b\n";
         assert_eq!(fix_expression_operand_wrapping(end_op), end_op);
     }
+
+
 
     #[test]
     fn fix_indent() {
