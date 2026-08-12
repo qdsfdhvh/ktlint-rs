@@ -1623,16 +1623,21 @@ pub(crate) fn ast_expected(
             }
             "statements" => {
                 if let Some(owner) = c.parent() {
-                    // Brace-less `for` body: `for (i in 1..10_000)` complete
-                    // on its own line, the following statement is its body at
-                    // +1 level (oracle). tree-sitter parses the body as a
-                    // sibling statement (no control_structure_body in the
-                    // ancestor chain), so detect it textually.
+                    // Brace-less control-statement body: `for (i in 1..10_000)`
+                    // / `if (x)` / `while (x)` complete on their own line,
+                    // the following statement is the body at +1 level
+                    // (oracle). tree-sitter parses these bodies as sibling
+                    // statements (no control_structure_body in the ancestor
+                    // chain for some shapes, e.g. inside parentheses), so
+                    // detect it textually.
                     if row > 0 && !trimmed.starts_with('}') {
                         let prev_raw = src.lines().nth(row - 1).unwrap_or("");
                         let prev_trim = prev_raw.trim();
                         let prev_code = prev_trim.split("//").next().unwrap_or("").trim_end();
-                        if prev_code.starts_with("for ") {
+                        let starts_control = ["for ", "if ", "while "]
+                            .iter()
+                            .any(|k| prev_code.starts_with(k));
+                        if starts_control {
                             if let Some(close) = header_close_paren(prev_code) {
                                 if prev_code[close + 1..].trim().is_empty() {
                                     return ast_expected(tree, src, row - 1, is).map(|e| e + is);
@@ -1749,6 +1754,32 @@ pub(crate) fn ast_expected(
                 }
             }
             "class_body" | "function_body" | "enum_class_body" => {
+                let is_class = matches!(c.kind(), "class_body" | "enum_class_body");
+                // Class/enum members and closing braces sit relative to the
+                // class header's base line. For a multiline primary
+                // constructor that is the `)` row
+                // (`class C\n  @X\n  constructor(\n    a: Int\n  ) : Base {`)
+                // — not the class declaration row (oracle: okhttp style).
+                // Function bodies keep the header row.
+                let base_row = if is_class {
+                    c.parent()
+                        .and_then(|owner| {
+                            owner
+                                .children(&mut owner.walk())
+                                .find(|k| {
+                                    k.kind() == "class_parameters"
+                                        || k.kind() == "primary_constructor"
+                                })
+                                .map(|pc| pc.end_position().row)
+                                .filter(|r| *r > owner.start_position().row)
+                                .or(Some(owner.start_position().row))
+                        })
+                        .unwrap_or(c.start_position().row)
+                } else {
+                    c.parent()
+                        .map(|p| p.start_position().row)
+                        .unwrap_or(c.start_position().row)
+                };
                 if trimmed.starts_with('}') {
                     // A `}` inside an `init { }` block closes at the init
                     // row (oracle: `init {\n    …\n}`).
@@ -1758,12 +1789,16 @@ pub(crate) fn ast_expected(
                         return ast_expected(tree, src, init.start_position().row, is);
                     }
                     // The closing `}` returns to the block's opening row —
-                    // the Allman `{` row when it is alone, the header row
-                    // otherwise.
+                    // the header base for class bodies (constructor-style
+                    // classes close at the `)` row's level), the Allman `{`
+                    // row / header row otherwise.
+                    if is_class {
+                        return ast_expected(tree, src, base_row, is);
+                    }
                     return ast_expected(tree, src, block_open_row(c, src), is);
                 }
                 if let Some(owner) = c.parent() {
-                    return ast_expected(tree, src, owner.start_position().row, is).map(|e| e + is);
+                    return ast_expected(tree, src, base_row, is).map(|e| e + is);
                 }
             }
             "anonymous_initializer" => {
@@ -1932,7 +1967,16 @@ pub(crate) fn ast_expected(
                         // \n)` closes at the val row).
                         return ast_expected(tree, src, c.start_position().row, is);
                     }
-                    return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
+                    // A row inside a parenthesized value
+                    // (`val x =\n    (\n        if (…) {`) sits one level
+                    // deeper than the value's first row (oracle).
+                    let nested_paren = chain.iter().any(|n| {
+                        n.kind() == "parenthesized_expression"
+                            && n.start_position().row < row
+                            && n.start_position().row > c.start_position().row
+                    });
+                    let extra = if nested_paren { 2 * is } else { is };
+                    return ast_expected(tree, src, c.start_position().row, is).map(|e| e + extra);
                 }
             }
             _ => {}
@@ -2163,6 +2207,17 @@ mod ast_matrix {
         let tree = KotlinParser::new().parse(src);
         assert_eq!(ast_expected(&tree, src, 3, 4), Some(4));
         assert_eq!(ast_expected(&tree, src, 4, 4), Some(4));
+    }
+
+    #[test]
+    fn issue202_class_members_follow_constructor_base() {
+        // okhttp-style header: `class C\n    constructor(\n        x: Int\n    ) : Base {` —
+        // class members sit one level deeper than the `)` row, and enum
+        // entries one level deeper than the enum row.
+        expect_ok(
+            "class C\n    constructor(\n        val x: Int? = null,\n    ) : Base {\n        enum class Level {\n            NONE,\n            HEADERS,\n        }\n    }\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 4), (5, 8), (6, 12), (7, 12), (8, 8), (9, 4)],
+        );
     }
 
     fn expect_ok(src: &str, row_expected: &[(usize, usize)]) {
