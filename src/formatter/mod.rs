@@ -478,8 +478,20 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
+        // Generic brackets must run on the UNMASKED text: mask_protected fences
+        // type_arguments/type_parameters with sentinels so text fixers (op-spacing)
+        // cannot corrupt `List<String>`, which would hide the brackets from this
+        // CST-driven pass. It is called directly rather than through
+        // safe_transform: protected_snapshot counts type_arguments/type_parameters
+        // as protected regions (for the text fixers' sake), so a transform whose
+        // whole job is to edit those regions would always fail the
+        // protected-region diff. The pass is inherently safe — it only deletes
+        // single spaces adjacent to CST-verified `<`/`>` tokens.
+        if rule_enabled(rule_configs, "standard:spacing-around-angle-brackets", code_style) {
+            text = fix_angle_brackets(&text);
+        }
         type Pass = (&'static str, fn(&str) -> String);
-        let passes: [Pass; 29] = [
+        let passes: [Pass; 28] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -516,7 +528,6 @@ fn apply_spacing_rules(
             ("standard:op-spacing", fix_operators),
             ("standard:comma-spacing", fix_commas),
             ("standard:paren-spacing", fix_parens),
-            ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
             ("standard:fun-keyword-spacing", fix_keyword_spacing),
             ("standard:function-return-type-spacing", fix_colons),
@@ -771,6 +782,7 @@ fn fix_all_spacing(source: &str) -> String {
         return source.to_string();
     }
     let spread_fixed = fix_spread_operators(source, &initial_tree);
+    let spread_fixed = fix_angle_brackets(&spread_fixed);
     let tree = parser.parse(&spread_fixed);
     if tree.root_node().has_error() {
         return source.to_string();
@@ -787,7 +799,6 @@ fn fix_all_spacing(source: &str) -> String {
         text = fix_operators(&text);
         text = fix_commas(&text);
         text = fix_parens(&text);
-        text = fix_angle_brackets(&text);
         text = fix_colons(&text);
         text = fix_keyword_spacing(&text);
         text = fix_range_spacing(&text);
@@ -1826,11 +1837,81 @@ fn fix_commas(source: &str) -> String {
 }
 
 fn fix_angle_brackets(source: &str) -> String {
-    // Disabled: a text-level `< `→`<` / ` >`→`>` cannot tell a generic (`List<T>`,
-    // now masked anyway) from the comparison operators `a < b` / `a >= b`, and
-    // corrupted the latter. Generic tidy is handled by masking; comparison spacing
-    // by fix_operators. Kept as a no-op so the pipeline order is unchanged.
-    source.to_string()
+    // CST-driven mirror of ktlint 1.8 spacing-around-angle-brackets: for every
+    // type-argument/type-parameter list, drop a space directly before `<`
+    // (unless the token before it is `fun`/`val`/`var`), directly after `<`, and
+    // directly before `>`. Newline whitespace (multiline generic lists) is left
+    // to the indentation pass, and the space after `>` is never touched.
+    // A text-level pass cannot do this safely — `a < b` is a comparison, not a
+    // generic — so we walk the CST, which only marks true generic brackets.
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut deletions: Vec<(usize, usize)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        let kind = node.kind();
+        if kind == "type_arguments" || kind == "type_parameters" {
+            if let Some(lt) = node.child(0) {
+                if lt.kind() == "<" {
+                    // Space directly before `<`: drop unless preceded by fun/val/var.
+                    let before = &bytes[..lt.start_byte()];
+                    if let Some(ws_start) = before.iter().rposition(|&b| !b.is_ascii_whitespace()).map(|i| i + 1) {
+                        if ws_start < lt.start_byte() {
+                            let mut p = ws_start;
+                            while p > 0
+                                && (bytes[p - 1].is_ascii_alphanumeric() || bytes[p - 1] == b'_')
+                            {
+                                p -= 1;
+                            }
+                            let prev_tok = &source[p..ws_start];
+                            if prev_tok != "fun" && prev_tok != "val" && prev_tok != "var" {
+                                deletions.push((ws_start, lt.start_byte()));
+                            }
+                        }
+                    }
+                    // Space directly after `<` (no newline): drop.
+                    let mut ws_end = lt.end_byte();
+                    while ws_end < bytes.len() && (bytes[ws_end] == b' ' || bytes[ws_end] == b'\t')
+                    {
+                        ws_end += 1;
+                    }
+                    if ws_end > lt.end_byte() {
+                        deletions.push((lt.end_byte(), ws_end));
+                    }
+                }
+            }
+            if let Some(gt) = node.child(node.child_count() - 1) {
+                if gt.kind() == ">" {
+                    // Space directly before `>` (no newline): drop.
+                    let before = &bytes[..gt.start_byte()];
+                    if let Some(ws_start) =
+                        before.iter().rposition(|&b| !b.is_ascii_whitespace()).map(|i| i + 1)
+                    {
+                        if ws_start < gt.start_byte() && bytes[ws_start..gt.start_byte()].iter().all(|&b| b == b' ' || b == b'\t')
+                        {
+                            deletions.push((ws_start, gt.start_byte()));
+                        }
+                    }
+                }
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(child) = node.child(i) {
+                stack.push(child);
+            }
+        }
+    }
+    if deletions.is_empty() {
+        return source.to_string();
+    }
+    deletions.sort_by_key(|r| std::cmp::Reverse(r.0));
+    let mut out = source.to_string();
+    for (start, end) in deletions {
+        out.replace_range(start..end, "");
+    }
+    out
 }
 
 fn fix_parens(source: &str) -> String {
@@ -3448,6 +3529,50 @@ catch(e: E) { b() }"
         let r = fix_all_spacing(src);
         assert!(r.contains("a >= b"), "comparison mangled: {r:?}");
     }
+
+
+
+
+
+
+    #[test]
+    fn nested_generic_and_comparison_left_alone() {
+        // Nested generic lists (inner and outer) are both tidied. A bare type
+        // expression as a property initializer (`val x = Map<String, ...`) is not
+        // valid Kotlin anyway and fails closed in tree-sitter; the real shape is a
+        // return/parameter type.
+        let src = "fun f(): Map<String, List < Int > > = mapOf()\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("Map<String, List<Int>>"), "nested generic: {r:?}");
+        // Comparison chains are not generic lists and keep their spaces.
+        let src2 = "val y = a < b > c\n";
+        let r2 = fix_all_spacing(src2);
+        assert!(r2.contains("a < b > c"), "comparison mangled: {r2:?}");
+    }
+
+    #[test]
+    fn generic_angle_spacing_fixed() {
+        // ktlint 1.8 spacing-around-angle-brackets: `<` before/after and `>`
+        // before get their spaces dropped; `>` after is untouched.
+        let src = "fun f(): ReadOnlyProperty < Any, String> = ReadOnlyProperty { x -> x }\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("ReadOnlyProperty<Any, String> ="),
+            "generic spacing not fixed: {r:?}"
+        );
+    }
+
+    #[test]
+    fn fun_type_parameter_keeps_space() {
+        // `fun <T> foo()` keeps the space after `fun` (ELEMENT_TYPES_ALLOWING_
+        // PRECEDING_WHITESPACE), while `Foo <T>` becomes `Foo<T>`.
+        let src = "fun <T> foo(x: Foo <T>) = x\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("fun <T> foo"), "fun space dropped: {r:?}");
+        assert!(r.contains("Foo<T>"), "class name space kept: {r:?}");
+    }
+
+
 
     #[test]
     fn blank_line_in_lambda_block_preserved() {
