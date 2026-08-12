@@ -30,10 +30,7 @@ fn intellij_alias(arg: &str) -> Option<String> {
 /// Collect suppression ranges from the CST: find `@Suppress`/`@SuppressWarnings`
 /// annotations (including `@file:`) and resolve the annotated element's row
 /// span (the declaration that carries the annotation).
-pub fn collect_suppressions(
-    tree: &tree_sitter::Tree,
-    source: &str,
-) -> Vec<SuppressRange> {
+pub fn collect_suppressions(tree: &tree_sitter::Tree, source: &str) -> Vec<SuppressRange> {
     let mut ranges: Vec<SuppressRange> = Vec::new();
     let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
     while let Some(node) = stack.pop() {

@@ -213,7 +213,8 @@ impl RuleEngine {
         violations.retain(|v| {
             let row = v.line.saturating_sub(1);
             !suppressions.iter().any(|s| {
-                row >= s.start_row && row <= s.end_row
+                row >= s.start_row
+                    && row <= s.end_row
                     && (s.rules.is_empty() || s.rules.contains(v.rule_id.as_str()))
             })
         });

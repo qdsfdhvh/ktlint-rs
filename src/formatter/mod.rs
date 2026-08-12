@@ -487,7 +487,11 @@ fn apply_spacing_rules(
         // whole job is to edit those regions would always fail the
         // protected-region diff. The pass is inherently safe — it only deletes
         // single spaces adjacent to CST-verified `<`/`>` tokens.
-        if rule_enabled(rule_configs, "standard:spacing-around-angle-brackets", code_style) {
+        if rule_enabled(
+            rule_configs,
+            "standard:spacing-around-angle-brackets",
+            code_style,
+        ) {
             text = fix_angle_brackets(&text);
         }
         type Pass = (&'static str, fn(&str) -> String);
@@ -1857,7 +1861,11 @@ fn fix_angle_brackets(source: &str) -> String {
                 if lt.kind() == "<" {
                     // Space directly before `<`: drop unless preceded by fun/val/var.
                     let before = &bytes[..lt.start_byte()];
-                    if let Some(ws_start) = before.iter().rposition(|&b| !b.is_ascii_whitespace()).map(|i| i + 1) {
+                    if let Some(ws_start) = before
+                        .iter()
+                        .rposition(|&b| !b.is_ascii_whitespace())
+                        .map(|i| i + 1)
+                    {
                         if ws_start < lt.start_byte() {
                             let mut p = ws_start;
                             while p > 0
@@ -1886,10 +1894,15 @@ fn fix_angle_brackets(source: &str) -> String {
                 if gt.kind() == ">" {
                     // Space directly before `>` (no newline): drop.
                     let before = &bytes[..gt.start_byte()];
-                    if let Some(ws_start) =
-                        before.iter().rposition(|&b| !b.is_ascii_whitespace()).map(|i| i + 1)
+                    if let Some(ws_start) = before
+                        .iter()
+                        .rposition(|&b| !b.is_ascii_whitespace())
+                        .map(|i| i + 1)
                     {
-                        if ws_start < gt.start_byte() && bytes[ws_start..gt.start_byte()].iter().all(|&b| b == b' ' || b == b'\t')
+                        if ws_start < gt.start_byte()
+                            && bytes[ws_start..gt.start_byte()]
+                                .iter()
+                                .all(|&b| b == b' ' || b == b'\t')
                         {
                             deletions.push((ws_start, gt.start_byte()));
                         }
@@ -3204,8 +3217,6 @@ mod tests {
         assert_eq!(fix_expression_operand_wrapping(end_op), end_op);
     }
 
-
-
     #[test]
     fn fix_indent() {
         let src = "class Foo {\nval x = 1\n}";
@@ -3530,11 +3541,6 @@ catch(e: E) { b() }"
         assert!(r.contains("a >= b"), "comparison mangled: {r:?}");
     }
 
-
-
-
-
-
     #[test]
     fn nested_generic_and_comparison_left_alone() {
         // Nested generic lists (inner and outer) are both tidied. A bare type
@@ -3543,7 +3549,10 @@ catch(e: E) { b() }"
         // return/parameter type.
         let src = "fun f(): Map<String, List < Int > > = mapOf()\n";
         let r = fix_all_spacing(src);
-        assert!(r.contains("Map<String, List<Int>>"), "nested generic: {r:?}");
+        assert!(
+            r.contains("Map<String, List<Int>>"),
+            "nested generic: {r:?}"
+        );
         // Comparison chains are not generic lists and keep their spaces.
         let src2 = "val y = a < b > c\n";
         let r2 = fix_all_spacing(src2);
@@ -3571,8 +3580,6 @@ catch(e: E) { b() }"
         assert!(r.contains("fun <T> foo"), "fun space dropped: {r:?}");
         assert!(r.contains("Foo<T>"), "class name space kept: {r:?}");
     }
-
-
 
     #[test]
     fn blank_line_in_lambda_block_preserved() {

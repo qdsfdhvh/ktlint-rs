@@ -173,12 +173,6 @@ mod tests {
         ArgumentListWrapping.check(&p.parse(s), s)
     }
 
-
-
-
-
-
-
     #[test]
     fn short_list_no_wrap() {
         assert!(c("val x = listOf(1, 2, 3)\n").is_empty());

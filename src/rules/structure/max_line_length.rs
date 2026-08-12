@@ -83,7 +83,9 @@ fn long_string_rows(
     let mut rows = std::collections::HashSet::new();
     let mut stack = vec![node];
     while let Some(current) = stack.pop() {
-        if current.kind() == "string_literal" && current.end_position().row == current.start_position().row {
+        if current.kind() == "string_literal"
+            && current.end_position().row == current.start_position().row
+        {
             let start = current.start_byte();
             let end = current.end_byte().min(source.len());
             if source[start..end].chars().count() > max_length {
