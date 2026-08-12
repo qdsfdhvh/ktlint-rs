@@ -187,7 +187,8 @@ impl Rule for Indentation {
                 let confident = tree_clean
                     && ast[i].is_some()
                     && expected_for_line == scan_expected[i]
-                    && row_starts_statement(_tree, source, i);
+                    && row_starts_statement(_tree, source, i)
+                    && !lambda_in_unconstrained_argument(_tree, source, i);
                 if confident {
                     too_shallow = true;
                     expected_indent = Some(expected_for_line);
@@ -2066,6 +2067,59 @@ fn lambda_in_condition(lambda: &tree_sitter::Node) -> bool {
     false
 }
 
+/// True when the row sits inside a lambda that is an argument value whose
+/// indentation ktlint does not constrain: a lambda nested inside an argument
+/// expression (`builder(\n    X.map {\n        …`) or a named-argument lambda
+/// (`onClick =\n    { …`). ktlint's indent rule yields no expectation for
+/// these rows (oracle: any indent is accepted), so over-indentation cannot
+/// be reported on them. A bare positional lambda argument (`call(\n    {`)
+/// stays strict.
+fn lambda_in_unconstrained_argument(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+    let line = src.lines().nth(row).unwrap_or("");
+    let col = line.len() - line.trim_start().len();
+    let point = tree_sitter::Point { row, column: col };
+    let Some(mut n) = tree.root_node().descendant_for_point_range(point, point) else {
+        return false;
+    };
+    let mut has_lambda = false;
+    let mut has_arg = false;
+    let mut lambda_direct = false;
+    let mut arg_row = 0usize;
+    loop {
+        match n.kind() {
+            "lambda_literal" => {
+                has_lambda = true;
+                let direct = match n.parent() {
+                    Some(p) if p.kind() == "value_argument" => true,
+                    Some(p) if p.kind() == "annotated_lambda" => {
+                        matches!(p.parent().map(|g| g.kind()), Some("value_argument"))
+                    }
+                    _ => false,
+                };
+                lambda_direct = direct;
+            }
+            "value_argument" => {
+                has_arg = true;
+                arg_row = n.start_position().row;
+            }
+            _ => {}
+        }
+        match n.parent() {
+            Some(p) => n = p,
+            None => break,
+        }
+    }
+    if !has_lambda || !has_arg {
+        return false;
+    }
+    // Named argument (`name =` on the owning line)? ktlint leaves the value
+    // unconstrained either way — nested lambdas are free, named lambdas are
+    // free; only a bare positional lambda argument is strict.
+    let arg_code = src.lines().nth(arg_row).unwrap_or("").trim();
+    let named = arg_code.contains('=');
+    named || !lambda_direct
+}
+
 /// The opening row of the block a `statements` node belongs to.
 /// A row that begins a declaration header (`val x`, `fun f`, annotations,
 /// modifiers) is a block member, not a continuation — only rows carrying
@@ -2137,6 +2191,7 @@ fn block_open_row(owner: &tree_sitter::Node, src: &str) -> usize {
 mod ast_matrix {
     use crate::parser::KotlinParser;
     use crate::rules::structure::indentation::ast_expected;
+    use crate::rules::structure::indentation::lambda_in_unconstrained_argument;
 
     #[test]
     fn issue202_lambda_arg_brace_aligns_with_args() {
@@ -2200,6 +2255,25 @@ mod ast_matrix {
     }
 
     #[test]
+    fn issue202_unconstrained_argument_lambda_skipped() {
+        // Argument values containing a lambda are unconstrained by ktlint
+        // (any indent accepted) — the probe must not report over-indentation
+        // inside them. A bare positional lambda argument stays strict.
+        let tree = KotlinParser::new().parse(
+            "fun main() {\n    builder(\n        userAgent = \"x\",\n        enabled =\n            ConnectionSpec.cipherSuites.map {\n                foo()\n            },\n    )\n}\n",
+        );
+        let src = "fun main() {\n    builder(\n        userAgent = \"x\",\n        enabled =\n            ConnectionSpec.cipherSuites.map {\n                foo()\n            },\n    )\n}\n";
+        // lambda body inside a named-argument chain value → unconstrained
+        assert!(lambda_in_unconstrained_argument(&tree, src, 5));
+        // the `.map {` value row itself (chain, no lambda in the chain yet) —
+        // not classified as unconstrained (blocked by other gates anyway)
+        assert!(!lambda_in_unconstrained_argument(&tree, src, 4));
+        // a bare positional lambda argument stays strict
+        let src2 = "fun main() {\n    withUrl(\n        \"/\",\n        {\n            method = HttpMethod.Post\n        }\n    )\n}\n";
+        let tree2 = KotlinParser::new().parse(src2);
+        assert!(!lambda_in_unconstrained_argument(&tree2, src2, 4));
+    }
+
     fn issue202_over_indent_reported_when_confident() {
         // The issue #202 repro: over-indentation on a multiple of
         // indent_size is reported when the classifier is confident.
