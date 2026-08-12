@@ -155,13 +155,15 @@ impl RuleEngine {
             if rule.requires_type_resolution() && self.config.skip_type_resolution {
                 continue;
             }
-            // standard:filename needs the file path; everything else shares
-            // the per-file SymbolTable (11 L1 rules use it).
-            let rule_violations = if rule.id() == "standard:filename" {
-                rule.check_with_path(path, tree, source)
-            } else {
-                rule.check_with_symbols(tree, source, Some(&sym_table))
-            };
+            // standard:filename and standard:indent need the file path;
+            // everything else shares the per-file SymbolTable (11 L1 rules
+            // use it). indent skips `.kts` scripts by extension (issue #202).
+            let rule_violations =
+                if rule.id() == "standard:filename" || rule.id() == "standard:indent" {
+                    rule.check_with_path(path, tree, source)
+                } else {
+                    rule.check_with_symbols(tree, source, Some(&sym_table))
+                };
             for mut v in rule_violations {
                 v.file = path.to_string();
                 violations.push(v);

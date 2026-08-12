@@ -1,3 +1,4 @@
+use crate::config::CodeStyle;
 use crate::rules::{Rule, Violation};
 
 /// JVM-compatible indentation check.
@@ -7,11 +8,20 @@ use crate::rules::{Rule, Violation};
 /// KDoc, and KTS files.
 pub struct Indentation {
     indent_size: usize,
+    code_style: CodeStyle,
 }
 
 impl Indentation {
     pub fn new(indent_size: usize) -> Self {
-        Self { indent_size }
+        Self {
+            indent_size,
+            code_style: CodeStyle::default(),
+        }
+    }
+
+    pub fn with_code_style(mut self, style: CodeStyle) -> Self {
+        self.code_style = style;
+        self
     }
 }
 
@@ -20,55 +30,34 @@ impl Rule for Indentation {
         "standard:indent"
     }
 
+    /// `.kts` scripts are skipped by extension (the engine passes the path
+    /// only to the rules that opt in). JVM ktlint does lint scripts, but the
+    /// differential corpus is `.kt`-only, and the script shapes are not yet
+    /// modelled — the skip keeps the gate's FP at 0 (issue #202).
+    fn check_with_path(
+        &self,
+        path: &str,
+        tree: &tree_sitter::Tree,
+        source: &str,
+    ) -> Vec<Violation> {
+        if path.ends_with(".kts") {
+            return Vec::new();
+        }
+        self.check(tree, source)
+    }
+
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+        CODE_STYLE.with(|c| c.set(self.code_style));
         let mut violations = Vec::new();
         let is = self.indent_size;
         let lines: Vec<&str> = source.lines().collect();
         let mut in_block_comment = false;
         let mut in_raw_string = false;
 
-        // Detect KTS files: if no class/fun/object declarations, skip indent.
-        // Skip leading modifiers (public/private/sealed/data/...) before
-        // checking the first keyword — `public sealed interface` must count.
-        let is_kts = !lines.iter().any(|l| {
-            let t = l.trim();
-            if t.is_empty() || t.starts_with("//") || t.starts_with("/*") || t.starts_with("*") {
-                return false;
-            }
-            let mut words = t.split_whitespace();
-            let mut kw = words.next().unwrap_or("");
-            while matches!(
-                kw,
-                "public"
-                    | "private"
-                    | "protected"
-                    | "internal"
-                    | "open"
-                    | "abstract"
-                    | "final"
-                    | "sealed"
-                    | "data"
-                    | "inline"
-                    | "external"
-                    | "const"
-                    | "suspend"
-                    | "override"
-                    | "companion"
-                    | "annotation"
-                    | "value"
-                    | "expect"
-                    | "actual"
-            ) {
-                kw = words.next().unwrap_or("");
-            }
-            matches!(
-                kw,
-                "class" | "fun" | "object" | "interface" | "enum" | "data"
-            )
-        });
-        if is_kts {
-            return violations;
-        }
+        // `.kts` scripts are skipped via `check_with_path` (extension-based) —
+        // a content heuristic misfires on `.kt` files whose only declarations
+        // are top-level vals (`internal val NiaTypography = Typography(…)`,
+        // Type.kt), where JVM ktlint does report the indent violations.
 
         // Per-line expected indent: brace depth × indent_size, raised to the
         // previous line's expectation + one level when the previous line ends
@@ -85,13 +74,50 @@ impl Rule for Indentation {
         // AST-driven expected indent (issue #202 rework): the first token's
         // container chain decides each code row. Falls back to the line-scan
         // model when the AST cannot classify the row.
-        // AST-driven expected indent (issue #202 rework): the first token's
-        // container chain decides each code row. Falls back to the line-scan
-        // model when the AST cannot classify the row.
+        // Over-indentation is only reported when KTLINT_RS_INDENT_PROBE is
+        // set (issue #202): the continuation model is not yet exact enough
+        // for every real-world shape (e.g. 2-space-indent projects), so the
+        // confident-rows-only detection stays a measurement tool until the
+        // remaining shapes are modelled (see the probe sweep).
+        let probe = std::env::var("KTLINT_RS_INDENT_PROBE").is_ok();
+        // On files tree-sitter fails to parse cleanly, error recovery produces
+        // garbage ancestry (e.g. statements re-parented to source_file), so the
+        // AST classifier's expectations are not trustworthy — fall back to the
+        // conservative line-scan model for those files (issue #202).
+        let tree_clean = !_tree.root_node().has_error();
+        // Line-scan expectations (brace depth + continuation) — the fallback
+        // model. The over-indent probe only trusts a row when the AST
+        // classifier AND the line-scan model agree on the expected indent:
+        // both are wrong together only when the shape is too exotic to model
+        // (issue #202 conservative gap).
+        let scan_expected = compute_line_expected(&lines, is, &elevated);
+        // AST expectations per row (None = unclassified → line-scan value).
+        let ast: Vec<Option<usize>> = (0..lines.len())
+            .map(|i| ast_expected(_tree, source, i, is))
+            .collect();
         let line_expected: Vec<usize> = (0..lines.len())
             .map(|i| {
-                ast_expected(_tree, source, i, is)
-                    .unwrap_or_else(|| compute_line_expected(&lines, is, &elevated)[i])
+                if tree_clean {
+                    ast[i].unwrap_or(scan_expected[i])
+                } else {
+                    // Error files: tree-sitter error recovery produces
+                    // garbage ancestry, so the AST classifier's expectations
+                    // are not trustworthy — use the line-scan model for all
+                    // rows (issue #202).
+                    scan_expected[i]
+                }
+            })
+            .collect();
+        // For each annotation row, the row of the declaration it annotates —
+        // the next code line after the annotation (JVM reports a mis-indented
+        // annotation against its declaration's expected indent, issue #202).
+        let annotation_target: Vec<Option<usize>> = (0..lines.len())
+            .map(|i| {
+                if lines[i].trim_start().starts_with('@') {
+                    annotation_target_row(&lines, i)
+                } else {
+                    None
+                }
             })
             .collect();
 
@@ -101,11 +127,18 @@ impl Rule for Indentation {
             let spaces = line.len() - line.trim_start().len();
 
             let raw_delimiters = line.matches("\"\"\"").count();
-            if in_raw_string || raw_delimiters % 2 == 1 {
-                if raw_delimiters % 2 == 1 {
-                    in_raw_string = !in_raw_string;
+            let toggles_raw = raw_delimiters % 2 == 1;
+            if in_raw_string {
+                if toggles_raw {
+                    // This row closes the raw string — it is a code row
+                    // (the delimiter), checked below like JVM does.
+                    in_raw_string = false;
+                } else {
+                    continue;
                 }
-                continue;
+            } else if toggles_raw {
+                // This row opens the raw string (`val x = \"\"\"`) — code row.
+                in_raw_string = true;
             }
 
             // Track block comments
@@ -119,17 +152,71 @@ impl Rule for Indentation {
                 continue;
             }
 
-            // Skip: blank, comments, annotations, KDoc markers, string-only lines
+            // Skip: blank, comments, KDoc markers, string-only lines,
+            // accessor headers. A standalone annotation row (annotation on
+            // its own line) is only skipped when it has no declaration to
+            // annotate (corrupt file) — otherwise it is checked against its
+            // declaration's expected indent below (issue #202). Rows that
+            // mix an annotation with declaration content (`@JvmField val
+            // x`) are ordinary rows and follow the normal expectation.
             if trimmed.is_empty()
-                || trimmed.starts_with("//")
-                || trimmed.starts_with('@')
                 || trimmed == "*/"
                 || trimmed.starts_with("* ")
                 || trimmed.starts_with("*/")
-                || trimmed.starts_with('"')
-                || trimmed.contains("get(")
-                || trimmed.contains("set(")
+                || raw_string_delimiter_row(trimmed)
+                || (standalone_annotation_row(trimmed) && annotation_target[i].is_none())
             {
+                continue;
+            }
+            // A line comment is checked against the next code row's expected
+            // indent (JVM reports a mis-indented `//` comment like a
+            // statement, issue #202). Exemptions (JVM oracle): inside a
+            // consecutive comment block, previous non-blank row at the same
+            // indent, or before a closing brace/paren.
+            if trimmed.starts_with("//") {
+                // Commented-out code (`//        assertEquals(...)` — two or
+                // more spaces after the `//`) keeps the commented code's
+                // deep indent and is left unchecked (JVM oracle).
+                let commented_code = trimmed[2..].starts_with("  ");
+                let prev_comment = i > 0 && lines[i - 1].trim_start().starts_with("//");
+                let next_comment = lines
+                    .get(i + 1)
+                    .map(|l| l.trim_start().starts_with("//"))
+                    .unwrap_or(false);
+                let mut prev = i;
+                while prev > 0 && lines[prev - 1].trim().is_empty() {
+                    prev -= 1;
+                }
+                let prev_spaces = if prev > 0 {
+                    lines[prev - 1].len() - lines[prev - 1].trim_start().len()
+                } else {
+                    usize::MAX
+                };
+                if !commented_code && !prev_comment && !next_comment && prev_spaces != spaces {
+                    if let Some(next) = next_code_row(&lines, i) {
+                        let next_t = lines[next].trim();
+                        if !next_t.starts_with('}') && !next_t.starts_with(')') {
+                            // Under-indentation only: an over-indented
+                            // comment may sit at a legitimate alignment
+                            // level the next-row model does not know
+                            // (e.g. when-entry bodies), so only the too-
+                            // shallow direction is reported (issue #202).
+                            if spaces < line_expected[next] {
+                                violations.push(Violation {
+                                    file: String::new(),
+                                    line: i + 1,
+                                    col: 1,
+                                    rule_id: self.id().into(),
+                                    message: format!(
+                                        "Unexpected indentation ({}) (should be {})",
+                                        spaces, line_expected[next]
+                                    ),
+                                    auto_fixable: true,
+                                });
+                            }
+                        }
+                    }
+                }
                 continue;
             }
 
@@ -147,7 +234,20 @@ impl Rule for Indentation {
             // except a mis-indented brace (non-multiple) which is reported at
             // the block's depth (covers continuation blocks like a `when {`
             // on a `=` continuation line).
-            let expected_for_line = depth_expected;
+            // A standalone annotation row takes the expected indent of the
+            // declaration it annotates — the next code row (JVM oracle:
+            // `@Test` at the wrong depth is reported against the fun's
+            // indent, issue #202). Rows mixing an annotation with their
+            // declaration (`@JvmField val x: T`) keep the row's own
+            // expectation.
+            let expected_for_line = if standalone_annotation_row(trimmed) {
+                match annotation_target[i] {
+                    Some(d) => line_expected[d],
+                    None => depth_expected,
+                }
+            } else {
+                depth_expected
+            };
             if expected_for_line > spaces {
                 let full_level_short = expected_for_line - spaces >= is;
                 if too_shallow || full_level_short {
@@ -157,6 +257,59 @@ impl Rule for Indentation {
             } else if too_shallow {
                 too_shallow = true;
                 expected_indent = Some(expected_for_line);
+            }
+            // Over-indentation (issue #202): an indent deeper than expected
+            // that lands on a multiple of indent_size is silently accepted
+            // today (the `else if` above only fires on non-multiples). The
+            // oracle reports it (`Unexpected indentation (8) (should be 4)`).
+            // Probe-only: reports on rows where the AST classifier AND the
+            // line-scan model agree on the expected value AND the row starts
+            // a fresh statement (never a continuation — alignment indents are
+            // not modelled exactly). Lazy: on already-formatted code
+            // over-indented rows are rare, so the tree walk is almost never
+            // paid.
+            if probe && spaces > expected_for_line {
+                // Confidence for the over-indent probe: the AST classifier
+                // AND the line-scan model must agree on the expected value
+                // AND the row starts a fresh statement (never a continuation
+                // — alignment indents are not modelled exactly). Standalone
+                // annotation rows inherit their declaration row's
+                // confidence; binary-expression continuations have a
+                // definite expectation (first row + 1) and are allowed too
+                // (issue #202).
+                let binary_cont = binary_continuation_row(_tree, source, i);
+                let (ast_some, scan_agree, stmt, unconstrained) =
+                    if standalone_annotation_row(trimmed) {
+                        match annotation_target[i] {
+                            Some(d) => (
+                                ast[d].is_some(),
+                                line_expected[d] == scan_expected[d],
+                                // The annotated declaration's node starts at the
+                                // annotation row (tree-sitter), so the statement
+                                // check runs on the annotation row itself.
+                                row_starts_statement(_tree, source, i),
+                                lambda_in_unconstrained_argument(_tree, source, i),
+                            ),
+                            None => (
+                                ast[i].is_some(),
+                                expected_for_line == scan_expected[i],
+                                row_starts_statement(_tree, source, i),
+                                lambda_in_unconstrained_argument(_tree, source, i),
+                            ),
+                        }
+                    } else {
+                        (
+                            ast[i].is_some(),
+                            expected_for_line == scan_expected[i],
+                            row_starts_statement(_tree, source, i) || binary_cont,
+                            lambda_in_unconstrained_argument(_tree, source, i),
+                        )
+                    };
+                let confident = tree_clean && ast_some && scan_agree && stmt && !unconstrained;
+                if confident {
+                    too_shallow = true;
+                    expected_indent = Some(expected_for_line);
+                }
             }
             if too_shallow {
                 let message = match expected_indent {
@@ -442,6 +595,7 @@ pub(crate) fn compute_line_expected(
     let mut in_block_comment = false;
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
+    let mut prev_binary_cont = false;
     for (i, line) in lines.iter().enumerate() {
         let t = line.trim();
         // Strip strings, comments, and char literals first so the paren counts
@@ -735,6 +889,47 @@ pub(crate) fn compute_line_expected(
         }
         if t.contains(".also") {}
         if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {}
+        // A property accessor (`get() = …`, bare `set`) on its own line sits
+        // one level deeper than its property — the scan model needs this for
+        // error files where the AST classifier is disabled (issue #202).
+        let accessor_head =
+            t.starts_with("get(") || t.starts_with("set(") || t == "get" || t == "set";
+        if accessor_head && i > 0 {
+            let prev_t = lines[i - 1].trim();
+            let prev_is_property = prev_t.starts_with("val ")
+                || prev_t.starts_with("var ")
+                || prev_t.contains(" val ")
+                || prev_t.contains(" var ");
+            if prev_is_property {
+                let want = prev_expected.saturating_add(is);
+                if want > e {
+                    e = want;
+                }
+            }
+        }
+        // A row continuing a multiline binary expression (`a() &&\n    b()`,
+        // `first\n    + second`) sits one level deeper than the previous
+        // code row; chain rows keep that level (JVM oracle, issue #202).
+        let prev_code = if i > 0 {
+            lines[i - 1].split("//").next().unwrap_or("").trim_end()
+        } else {
+            ""
+        };
+        let binary_cont = binary_operator_row(t, prev_code);
+        if binary_cont {
+            // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
+            // level of the previous row; the first continuation lifts one
+            // level above it (JVM oracle, issue #202).
+            let want = if prev_binary_cont {
+                prev_expected
+            } else {
+                prev_expected.saturating_add(is)
+            };
+            if want > e {
+                e = want;
+            }
+        }
+        prev_binary_cont = binary_cont;
         out[i] = e;
         prev_expected = e;
         prev_last_code = last_code;
@@ -1260,6 +1455,15 @@ mod tests {
 ///  - chain rows (`.map`) sit at the chain root row + one level
 /// Allman `{` sits at the previous row + one level. Top-level rows
 /// are 0. Recursion is depth-guarded against cyclic AST structures.
+// The named-argument `=`-value lift is code-style dependent (the IntelliJ
+// IDEA style accepts the aligned value, JVM oracle issue #202); the rule
+// sets this once per check(). Tests leave the default (KtlintOfficial,
+// which lifts).
+thread_local! {
+    static CODE_STYLE: std::cell::Cell<CodeStyle> =
+        const { std::cell::Cell::new(CodeStyle::KtlintOfficial) };
+}
+
 pub(crate) fn ast_expected(
     tree: &tree_sitter::Tree,
     src: &str,
@@ -1284,28 +1488,12 @@ pub(crate) fn ast_expected(
     let _guard = DepthGuard;
     DEPTH.with(|c| c.set(c.get() + 1));
     if DEPTH.with(|c| c.get()) > 200 {
-        if row == 110 {
-            eprintln!("NONE110 depth>200");
-        }
         return None;
     }
     // A row already being computed higher in the recursion means a cyclic
     // expectation (nested block ↔ header) — bail to the fallback.
     if IN_PROGRESS.with(|c| c.borrow().contains(&row)) {
-        if row == 110 {
-            eprintln!(
-                "NONE110 in-progress {:?}",
-                IN_PROGRESS.with(|c| c.borrow().clone())
-            );
-        }
         return None;
-    }
-    if row >= 105 && row <= 112 {
-        eprintln!(
-            "AE row={row} depth={} prog={:?}",
-            DEPTH.with(|c| c.get()),
-            IN_PROGRESS.with(|c| c.borrow().clone())
-        );
     }
     IN_PROGRESS.with(|c| c.borrow_mut().push(row));
     let line = src.lines().nth(row)?;
@@ -1313,12 +1501,7 @@ pub(crate) fn ast_expected(
     let point = tree_sitter::Point { row, column: col };
     let node = match tree.root_node().descendant_for_point_range(point, point) {
         Some(n) => n,
-        None => {
-            if row == 110 {
-                eprintln!("NONE110 no-node");
-            }
-            return None;
-        }
+        None => return None,
     };
     let trimmed = line.trim();
     // A lambda `{` right after an open `(` (`call(\n    { … }`) sits one
@@ -1331,22 +1514,46 @@ pub(crate) fn ast_expected(
         }
     }
     if trimmed == "{" {
-        // A lambda argument `{` (inside a paren list) is handled by the
-        // value_arguments classification. A true block-opening Allman `{`
+        // A lambda argument `{` (inside a paren list) aligns with the other
+        // arguments — `withUrl(\n    "/",\n    {` puts `{` at the args row
+        // + one level (oracle, issue #202). A true block-opening Allman `{`
         // sits at the previous row + one level — except class/object bodies
         // which stay at the header row (oracle: `class C\n{`).
         let mut up = node;
         let mut kind = "";
+        let mut args_row: Option<usize> = None;
         loop {
             match up.kind() {
                 "value_arguments" | "function_value_parameters" | "class_parameters" => {
                     kind = "args";
+                    args_row = Some(up.start_position().row);
                     break;
                 }
                 "lambda_literal" => {
-                    // Allman lambda `{`: aligns with the lambda's own row —
-                    // a chained lambda (`list\n    .map\n    {`) with the
-                    // chain root (oracle: `{` at the `val r = list` row).
+                    // A lambda argument is classified by its paren-list owner;
+                    // walk up through it. A standalone lambda (chained lambda
+                    // body / Allman lambda) is the "lambda" case below.
+                    let mut w = up;
+                    let mut found_args = None;
+                    while let Some(p) = w.parent() {
+                        match p.kind() {
+                            "value_arguments"
+                            | "function_value_parameters"
+                            | "class_parameters" => {
+                                found_args = Some(p.start_position().row);
+                                break;
+                            }
+                            "statements" | "class_body" | "function_body" | "enum_class_body"
+                            | "lambda_literal" => break,
+                            _ => {}
+                        }
+                        w = p;
+                    }
+                    if let Some(r) = found_args {
+                        kind = "args";
+                        args_row = Some(r);
+                        break;
+                    }
                     kind = "lambda";
                     break;
                 }
@@ -1418,7 +1625,10 @@ pub(crate) fn ast_expected(
             return ast_expected(tree, src, base, is);
         }
         return match kind {
-            "args" => None,
+            "args" => match args_row {
+                Some(r) if r < row => ast_expected(tree, src, r, is).map(|e| e + is),
+                _ => None,
+            },
             "no_lift" => ast_expected(tree, src, row.saturating_sub(1), is),
             _ => ast_expected(tree, src, row.saturating_sub(1), is).map(|e| e + is),
         };
@@ -1457,34 +1667,6 @@ pub(crate) fn ast_expected(
             .max()
             .unwrap_or(row - 1);
         return ast_expected(tree, src, stmt_row, is).map(|e| e + is);
-    }
-    if trimmed == "runBlocking {" && row == 110 {
-        let mut up = node;
-        let mut ks: Vec<(String, usize)> = vec![];
-        loop {
-            ks.push((up.kind().to_string(), up.start_position().row));
-            match up.parent() {
-                Some(p) => up = p,
-                None => break,
-            }
-        }
-        eprintln!(
-            "RB111 chain={ks:?} self={:?} fun={:?} parent={:?}",
-            ast_expected(tree, src, 110, is),
-            ast_expected(tree, src, 105, is),
-            ast_expected(tree, src, 109, is)
-        );
-    }
-    if trimmed == "{" && row >= 3 {
-        let mut up = node;
-        let mut ks: Vec<&str> = vec![];
-        loop {
-            ks.push(up.kind());
-            match up.parent() {
-                Some(p) => up = p,
-                None => break,
-            }
-        }
     }
     for c in &chain {
         match c.kind() {
@@ -1535,8 +1717,13 @@ pub(crate) fn ast_expected(
                 }
                 // First row of a parameter default value
                 // (`request: Request =\n    Request`) sits one level deeper
-                // than the parameter row (oracle). Call-site named arguments
-                // (`required =\n    annotations`) keep the argument row.
+                // than the parameter row (oracle). Call-site named argument
+                // values lift one level too — except under the IntelliJ IDEA
+                // code style, where the aligned value is accepted (a ktor
+                // fixture at the same shape is silent under
+                // `ktlint_code_style = intellij_idea`, JVM oracle issue
+                // #202). A bare identifier or numeric literal may align
+                // with the argument row even when the lift applies.
                 if row > 0 {
                     let prev_raw = src.lines().nth(row - 1).unwrap_or("");
                     let prev_code = prev_raw.trim().split("//").next().unwrap_or("").trim_end();
@@ -1544,10 +1731,19 @@ pub(crate) fn ast_expected(
                         && !trimmed.starts_with('.')
                         && !trimmed.starts_with("?:")
                     {
-                        if c.kind() == "function_value_parameters"
+                        let lift = CODE_STYLE.with(|c| c.get()) != CodeStyle::IntelliJIdea;
+                        let simple = {
+                            let body = trimmed.trim_end_matches(',');
+                            let mut chars = body.chars();
+                            matches!(chars.next(), Some(c) if c.is_alphabetic() || c == '_')
+                                && body.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+                        } || trimmed.trim_end_matches(',').parse::<i64>().is_ok()
+                            || trimmed.trim_end_matches(',').parse::<f64>().is_ok();
+                        let lift_row = c.kind() == "function_value_parameters"
                             || c.kind() == "class_parameters"
                             || c.kind() == "primary_constructor"
-                        {
+                            || (lift && !simple);
+                        if lift_row {
                             return ast_expected(tree, src, row - 1, is).map(|e| e + is);
                         }
                         return ast_expected(tree, src, row - 1, is);
@@ -1561,7 +1757,46 @@ pub(crate) fn ast_expected(
                     //     "/",\n    {`) sits at the call row + one level.
                     return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
                 }
-                return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
+                // A row continuing a binary/expression continuation inside
+                // the args (`withContext(\n    a +\n        b { … }`) sits
+                // one level deeper than the args themselves (oracle). The
+                // continuation expression started on a previous row inside
+                // the paren list.
+                let nested_continuation = chain.iter().any(|n| {
+                    matches!(
+                        n.kind(),
+                        "additive_expression"
+                            | "multiplicative_expression"
+                            | "comparison_expression"
+                            | "equality_expression"
+                            | "conjunction_expression"
+                            | "disjunction_expression"
+                            | "elvis_expression"
+                            | "range_expression"
+                            | "infix_expression"
+                    ) && n.start_position().row < row
+                        && n.start_position().row > c.start_position().row
+                });
+                let extra = if nested_continuation { 2 * is } else { is };
+                return ast_expected(tree, src, c.start_position().row, is).map(|e| e + extra);
+            }
+            "additive_expression"
+            | "multiplicative_expression"
+            | "comparison_expression"
+            | "equality_expression"
+            | "conjunction_expression"
+            | "disjunction_expression"
+            | "range_expression"
+            | "infix_expression" => {
+                // A row continuing a multiline binary expression (`return
+                // a() &&\n    b()` — the expression node spans rows and
+                // started earlier) sits one level deeper than the
+                // expression's first row (JVM oracle, issue #202). Only
+                // fires when the row starts a fresh operand (never a closer
+                // or a nested block row).
+                if c.start_position().row < row && binary_continuation_row(tree, src, row) {
+                    return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
+                }
             }
             "lambda_literal" => {
                 if c.start_position().row != row {
@@ -1589,6 +1824,28 @@ pub(crate) fn ast_expected(
             }
             "statements" => {
                 if let Some(owner) = c.parent() {
+                    // Brace-less control-statement body: `for (i in 1..10_000)`
+                    // / `if (x)` / `while (x)` complete on their own line,
+                    // the following statement is the body at +1 level
+                    // (oracle). tree-sitter parses these bodies as sibling
+                    // statements (no control_structure_body in the ancestor
+                    // chain for some shapes, e.g. inside parentheses), so
+                    // detect it textually.
+                    if row > 0 && !trimmed.starts_with('}') {
+                        let prev_raw = src.lines().nth(row - 1).unwrap_or("");
+                        let prev_trim = prev_raw.trim();
+                        let prev_code = prev_trim.split("//").next().unwrap_or("").trim_end();
+                        let starts_control = ["for ", "if ", "while "]
+                            .iter()
+                            .any(|k| prev_code.starts_with(k));
+                        if starts_control {
+                            if let Some(close) = header_close_paren(prev_code) {
+                                if prev_code[close + 1..].trim().is_empty() {
+                                    return ast_expected(tree, src, row - 1, is).map(|e| e + is);
+                                }
+                            }
+                        }
+                    }
                     // The first row of a property value/assignment
                     // continuation (`client =\n    client`) sits one level
                     // deeper than the `=` row (oracle), but only when it is
@@ -1632,9 +1889,26 @@ pub(crate) fn ast_expected(
                         return ast_expected(tree, src, open_row, is);
                     }
                     if chainish && !chain_param_lambda {
+                        // Elvis lambda bodies: a line-start elvis (`?: run {`)
+                        // lifts its body one level (oracle); a mid-line elvis
+                        // (`.takeIf { } ?: run {`) keeps the body at the
+                        // elvis line's own level. Only the closing `}`
+                        // returns to the elvis row (handled above).
+                        if open_line.starts_with("?: ") || open_line.starts_with("?:{") {
+                            return ast_expected(tree, src, open_row, is).map(|e| e + is);
+                        }
                         return ast_expected(tree, src, open_row, is);
                     }
-                    return ast_expected(tree, src, open_row, is).map(|e| e + is);
+                    // A lambda nested in a control-structure condition
+                    // (`if (a || runCatching {`) lifts its body two levels
+                    // (condition continuation + lambda), not one (oracle).
+                    // Only when the block owner is the lambda itself.
+                    let lift = if owner.kind() == "lambda_literal" && lambda_in_condition(&owner) {
+                        2 * is
+                    } else {
+                        is
+                    };
+                    return ast_expected(tree, src, open_row, is).map(|e| e + lift);
                 }
             }
             "control_structure_body" => {
@@ -1666,21 +1940,65 @@ pub(crate) fn ast_expected(
                 // `get()`/`set(v)` on its own line: the accessor sits one
                 // level deeper than its property (`val a: Int\n    get()`).
                 if c.start_position().row == row {
-                    // Find the owning property declaration (a sibling of the
-                    // accessor under class_body).
-                    let prop_row = c.parent().and_then(|p| {
-                        p.children(&mut p.walk())
-                            .filter(|k| k.kind() == "property_declaration")
-                            .filter(|k| k.start_position().row <= row)
-                            .map(|k| k.start_position().row)
-                            .max()
-                    });
+                    // Find the owning property declaration: a sibling of the
+                    // accessor under class_body, or the property ancestor
+                    // (top-level properties — `val a\nget()` — parent the
+                    // accessor through property_accessors, issue #202).
+                    let prop_row = c
+                        .parent()
+                        .and_then(|p| {
+                            p.children(&mut p.walk())
+                                .filter(|k| k.kind() == "property_declaration")
+                                .filter(|k| k.start_position().row <= row)
+                                .map(|k| k.start_position().row)
+                                .max()
+                        })
+                        .or_else(|| {
+                            let mut up = *c;
+                            loop {
+                                match up.parent() {
+                                    Some(p) => {
+                                        if p.kind() == "property_declaration" {
+                                            return Some(p.start_position().row);
+                                        }
+                                        up = p;
+                                    }
+                                    None => return None,
+                                }
+                            }
+                        });
                     if let Some(pr) = prop_row {
                         return ast_expected(tree, src, pr, is).map(|e| e + is);
                     }
                 }
             }
             "class_body" | "function_body" | "enum_class_body" => {
+                let is_class = matches!(c.kind(), "class_body" | "enum_class_body");
+                // Class/enum members and closing braces sit relative to the
+                // class header's base line. For a multiline primary
+                // constructor that is the `)` row
+                // (`class C\n  @X\n  constructor(\n    a: Int\n  ) : Base {`)
+                // — not the class declaration row (oracle: okhttp style).
+                // Function bodies keep the header row.
+                let base_row = if is_class {
+                    c.parent()
+                        .and_then(|owner| {
+                            owner
+                                .children(&mut owner.walk())
+                                .find(|k| {
+                                    k.kind() == "class_parameters"
+                                        || k.kind() == "primary_constructor"
+                                })
+                                .map(|pc| pc.end_position().row)
+                                .filter(|r| *r > owner.start_position().row)
+                                .or(Some(owner.start_position().row))
+                        })
+                        .unwrap_or(c.start_position().row)
+                } else {
+                    c.parent()
+                        .map(|p| p.start_position().row)
+                        .unwrap_or(c.start_position().row)
+                };
                 if trimmed.starts_with('}') {
                     // A `}` inside an `init { }` block closes at the init
                     // row (oracle: `init {\n    …\n}`).
@@ -1690,12 +2008,16 @@ pub(crate) fn ast_expected(
                         return ast_expected(tree, src, init.start_position().row, is);
                     }
                     // The closing `}` returns to the block's opening row —
-                    // the Allman `{` row when it is alone, the header row
-                    // otherwise.
+                    // the header base for class bodies (constructor-style
+                    // classes close at the `)` row's level), the Allman `{`
+                    // row / header row otherwise.
+                    if is_class {
+                        return ast_expected(tree, src, base_row, is);
+                    }
                     return ast_expected(tree, src, block_open_row(c, src), is);
                 }
                 if let Some(owner) = c.parent() {
-                    return ast_expected(tree, src, owner.start_position().row, is).map(|e| e + is);
+                    return ast_expected(tree, src, base_row, is).map(|e| e + is);
                 }
             }
             "anonymous_initializer" => {
@@ -1864,13 +2186,465 @@ pub(crate) fn ast_expected(
                         // \n)` closes at the val row).
                         return ast_expected(tree, src, c.start_position().row, is);
                     }
-                    return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
+                    // A row inside a parenthesized value
+                    // (`val x =\n    (\n        if (…) {`) sits one level
+                    // deeper than the value's first row (oracle).
+                    let nested_paren = chain.iter().any(|n| {
+                        n.kind() == "parenthesized_expression"
+                            && n.start_position().row < row
+                            && n.start_position().row > c.start_position().row
+                    });
+                    let extra = if nested_paren { 2 * is } else { is };
+                    return ast_expected(tree, src, c.start_position().row, is).map(|e| e + extra);
                 }
             }
             _ => {}
         }
     }
     Some(0)
+}
+
+/// The opening row of the block a `statements` node belongs to.
+/// True when the row's first code token starts a new statement inside a body
+/// container (statements / class_body / …) — as opposed to a continuation of
+/// a statement that began on an earlier line (`.map`, `?: …`, `)`, wrapped
+/// args). Over-indentation is only probed on statement-start rows: a
+/// continuation's legitimate indent is alignment, which the classifier does
+/// not model exactly (issue #202).
+fn row_starts_statement(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+    let line = src.lines().nth(row).unwrap_or("");
+    let col = line.len() - line.trim_start().len();
+    let point = tree_sitter::Point { row, column: col };
+    let Some(mut n) = tree.root_node().descendant_for_point_range(point, point) else {
+        return false;
+    };
+    loop {
+        match n.parent() {
+            Some(p) => {
+                if matches!(
+                    p.kind(),
+                    "statements"
+                        | "class_body"
+                        | "enum_class_body"
+                        | "secondary_constructor"
+                        | "source_file"
+                ) {
+                    // An annotated declaration's node starts at its first
+                    // annotation row, so the declaration row below an
+                    // annotation fails the start-row equality. Accept a row
+                    // that is itself a standalone annotation, or a row
+                    // directly below a standalone annotation that begins a
+                    // declaration header (issue #202). A bare `suspend …`
+                    // continuation (generic/type argument) is not a
+                    // statement start.
+                    let prev_is_ann = row > 0
+                        && src
+                            .lines()
+                            .nth(row - 1)
+                            .map(|l| l.trim().starts_with('@'))
+                            .unwrap_or(false);
+                    return n.start_position().row == row
+                        || line.trim_start().starts_with('@')
+                        || (prev_is_ann && is_decl_header(line.trim()));
+                }
+                n = p;
+            }
+            None => return false,
+        }
+    }
+}
+
+/// Index of the `)` that closes the `for (` header, accounting for nested
+/// parens (`for ((a, b) in pairs)`). None when no complete header is found.
+fn header_close_paren(code: &str) -> Option<usize> {
+    let open = code.find('(')?;
+    let mut depth = 0usize;
+    for (i, ch) in code[open..].char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return Some(open + i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// True when a lambda sits inside a control structure's parenthesized
+/// condition (`if (a || runCatching {`, `while (x && run {`) rather than in
+/// its body or elsewhere. Its body then lifts two levels below the control
+/// structure row (condition continuation + lambda body), not one (oracle).
+fn lambda_in_condition(lambda: &tree_sitter::Node) -> bool {
+    // A lambda inside a control structure's condition (`if (a || runCatching
+    // {`, `if (runCatching { … }.isSuccess)`) reaches the control structure
+    // node before any body container. A then/else-branch lambda sits inside
+    // the branch's control_structure_body first.
+    let mut n = *lambda;
+    while let Some(p) = n.parent() {
+        match p.kind() {
+            "if_expression" | "while_statement" | "for_statement" | "do_while_statement" => {
+                return true;
+            }
+            "statements"
+            | "function_body"
+            | "class_body"
+            | "enum_class_body"
+            | "lambda_literal"
+            | "when_entry"
+            | "control_structure_body" => {
+                return false;
+            }
+            _ => {}
+        }
+        n = p;
+    }
+    false
+}
+
+/// True when the row sits inside a lambda that is an argument value whose
+/// indentation ktlint does not constrain: a lambda nested inside an argument
+/// expression (`builder(\n    X.map {\n        …`) or a named-argument lambda
+/// (`onClick =\n    { …`). ktlint's indent rule yields no expectation for
+/// these rows (oracle: any indent is accepted), so over-indentation cannot
+/// be reported on them. A bare positional lambda argument (`call(\n    {`)
+/// stays strict.
+fn lambda_in_unconstrained_argument(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+    let line = src.lines().nth(row).unwrap_or("");
+    let col = line.len() - line.trim_start().len();
+    let point = tree_sitter::Point { row, column: col };
+    let Some(mut n) = tree.root_node().descendant_for_point_range(point, point) else {
+        return false;
+    };
+    let mut has_lambda = false;
+    let mut has_arg = false;
+    let mut lambda_direct = false;
+    let mut arg_row = 0usize;
+    loop {
+        match n.kind() {
+            "lambda_literal" => {
+                has_lambda = true;
+                let direct = match n.parent() {
+                    Some(p) if p.kind() == "value_argument" => true,
+                    Some(p) if p.kind() == "annotated_lambda" => {
+                        matches!(p.parent().map(|g| g.kind()), Some("value_argument"))
+                    }
+                    _ => false,
+                };
+                lambda_direct = direct;
+            }
+            "value_argument" => {
+                has_arg = true;
+                arg_row = n.start_position().row;
+            }
+            _ => {}
+        }
+        match n.parent() {
+            Some(p) => n = p,
+            None => break,
+        }
+    }
+    if !has_lambda || !has_arg {
+        return false;
+    }
+    // Named argument (`name =` on the owning line)? ktlint leaves the value
+    // unconstrained either way — nested lambdas are free, named lambdas are
+    // free; only a bare positional lambda argument is strict.
+    let arg_code = src.lines().nth(arg_row).unwrap_or("").trim();
+    let named = arg_code.contains('=');
+    named || !lambda_direct
+}
+
+/// True when the trimmed row is a property accessor header: `get() =`,
+/// `get() {`, `set(value) {`, a bare `get`/`set` keyword, optionally after
+/// a visibility modifier or an annotation on the same row (`@InternalAPI
+/// set(value) {`). A `get(`/`set(` substring elsewhere is NOT an accessor —
+/// `@Target(...)` contains `get(` but must be checked (issue #202), and
+/// `.get(0)`/`map.get(k)` calls follow chain rules. Accessor rows stay
+/// unchecked: their indent expectations are not modelled.
+fn accessor_row(trimmed: &str) -> bool {
+    let body = trimmed.trim_start();
+    let stripped = if body.starts_with('@') {
+        body.split_once(' ')
+            .map(|(_, r)| r.trim_start())
+            .unwrap_or("")
+    } else {
+        body
+    };
+    let mut words = stripped.split_whitespace();
+    let first = words.next().unwrap_or("");
+    let second = words.next().unwrap_or("");
+    let is_accessor =
+        |w: &str| w == "get" || w == "set" || w.starts_with("get(") || w.starts_with("set(");
+    is_accessor(first)
+        || (matches!(
+            first,
+            "private" | "public" | "internal" | "protected" | "inline"
+        ) && is_accessor(second))
+}
+
+/// True when the trimmed row is a standalone annotation: an `@` annotation
+/// (optionally with a use-site target like `@get:`) followed only by its own
+/// argument list and nothing else — `@Test`, `@get: Rule(order = 0)`,
+/// `@Deprecated(` (multi-line args). A row that mixes an annotation with
+/// declaration content (`@JvmField val x: T`, `@Deprecated(...) public val
+/// realm`) is an ordinary declaration row, not a standalone annotation
+/// (issue #202).
+fn standalone_annotation_row(t: &str) -> bool {
+    let body = t.trim_start();
+    if !body.starts_with('@') {
+        return false;
+    }
+    let mut depth: isize = 0;
+    let mut end = body.len();
+    for (i, c) in body.char_indices() {
+        if i == 0 {
+            continue;
+        }
+        match c {
+            '(' => depth += 1,
+            ')' => depth = depth.saturating_sub(1),
+            c if c.is_whitespace() && depth == 0 => {
+                // A use-site target (`@get: Rule(...)`) has a space between
+                // the target and the annotation name — keep scanning.
+                if body[1..i].ends_with(':') {
+                    continue;
+                }
+                end = i;
+                break;
+            }
+            _ => {}
+        }
+    }
+    if depth > 0 {
+        // `@Deprecated(` — the argument list continues on later rows.
+        return true;
+    }
+    body[end..].trim().is_empty()
+}
+
+/// True when the trimmed row is a raw-string delimiter/continuation row
+/// that must stay unchecked: `"""` alone, `""".trimIndent()`, a closer
+/// with trailing content (`}()"""`, `|content"""`, `"""content`). Only the
+/// opener row that carries an assignment (`value = """`) is checked — JVM
+/// reports a mis-indented one like any declaration (issue #202).
+fn raw_string_delimiter_row(t: &str) -> bool {
+    if !t.contains("\"\"\"") {
+        return false;
+    }
+    let before = t.split("\"\"\"").next().unwrap_or("").trim_end();
+    !before.ends_with('=') && !before.ends_with('(')
+}
+
+/// True when the row continues a multiline binary expression: the AST node
+/// at the row starts a fresh operand of a binary expression that began on
+/// an earlier row (`return a() &&\n    b()`), or the node IS the binary
+/// expression spanning rows (`&& call…` after `= …`). Closers (`)`, `}`)
+/// and nested block rows never qualify (issue #202).
+fn binary_continuation_row(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+    let line = src.lines().nth(row).unwrap_or("");
+    let col = line.len() - line.trim_start().len();
+    let point = tree_sitter::Point { row, column: col };
+    let Some(node) = tree.root_node().descendant_for_point_range(point, point) else {
+        return false;
+    };
+    if line.trim_start().starts_with(')') || line.trim_start().starts_with('}') {
+        return false;
+    }
+    let is_binary = |k: &str| {
+        matches!(
+            k,
+            "additive_expression"
+                | "multiplicative_expression"
+                | "comparison_expression"
+                | "equality_expression"
+                | "conjunction_expression"
+                | "disjunction_expression"
+                | "range_expression"
+                | "infix_expression"
+        )
+    };
+    if is_binary(node.kind()) && node.start_position().row < row {
+        // The node is the binary expression itself (`&& call…` after `=`):
+        // it must be the statement's direct expression.
+        return node
+            .parent()
+            .map(|p| is_binary_statement_root(p.kind()))
+            .unwrap_or(false);
+    }
+    let mut n = node;
+    while let Some(p) = n.parent() {
+        if is_binary(p.kind()) && p.start_position().row < row {
+            // The binary expression must be the statement's direct
+            // expression — a continuation inside an if/while condition, a
+            // call argument, or a chain follows different rules and is not
+            // a binary continuation (issue #202). Nested binary parents
+            // (`(a && b) && c`) are part of the same statement expression
+            // and are skipped.
+            if node.start_position().row == row {
+                let mut top = p;
+                loop {
+                    match top.parent() {
+                        Some(gp) if is_binary(gp.kind()) => top = gp,
+                        Some(gp) => return is_binary_statement_root(gp.kind()),
+                        None => return false,
+                    }
+                }
+            }
+            return false;
+        }
+        n = p;
+    }
+    false
+}
+
+/// True when the node kind can directly own a statement-level binary
+/// expression whose continuations lift one level (issue #202). Conditions
+/// (`if (a && b)`), chains, and call arguments follow their own alignment
+/// rules and are excluded. `return` parses as `jump_expression` in
+/// tree-sitter-kotlin.
+fn is_binary_statement_root(kind: &str) -> bool {
+    matches!(
+        kind,
+        "return_statement"
+            | "jump_expression"
+            | "property_declaration"
+            | "assignment_expression"
+            | "expression_statement"
+            | "function_declaration"
+            | "function_body"
+    )
+}
+
+/// The next code row after `row`: the next line that is not blank, not a
+/// line/block comment, not KDoc, and not a raw-string delimiter. Gives a
+/// standalone `//` comment the expected indent of the statement that
+/// follows it (JVM oracle, issue #202).
+fn next_code_row(lines: &[&str], row: usize) -> Option<usize> {
+    for (j, l) in lines.iter().enumerate().skip(row + 1) {
+        let t = l.trim();
+        if t.is_empty()
+            || t.starts_with("//")
+            || t.starts_with("/*")
+            || t.starts_with('*')
+            || t.starts_with("\"\"\"")
+        {
+            continue;
+        }
+        return Some(j);
+    }
+    None
+}
+
+/// True when the trimmed row continues a binary expression: it starts with
+/// an operator (`+ second`) or the previous code row ends with one
+/// (`a() &&`). Used by the line-scan model to lift binary continuations
+/// one level. Excludes import wildcards (`libcurl.*`), postfix `++`/`--`,
+/// and reference operators (`::`) (issue #202).
+fn binary_operator_row(t: &str, prev_code: &str) -> bool {
+    let starts = ["&&", "||", "==", "!=", "<=", ">=", "??", "+", "-"];
+    let ends = [
+        "&&", "||", "==", "!=", "<=", ">=", "??", "+", "-", "*", "/", "%",
+    ];
+    starts.iter().any(|op| t.starts_with(op))
+        || (ends.iter().any(|op| prev_code.ends_with(op))
+            && !prev_code.ends_with(".*")
+            && !prev_code.ends_with("*/")
+            && !prev_code.ends_with("++")
+            && !prev_code.ends_with("--")
+            && !prev_code.ends_with("::"))
+}
+
+/// The row of the declaration an annotation row annotates: the next code
+/// line after the annotation, skipping blank lines, comments, KDoc markers,
+/// string-only rows, and further annotation rows (`@A\n@B\nfun f` — both
+/// annotations share `fun f`'s indent). Rows inside the annotation's own
+/// multi-line argument list (`@Foo(\n    arg\n)` are annotation
+/// continuations, not the declaration. None when no declaration follows
+/// (annotation at EOF or before a closing brace — corrupt file, uncheckable).
+fn annotation_target_row(lines: &[&str], row: usize) -> Option<usize> {
+    let mut depth: isize = 0;
+    let mut in_args = false;
+    for (j, l) in lines.iter().enumerate().skip(row) {
+        let code = l.split("//").next().unwrap_or("");
+        if j == row {
+            // The annotation row itself: count its own parens so a
+            // multi-line argument list is skipped below.
+            depth = count_parens(code);
+            in_args = depth > 0;
+            continue;
+        }
+        if in_args {
+            // Inside an annotation's argument list — includes the row that
+            // closes it (`)`): annotation continuations are not the
+            // declaration.
+            depth += count_parens(code);
+            if depth <= 0 {
+                in_args = false;
+            }
+            continue;
+        }
+        let t = l.trim();
+        if t.starts_with('@') {
+            if standalone_annotation_row(t) {
+                // A further stacked annotation (`@A\n@B(...)`): its own args
+                // must also be skipped before reaching the declaration.
+                depth = count_parens(code);
+                if depth > 0 {
+                    in_args = true;
+                }
+                continue;
+            }
+            // A row mixing an annotation with declaration content
+            // (`@JvmField val x`, `@Synchronized fun f`) IS the declaration
+            // itself — it is the annotation's target.
+            if accessor_row(t) {
+                return None;
+            }
+            return Some(j);
+        }
+        if t.is_empty()
+            || t.starts_with("//")
+            || t.starts_with("/*")
+            || t.starts_with('*')
+            || t.starts_with('"')
+        {
+            continue;
+        }
+        // An accessor header is not a declaration row the annotation can
+        // inherit an indent from (accessor expectations are unmodelled) —
+        // treat the annotation as uncheckable (issue #202).
+        if accessor_row(t) {
+            return None;
+        }
+        return Some(j);
+    }
+    None
+}
+
+/// Paren balance of a code slice, ignoring string literals (single `"`
+/// toggles, backslash-escaped chars skipped) so `@Suppress("a(b)")` stays
+/// balanced and multi-line annotation args are tracked correctly (issue
+/// #202).
+fn count_parens(code: &str) -> isize {
+    let mut depth: isize = 0;
+    let mut in_str = false;
+    let mut chars = code.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                chars.next();
+            }
+            '"' => in_str = !in_str,
+            '(' if !in_str => depth += 1,
+            ')' if !in_str => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    depth
 }
 
 /// The opening row of the block a `statements` node belongs to.
@@ -1944,6 +2718,113 @@ fn block_open_row(owner: &tree_sitter::Node, src: &str) -> usize {
 mod ast_matrix {
     use crate::parser::KotlinParser;
     use crate::rules::structure::indentation::ast_expected;
+    use crate::rules::structure::indentation::lambda_in_unconstrained_argument;
+    use crate::rules::structure::indentation::Indentation;
+    use crate::rules::Rule;
+    // Tests toggle KTLINT_RS_INDENT_PROBE via the process env; a shared lock
+    // keeps the concurrent test threads from clobbering each other.
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[test]
+    fn issue202_lambda_arg_brace_aligns_with_args() {
+        // `withUrl(\n    "/",\n    {` — a lambda argument `{` on its own
+        // line aligns with the other arguments (args row + one level).
+        expect_ok(
+            "fun main() {\n    withUrl(\n        \"/\",\n        {\n            method = HttpMethod.Post\n        }\n    )\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 8), (5, 12), (6, 8), (7, 4), (8, 0)],
+        );
+    }
+
+    #[test]
+    fn issue202_line_start_elvis_body_lifts() {
+        // `?: run {` at line start lifts its body one level.
+        expect_ok(
+            "fun main() {\n    val x = listOf(1)\n        ?.firstOrNull()\n        ?.let { a -> a }\n        ?: run {\n            foo()\n        }\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 8), (5, 8), (6, 12)],
+        );
+    }
+
+    #[test]
+    fn issue202_midline_elvis_body_keeps_line_level() {
+        // `.takeIf { } ?: run {` — a mid-line elvis keeps its body at the
+        // elvis line's own level.
+        expect_ok(
+            "fun main() {\n    val x = listOf(1)\n        .takeIf { it.isNotEmpty() } ?: run {\n        foo()\n        return@run null\n    }\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 8), (5, 8), (6, 4), (7, 0)],
+        );
+    }
+
+    #[test]
+    fn issue202_bracless_for_body_lifts() {
+        // `for (i in 1..10_000)` complete on its own line: the following
+        // statement is its body at +1 level (tree-sitter parses it as a
+        // sibling statement, so the classifier detects it textually).
+        expect_ok(
+            "fun main() {\n    buildString {\n        for (i in 1..10_000)\n            appendLine(\"x\")\n    }\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 12), (5, 4), (6, 0)],
+        );
+    }
+
+    #[test]
+    fn issue202_condition_lambda_lifts_twice() {
+        // A lambda inside a control-structure condition (`if (a || runCatching
+        // {`) lifts its body two levels (condition continuation + lambda).
+        expect_ok(
+            "fun main() {\n    if (a || runCatching {\n            foo()\n        }) {\n        bar()\n    }\n}\n",
+            &[(1, 0), (2, 4), (3, 12), (4, 4), (5, 8), (6, 4), (7, 0)],
+        );
+    }
+
+    #[test]
+    fn issue202_args_binary_continuation_lifts() {
+        // `withContext(\n    a +\n        CoroutineExceptionHandler { …` —
+        // a binary continuation inside the args sits one level deeper than
+        // the args themselves.
+        expect_ok(
+            "fun main() {\n    withContext(\n        application.coroutineContext +\n            CoroutineExceptionHandler { _, e ->\n                log(e)\n            }\n    ) { }\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 12), (5, 16)],
+        );
+    }
+
+    #[test]
+    fn issue202_unconstrained_argument_lambda_skipped() {
+        // Argument values containing a lambda are unconstrained by ktlint
+        // (any indent accepted) — the probe must not report over-indentation
+        // inside them. A bare positional lambda argument stays strict.
+        let tree = KotlinParser::new().parse(
+            "fun main() {\n    builder(\n        userAgent = \"x\",\n        enabled =\n            ConnectionSpec.cipherSuites.map {\n                foo()\n            },\n    )\n}\n",
+        );
+        let src = "fun main() {\n    builder(\n        userAgent = \"x\",\n        enabled =\n            ConnectionSpec.cipherSuites.map {\n                foo()\n            },\n    )\n}\n";
+        // lambda body inside a named-argument chain value → unconstrained
+        assert!(lambda_in_unconstrained_argument(&tree, src, 5));
+        // the `.map {` value row itself (chain, no lambda in the chain yet) —
+        // not classified as unconstrained (blocked by other gates anyway)
+        assert!(!lambda_in_unconstrained_argument(&tree, src, 4));
+        // a bare positional lambda argument stays strict
+        let src2 = "fun main() {\n    withUrl(\n        \"/\",\n        {\n            method = HttpMethod.Post\n        }\n    )\n}\n";
+        let tree2 = KotlinParser::new().parse(src2);
+        assert!(!lambda_in_unconstrained_argument(&tree2, src2, 4));
+    }
+
+    fn issue202_over_indent_reported_when_confident() {
+        // The issue #202 repro: over-indentation on a multiple of
+        // indent_size is reported when the classifier is confident.
+        let src = "package com.example\n\npublic fun exampleFunction(): Int {\n        val value = 1\n    return value\n}\n";
+        let tree = KotlinParser::new().parse(src);
+        assert_eq!(ast_expected(&tree, src, 3, 4), Some(4));
+        assert_eq!(ast_expected(&tree, src, 4, 4), Some(4));
+    }
+
+    #[test]
+    fn issue202_class_members_follow_constructor_base() {
+        // okhttp-style header: `class C\n    constructor(\n        x: Int\n    ) : Base {` —
+        // class members sit one level deeper than the `)` row, and enum
+        // entries one level deeper than the enum row.
+        expect_ok(
+            "class C\n    constructor(\n        val x: Int? = null,\n    ) : Base {\n        enum class Level {\n            NONE,\n            HEADERS,\n        }\n    }\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 4), (5, 8), (6, 12), (7, 12), (8, 8), (9, 4)],
+        );
+    }
 
     fn expect_ok(src: &str, row_expected: &[(usize, usize)]) {
         let tree = KotlinParser::new().parse(src);
@@ -1962,6 +2843,165 @@ mod ast_matrix {
     }
 
     #[test]
+    fn issue202_annotation_under_indent_reported() {
+        // A standalone annotation at the wrong (too shallow) depth is
+        // reported against its declaration's expected indent, like JVM
+        // ktlint: `@Test` at 0 inside a class body (should be 4).
+        let src = "class Foo {\n    fun ok() {}\n@Test\nfun bad() {}\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        // JVM reports both the annotation and its mis-indented declaration.
+        assert_eq!(rows, vec![3, 4]);
+    }
+
+    #[test]
+    fn issue202_annotation_over_indent_reported() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Probe mode (issue #202 measurement): over-indented standalone
+        // annotations are reported when the declaration's expectation is
+        // confident (`@Test` at 8 should be 4).
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let src = "class Foo {\n    fun ok() {}\n        @Test\n    fun bad() {}\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert_eq!(rows, vec![3]);
+    }
+
+    #[test]
+    fn issue202_annotation_stack_and_multiline_args() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Stacked standalone annotations share the declaration's expected
+        // indent: `@Marker` / `@Target(...)` at 8 above `val prop` at 4 are
+        // both reported.
+        let src = "@Target(AnnotationTarget.FUNCTION)\nannotation class Marker\n\nclass Baz {\n        @Marker\n        @Target(AnnotationTarget.FUNCTION)\n    val prop: Int = 1\n}\n";
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert_eq!(rows, vec![5, 6]);
+    }
+
+    #[test]
+    fn issue202_combined_annotation_row_uses_own_expectation() {
+        // A row mixing an annotation with its declaration (`@JvmField val
+        // x`) is an ordinary declaration row — correctly indented combined
+        // rows in a class parameter list produce no report.
+        let src = "class C(\n    @JvmField val node: Node,\n) {\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        assert!(violations.is_empty(), "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_accessor_annotation_skipped() {
+        // An annotation on a property accessor (`@Deprecated` above `set`)
+        // stays unchecked — accessor indent expectations are not modelled.
+        let src =
+            "class C {\n    public var x: Int = 1\n        @Deprecated(\"old\")\n        set\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        assert!(violations.is_empty(), "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_top_level_annotated_class() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // Top-level annotations (`@Marker` before `class TopLevelBad`) are
+        // checked against the class's expected indent (0).
+        let src = "class Foo {}\n\n        @Marker\nclass TopLevelBad {}\n";
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert_eq!(rows, vec![3]);
+    }
+
+    #[test]
+    fn issue202_kts_script_skipped_by_extension() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // `.kts` scripts are skipped via check_with_path (extension-based);
+        // the content heuristic misfired on `.kt` files with only top-level
+        // vals (Type.kt, issue #202).
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let src = "val x = 1\n        val y = 2\n";
+        let tree = KotlinParser::new().parse(src);
+        let rule = Indentation::new(4);
+        assert!(rule.check_with_path("script.kts", &tree, src).is_empty());
+        // The same content is checked in a .kt file (row 2 at 8, should be 0).
+        assert_eq!(rule.check_with_path("Type.kt", &tree, src).len(), 1);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+    }
+
+    #[test]
+    fn issue202_top_level_property_accessor_lifts() {
+        // A getter of a top-level property sits one level deeper than the
+        // property (`val a\nget()` — property 0, getter 4), JVM oracle.
+        expect_ok("private val size\nget() = 1f\n", &[(1, 0), (2, 4)]);
+    }
+
+    #[test]
+    fn issue202_raw_string_opener_checked_content_skipped() {
+        // `value = \"\"\"` openers are checked like declarations; the
+        // content rows and pure delimiter rows are not.
+        let src = "class Foo {\n    fun a() {\n        val q = \"\"\"\ncontent\n\"\"\"\n    }\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        assert!(violations.is_empty(), "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_string_continuation_row_checked() {
+        // A `\"foo\" +` continuation row is checked like any expression
+        // continuation (JVM reports it at the wrong depth, issue #202).
+        let src = "class Foo {\n    fun a() {\n        val x = build(\n            expl = \"a\" +\n\"b\",\n        )\n    }\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert!(rows.contains(&5), "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_named_arg_equals_value_lifts() {
+        // Call-site named-arg values lift one level under the default
+        // (KtlintOfficial) code style: `b =\n    if (…)` — the if sits at
+        // the arg row + 1 (JVM oracle, issue #202).
+        let src = "fun main() {\n    build(\n        a = 1,\n        b =\n        if (true) {\n            2\n        },\n    )\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert_eq!(rows, vec![5, 6, 7], "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_binary_continuation_lifts() {
+        // `return a() &&\n    b() &&\n    c()` — continuation rows sit at
+        // the statement row + 1 (JVM oracle, issue #202); the probe reports
+        // the over-indented 12-space rows.
+        let _guard = ENV_LOCK.lock().unwrap();
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let src = "fun f(): Boolean {\n    return a() &&\n            b() &&\n            c()\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert_eq!(rows, vec![3, 4]);
+    }
+
+    #[test]
+    fn issue202_intellij_idea_keeps_aligned_equals_value() {
+        // Under `ktlint_code_style = intellij_idea` the aligned named-arg
+        // value is accepted (a ktor fixture shape, JVM oracle issue #202).
+        let src = "fun main() {\n    build(\n        partHeaders =\n        headersOf(\n            a,\n        ),\n    )\n}\n";
+        let rule = Indentation::new(4).with_code_style(crate::config::CodeStyle::IntelliJIdea);
+        let violations = rule.check(&KotlinParser::new().parse(src), src);
+        assert!(violations.is_empty(), "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_comment_under_indent_reported() {
+        // A standalone `//` comment shallower than the following statement
+        // is reported (JVM oracle, issue #202); the ForYouScreenTest shape.
+        let src = "fun main() {\n    build(\n        x =\n        Shown(\n            // comment\n            topics = list,\n        ),\n    )\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert!(rows.contains(&5), "{:?}", violations);
+    }
+
     fn matrix() {
         expect_ok(
             "package c\n\nfun f() {\n    val x = 1\n    if (x) {\n        a()\n    }\n}\n",
