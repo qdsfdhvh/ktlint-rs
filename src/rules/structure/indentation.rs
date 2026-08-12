@@ -20,6 +20,22 @@ impl Rule for Indentation {
         "standard:indent"
     }
 
+    /// `.kts` scripts are skipped by extension (the engine passes the path
+    /// only to the rules that opt in). JVM ktlint does lint scripts, but the
+    /// differential corpus is `.kt`-only, and the script shapes are not yet
+    /// modelled — the skip keeps the gate's FP at 0 (issue #202).
+    fn check_with_path(
+        &self,
+        path: &str,
+        tree: &tree_sitter::Tree,
+        source: &str,
+    ) -> Vec<Violation> {
+        if path.ends_with(".kts") {
+            return Vec::new();
+        }
+        self.check(tree, source)
+    }
+
     fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let mut violations = Vec::new();
         let is = self.indent_size;
@@ -27,48 +43,10 @@ impl Rule for Indentation {
         let mut in_block_comment = false;
         let mut in_raw_string = false;
 
-        // Detect KTS files: if no class/fun/object declarations, skip indent.
-        // Skip leading modifiers (public/private/sealed/data/...) before
-        // checking the first keyword — `public sealed interface` must count.
-        let is_kts = !lines.iter().any(|l| {
-            let t = l.trim();
-            if t.is_empty() || t.starts_with("//") || t.starts_with("/*") || t.starts_with("*") {
-                return false;
-            }
-            let mut words = t.split_whitespace();
-            let mut kw = words.next().unwrap_or("");
-            while matches!(
-                kw,
-                "public"
-                    | "private"
-                    | "protected"
-                    | "internal"
-                    | "open"
-                    | "abstract"
-                    | "final"
-                    | "sealed"
-                    | "data"
-                    | "inline"
-                    | "external"
-                    | "const"
-                    | "suspend"
-                    | "override"
-                    | "companion"
-                    | "annotation"
-                    | "value"
-                    | "expect"
-                    | "actual"
-            ) {
-                kw = words.next().unwrap_or("");
-            }
-            matches!(
-                kw,
-                "class" | "fun" | "object" | "interface" | "enum" | "data"
-            )
-        });
-        if is_kts {
-            return violations;
-        }
+        // `.kts` scripts are skipped via `check_with_path` (extension-based) —
+        // a content heuristic misfires on `.kt` files whose only declarations
+        // are top-level vals (`internal val NiaTypography = Typography(…)`,
+        // Type.kt), where JVM ktlint does report the indent violations.
 
         // Per-line expected indent: brace depth × indent_size, raised to the
         // previous line's expectation + one level when the previous line ends
@@ -138,11 +116,18 @@ impl Rule for Indentation {
             let spaces = line.len() - line.trim_start().len();
 
             let raw_delimiters = line.matches("\"\"\"").count();
-            if in_raw_string || raw_delimiters % 2 == 1 {
-                if raw_delimiters % 2 == 1 {
-                    in_raw_string = !in_raw_string;
+            let toggles_raw = raw_delimiters % 2 == 1;
+            if in_raw_string {
+                if toggles_raw {
+                    // This row closes the raw string — it is a code row
+                    // (the delimiter), checked below like JVM does.
+                    in_raw_string = false;
+                } else {
+                    continue;
                 }
-                continue;
+            } else if toggles_raw {
+                // This row opens the raw string (`val x = \"\"\"`) — code row.
+                in_raw_string = true;
             }
 
             // Track block comments
@@ -168,8 +153,7 @@ impl Rule for Indentation {
                 || trimmed == "*/"
                 || trimmed.starts_with("* ")
                 || trimmed.starts_with("*/")
-                || trimmed.starts_with('"')
-                || accessor_row(trimmed)
+                || raw_string_delimiter_row(trimmed)
                 || (standalone_annotation_row(trimmed) && annotation_target[i].is_none())
             {
                 continue;
@@ -839,6 +823,24 @@ pub(crate) fn compute_line_expected(
         }
         if t.contains(".also") {}
         if t.starts_with("public fun HttpRequestBuilder.bufferPolicy") {}
+        // A property accessor (`get() = …`, bare `set`) on its own line sits
+        // one level deeper than its property — the scan model needs this for
+        // error files where the AST classifier is disabled (issue #202).
+        let accessor_head =
+            t.starts_with("get(") || t.starts_with("set(") || t == "get" || t == "set";
+        if accessor_head && i > 0 {
+            let prev_t = lines[i - 1].trim();
+            let prev_is_property = prev_t.starts_with("val ")
+                || prev_t.starts_with("var ")
+                || prev_t.contains(" val ")
+                || prev_t.contains(" var ");
+            if prev_is_property {
+                let want = prev_expected.saturating_add(is);
+                if want > e {
+                    e = want;
+                }
+            }
+        }
         out[i] = e;
         prev_expected = e;
         prev_last_code = last_code;
@@ -1617,8 +1619,11 @@ pub(crate) fn ast_expected(
                 }
                 // First row of a parameter default value
                 // (`request: Request =\n    Request`) sits one level deeper
-                // than the parameter row (oracle). Call-site named arguments
-                // (`required =\n    annotations`) keep the argument row.
+                // than the parameter row (oracle). Call-site named argument
+                // values (`required =\n    annotations`) keep the argument
+                // row — the lift is context-dependent (a ktor fixture at
+                // the same shape is accepted aligned), so it stays off
+                // (issue #202 residual).
                 if row > 0 {
                     let prev_raw = src.lines().nth(row - 1).unwrap_or("");
                     let prev_code = prev_raw.trim().split("//").next().unwrap_or("").trim_end();
@@ -1808,15 +1813,33 @@ pub(crate) fn ast_expected(
                 // `get()`/`set(v)` on its own line: the accessor sits one
                 // level deeper than its property (`val a: Int\n    get()`).
                 if c.start_position().row == row {
-                    // Find the owning property declaration (a sibling of the
-                    // accessor under class_body).
-                    let prop_row = c.parent().and_then(|p| {
-                        p.children(&mut p.walk())
-                            .filter(|k| k.kind() == "property_declaration")
-                            .filter(|k| k.start_position().row <= row)
-                            .map(|k| k.start_position().row)
-                            .max()
-                    });
+                    // Find the owning property declaration: a sibling of the
+                    // accessor under class_body, or the property ancestor
+                    // (top-level properties — `val a\nget()` — parent the
+                    // accessor through property_accessors, issue #202).
+                    let prop_row = c
+                        .parent()
+                        .and_then(|p| {
+                            p.children(&mut p.walk())
+                                .filter(|k| k.kind() == "property_declaration")
+                                .filter(|k| k.start_position().row <= row)
+                                .map(|k| k.start_position().row)
+                                .max()
+                        })
+                        .or_else(|| {
+                            let mut up = *c;
+                            loop {
+                                match up.parent() {
+                                    Some(p) => {
+                                        if p.kind() == "property_declaration" {
+                                            return Some(p.start_position().row);
+                                        }
+                                        up = p;
+                                    }
+                                    None => return None,
+                                }
+                            }
+                        });
                     if let Some(pr) = prop_row {
                         return ast_expected(tree, src, pr, is).map(|e| e + is);
                     }
@@ -2276,6 +2299,19 @@ fn standalone_annotation_row(t: &str) -> bool {
     body[end..].trim().is_empty()
 }
 
+/// True when the trimmed row is a raw-string delimiter/continuation row
+/// that must stay unchecked: `"""` alone, `""".trimIndent()`, a closer
+/// with trailing content (`}()"""`, `|content"""`, `"""content`). Only the
+/// opener row that carries an assignment (`value = """`) is checked — JVM
+/// reports a mis-indented one like any declaration (issue #202).
+fn raw_string_delimiter_row(t: &str) -> bool {
+    if !t.contains("\"\"\"") {
+        return false;
+    }
+    let before = t.split("\"\"\"").next().unwrap_or("").trim_end();
+    !before.ends_with('=') && !before.ends_with('(')
+}
+
 /// The row of the declaration an annotation row annotates: the next code
 /// line after the annotation, skipping blank lines, comments, KDoc markers,
 /// string-only rows, and further annotation rows (`@A\n@B\nfun f` — both
@@ -2631,6 +2667,48 @@ mod ast_matrix {
         unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
         let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
         assert_eq!(rows, vec![3]);
+    }
+
+    #[test]
+    fn issue202_kts_script_skipped_by_extension() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        // `.kts` scripts are skipped via check_with_path (extension-based);
+        // the content heuristic misfired on `.kt` files with only top-level
+        // vals (Type.kt, issue #202).
+        unsafe { std::env::set_var("KTLINT_RS_INDENT_PROBE", "1") };
+        let src = "val x = 1\n        val y = 2\n";
+        let tree = KotlinParser::new().parse(src);
+        let rule = Indentation::new(4);
+        assert!(rule.check_with_path("script.kts", &tree, src).is_empty());
+        // The same content is checked in a .kt file (row 2 at 8, should be 0).
+        assert_eq!(rule.check_with_path("Type.kt", &tree, src).len(), 1);
+        unsafe { std::env::remove_var("KTLINT_RS_INDENT_PROBE") };
+    }
+
+    #[test]
+    fn issue202_top_level_property_accessor_lifts() {
+        // A getter of a top-level property sits one level deeper than the
+        // property (`val a\nget()` — property 0, getter 4), JVM oracle.
+        expect_ok("private val size\nget() = 1f\n", &[(1, 0), (2, 4)]);
+    }
+
+    #[test]
+    fn issue202_raw_string_opener_checked_content_skipped() {
+        // `value = \"\"\"` openers are checked like declarations; the
+        // content rows and pure delimiter rows are not.
+        let src = "class Foo {\n    fun a() {\n        val q = \"\"\"\ncontent\n\"\"\"\n    }\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        assert!(violations.is_empty(), "{:?}", violations);
+    }
+
+    #[test]
+    fn issue202_string_continuation_row_checked() {
+        // A `\"foo\" +` continuation row is checked like any expression
+        // continuation (JVM reports it at the wrong depth, issue #202).
+        let src = "class Foo {\n    fun a() {\n        val x = build(\n            expl = \"a\" +\n\"b\",\n        )\n    }\n}\n";
+        let violations = Indentation::new(4).check(&KotlinParser::new().parse(src), src);
+        let rows: Vec<usize> = violations.iter().map(|v| v.line).collect();
+        assert!(rows.contains(&5), "{:?}", violations);
     }
 
     fn matrix() {
