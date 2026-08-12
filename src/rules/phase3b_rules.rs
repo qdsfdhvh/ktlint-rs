@@ -274,6 +274,13 @@ impl FunctionSignatureSpacing {
         if body_expr.start_position().row == body_expr.end_position().row {
             return;
         }
+        // The first token of the body must share the `=` line — a body that
+        // already starts on its own line (`fun f() =\n    expr…`) is fine
+        // (oracle: PushPromise.wrap() =\n  PushPromise(…) stays untouched).
+        let eq_row = bytes[..eq.end_byte()].iter().filter(|&&b| b == b'\n').count();
+        if body_expr.start_position().row != eq_row {
+            return;
+        }
         let body_start = eq.end_byte() + 1;
         // ktlint reports at the first token of the body expression (the
         // token right after `=`).

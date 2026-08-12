@@ -21,7 +21,14 @@ impl Rule for ArgumentListWrapping {
         let bytes = source.as_bytes();
         let mut stack = vec![tree.root_node()];
         while let Some(node) = stack.pop() {
-            if matches!(node.kind(), "value_arguments" | "class_parameters") {
+            // Only call-site argument lists (the parent is a call) —
+            // class/function parameter lists and function types
+            // (`(() -> Unit)?`) are not this rule's territory (oracle).
+            if matches!(node.kind(), "value_arguments")
+                && node
+                    .parent()
+                    .is_some_and(|p| matches!(p.kind(), "call_expression" | "call_suffix"))
+            {
                 self.check_list(&node, bytes, source, &mut violations);
             }
             for i in (0..node.child_count()).rev() {
@@ -60,6 +67,12 @@ impl ArgumentListWrapping {
         if args.is_empty() {
             return;
         }
+        // ktlint skips lists with >= 8 arguments
+        // (ktlint_argument_list_wrapping_ignore_when_parameter_count_greater_
+        // or_equal_than, default 8, oracle-probed).
+        if args.len() > 8 {
+            return;
+        }
 
         // Skip lambda arguments: `foo { ... }` — wrapping a lambda is not useful.
         let has_lambda = args.iter().any(|a| {
@@ -69,14 +82,20 @@ impl ArgumentListWrapping {
 
         // Determine if wrapping is needed: list already spans lines, or the
         // single-line list exceeds max_line_length. ktlint measures the whole
-        // line (leavesOnLine20), not just the list node.
+        // physical line (leavesOnLine from the line's first leaf, oracle:
+        // `fun f() = call(…long args…)` reports on the full line; an
+        // assignment at class-member level is parsed differently and is not
+        // covered here).
         let single_line = start_row == end_row;
+        // ktlint measures the leaves from the list's opening `(` to the end
+        // of the line (oracle: a 128-char 4-arg call whose `(` sits at col 24
+        // is not reported — 104 chars from `(`; the same args with a longer
+        // name reach 121 from `(` and are reported).
         let line_len = if single_line {
-            let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
             let line_end = source[node.end_byte()..]
                 .find('\n')
                 .map_or(source.len(), |i| node.end_byte() + i);
-            line_end - line_start
+            line_end - node.start_byte()
         } else {
             0
         };
@@ -153,6 +172,12 @@ mod tests {
         let mut p = KotlinParser::new();
         ArgumentListWrapping.check(&p.parse(s), s)
     }
+
+
+
+
+
+
 
     #[test]
     fn short_list_no_wrap() {
