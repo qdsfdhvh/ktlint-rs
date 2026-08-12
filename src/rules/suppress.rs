@@ -1,142 +1,126 @@
 //! @Suppress / @SuppressWarnings annotation support.
 //!
-//! Handles per-element rule suppression via annotations:
-//! - `@Suppress("ktlint")` — suppress all ktlint rules on this element
-//! - `@Suppress("ktlint:standard:curly-spacing")` — suppress a specific rule
-//! - `@SuppressWarnings("ktlint")` — same as @Suppress
-//! - Multiple args: `@Suppress("ktlint:rule1", "ktlint:rule2")`
+//! ktlint 1.8 parity: a `@Suppress(...)` / `@SuppressWarnings(...)`
+//! annotation on an element suppresses matching rules for that element
+//! (its whole line span). Arguments match (JVM oracle, probed):
+//! - `"ktlint"` — all rules
+//! - the full id: `@Suppress("ktlint:standard:function-naming")`
+//! - the IntelliJ inspection name alias (currently `"FunctionName"` for
+//!   function-naming; extend as more appear)
+//! - `@file:Suppress(...)` applies to the whole file.
 
 use std::collections::HashSet;
 
-/// Parse @Suppress annotations from source code and return the set of
-/// suppressed rule IDs for each line range.
-///
-/// Returns vec of (line, rule_id) pairs where the rule is suppressed.
-/// If `rule_id` is empty string, ALL rules are suppressed on that line.
-#[allow(dead_code)]
-pub fn parse_suppress_annotations(source: &str) -> Vec<(usize, String)> {
-    let mut results = Vec::new();
-    let lines: Vec<&str> = source.lines().collect();
+/// One suppression range: rows [start, end] inclusive, and the set of
+/// suppressed rule ids (empty set = all rules).
+pub struct SuppressRange {
+    pub start_row: usize,
+    pub end_row: usize,
+    pub rules: HashSet<String>,
+}
 
-    for (i, line) in lines.iter().enumerate() {
-        let trimmed = line.trim();
+/// IntelliJ inspection names that map to ktlint rule ids.
+fn intellij_alias(arg: &str) -> Option<String> {
+    match arg {
+        "FunctionName" => Some("standard:function-naming".to_string()),
+        _ => None,
+    }
+}
 
-        // Match @Suppress or @SuppressWarnings
-        if trimmed.starts_with("@Suppress(") || trimmed.starts_with("@SuppressWarnings(") {
-            // Extract the content inside the parentheses
-            if let Some(args_start) = trimmed.find('(') {
-                if let Some(args_end) = trimmed[args_start..].find(')') {
-                    let args = &trimmed[args_start + 1..args_start + args_end];
-
-                    // Split by comma, trim quotes
-                    for arg in args.split(',') {
-                        let arg = arg.trim().trim_matches('"').trim();
-                        if arg == "ktlint" {
-                            // Suppress ALL rules on the NEXT line (annotated element)
-                            results.push((i + 2, String::new()));
-                        } else if let Some(rule) = arg.strip_prefix("ktlint:") {
-                            results.push((i + 2, rule.to_string()));
-                        }
+/// Collect suppression ranges from the CST: find `@Suppress`/`@SuppressWarnings`
+/// annotations (including `@file:`) and resolve the annotated element's row
+/// span (the declaration that carries the annotation).
+pub fn collect_suppressions(
+    tree: &tree_sitter::Tree,
+    source: &str,
+) -> Vec<SuppressRange> {
+    let mut ranges: Vec<SuppressRange> = Vec::new();
+    let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "annotation" {
+            let text = &source[node.start_byte()..node.end_byte()];
+            let trimmed = text.trim();
+            if trimmed.starts_with("@Suppress")
+                || trimmed.starts_with("@SuppressWarnings")
+                || trimmed.starts_with("@file:Suppress")
+            {
+                if let Some(args) = extract_args(trimmed) {
+                    let rules = parse_args(&args);
+                    let (start, end) = element_span(&node, source);
+                    if !rules.is_empty() {
+                        ranges.push(SuppressRange {
+                            start_row: start,
+                            end_row: end,
+                            rules,
+                        });
                     }
                 }
             }
         }
-    }
-
-    results
-}
-
-/// Filter out violations that are suppressed by @Suppress annotations.
-#[allow(dead_code)]
-pub fn filter_suppressed(
-    violations: Vec<crate::rules::Violation>,
-    source: &str,
-) -> Vec<crate::rules::Violation> {
-    let suppressed = parse_suppress_annotations(source);
-
-    // Build a set of suppressed rule IDs per line
-    let mut fully_suppressed_lines: HashSet<usize> = HashSet::new();
-    let mut rule_suppressions: Vec<(usize, String)> = Vec::new();
-
-    for (line, rule_id) in &suppressed {
-        if rule_id.is_empty() {
-            fully_suppressed_lines.insert(*line);
-        } else {
-            rule_suppressions.push((*line, rule_id.clone()));
+        for i in (0..node.child_count()).rev() {
+            if let Some(child) = node.child(i) {
+                stack.push(child);
+            }
         }
     }
-
-    violations
-        .into_iter()
-        .filter(|v| {
-            // Fully suppressed lines
-            if fully_suppressed_lines.contains(&v.line) {
-                return false;
-            }
-            // Per-rule suppression
-            for (line, rule_id) in &rule_suppressions {
-                if *line == v.line && v.rule_id == *rule_id {
-                    return false;
-                }
-            }
-            true
-        })
-        .collect()
+    ranges
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::rules::Violation;
+fn extract_args(text: &str) -> Option<String> {
+    let open = text.find('(')?;
+    let rest = &text[open + 1..];
+    let close = rest.find(')')?;
+    Some(rest[..close].to_string())
+}
 
-    #[test]
-    fn parse_single_suppress() {
-        let source = "@Suppress(\"ktlint:standard:curly-spacing\")\nclass Foo\n";
-        let s = parse_suppress_annotations(source);
-        assert_eq!(s.len(), 1);
-        assert_eq!(s[0], (2, "standard:curly-spacing".to_string()));
+fn parse_args(args: &str) -> HashSet<String> {
+    let mut rules = HashSet::new();
+    for arg in args.split(',') {
+        let arg = arg.trim().trim_matches('"').trim();
+        if arg.is_empty() {
+            continue;
+        }
+        if arg == "ktlint" {
+            rules.insert(String::new()); // empty = all rules
+        } else if let Some(rule) = arg.strip_prefix("ktlint:") {
+            // `ktlint:standard:function-naming` — exact rule id.
+            rules.insert(rule.to_string());
+        } else if let Some(alias) = intellij_alias(arg) {
+            rules.insert(alias);
+        }
+        // Anything else (bare `function-naming`, `FunctionNaming`, …) does
+        // NOT match (JVM oracle: probed — only the IntelliJ inspection name
+        // and the full `ktlint:…` id suppress).
     }
+    rules
+}
 
-    #[test]
-    fn parse_ktlint_suppress_all() {
-        let source = "@Suppress(\"ktlint\")\nfun foo()\n";
-        let s = parse_suppress_annotations(source);
-        assert_eq!(s.len(), 1);
-        assert_eq!(s[0].1, "");
-        assert_eq!(s[0].0, 2); // line 2 (annotated element),
-        assert_eq!(s[0].1, ""); // empty = all rules
+/// Row span of the element the annotation applies to: the enclosing
+/// declaration's start..end rows, or just the annotation row when no
+/// declaration encloses it (e.g. a lone `@file:` annotation).
+fn element_span(node: &tree_sitter::Node, _source: &str) -> (usize, usize) {
+    let mut n = *node;
+    let mut best: Option<tree_sitter::Node> = None;
+    while let Some(p) = n.parent() {
+        match p.kind() {
+            "function_declaration"
+            | "property_declaration"
+            | "class_declaration"
+            | "object_declaration"
+            | "enum_entry"
+            | "type_alias_declaration"
+            | "function_value_parameter"
+            | "class_parameter" => {
+                best = Some(p);
+                break;
+            }
+            _ => {}
+        }
+        n = p;
     }
-
-    #[test]
-    fn filter_suppressed_violations() {
-        let source = "@Suppress(\"ktlint:standard:curly-spacing\")\nclass Foo{\n}\n";
-        let violations = vec![
-            Violation {
-                file: String::new(),
-                line: 2, // class Foo line (annotated element)
-                col: 1,
-                rule_id: "standard:curly-spacing".to_string(),
-                message: "Missing space".to_string(),
-                auto_fixable: true,
-            },
-            Violation {
-                file: String::new(),
-                line: 2,
-                col: 1,
-                rule_id: "standard:op-spacing".to_string(),
-                message: "Missing space".to_string(),
-                auto_fixable: true,
-            },
-        ];
-        let filtered = filter_suppressed(violations, source);
-        assert_eq!(filtered.len(), 1); // curly-spacing filtered, op-spacing remains
-        assert_eq!(filtered[0].rule_id, "standard:op-spacing");
-    }
-
-    #[test]
-    fn suppres_warnings_works() {
-        let source = "@SuppressWarnings(\"ktlint\")\nfun foo()\n";
-        let s = parse_suppress_annotations(source);
-        assert_eq!(s.len(), 1);
+    if let Some(b) = best {
+        (b.start_position().row, b.end_position().row)
+    } else {
+        (node.start_position().row, node.start_position().row)
     }
 }

@@ -60,7 +60,11 @@ impl CommentSpacing {
         // `//` should be followed by a space (unless it's `////\n` or empty `//`)
         if text.starts_with("//") && text.len() > 2 {
             let third = text.as_bytes()[2];
-            if third != b' ' && third != b'/' && third != b'\n' && third != b'\r' {
+            if third != b' ' && third != b'/' && third != b'\n' && third != b'\r'
+                // IDE fold markers are exempt (JVM oracle).
+                && !text.starts_with("//region")
+                && !text.starts_with("//endregion")
+            {
                 violations.push(Violation {
                     file: String::new(),
                     line: pos.row + 1,
