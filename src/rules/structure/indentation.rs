@@ -85,14 +85,29 @@ impl Rule for Indentation {
         // AST-driven expected indent (issue #202 rework): the first token's
         // container chain decides each code row. Falls back to the line-scan
         // model when the AST cannot classify the row.
-        // AST-driven expected indent (issue #202 rework): the first token's
-        // container chain decides each code row. Falls back to the line-scan
-        // model when the AST cannot classify the row.
+        // Over-indentation is only reported when KTLINT_RS_INDENT_PROBE is
+        // set (issue #202): the continuation model is not yet exact enough
+        // for every real-world shape (e.g. 2-space-indent projects), so the
+        // confident-rows-only detection stays a measurement tool until the
+        // remaining shapes are modelled (see the probe sweep).
+        let probe = std::env::var("KTLINT_RS_INDENT_PROBE").is_ok();
+        // On files tree-sitter fails to parse cleanly, error recovery produces
+        // garbage ancestry (e.g. statements re-parented to source_file), so the
+        // AST classifier's expectations are not trustworthy — fall back to the
+        // conservative line-scan model for those files (issue #202).
+        let tree_clean = !_tree.root_node().has_error();
+        // Line-scan expectations (brace depth + continuation) — the fallback
+        // model. The over-indent probe only trusts a row when the AST
+        // classifier AND the line-scan model agree on the expected indent:
+        // both are wrong together only when the shape is too exotic to model
+        // (issue #202 conservative gap).
+        let scan_expected = compute_line_expected(&lines, is, &elevated);
+        // AST expectations per row (None = unclassified → line-scan value).
+        let ast: Vec<Option<usize>> = (0..lines.len())
+            .map(|i| ast_expected(_tree, source, i, is))
+            .collect();
         let line_expected: Vec<usize> = (0..lines.len())
-            .map(|i| {
-                ast_expected(_tree, source, i, is)
-                    .unwrap_or_else(|| compute_line_expected(&lines, is, &elevated)[i])
-            })
+            .map(|i| ast[i].unwrap_or(scan_expected[i]))
             .collect();
 
         for (i, line) in lines.iter().enumerate() {
@@ -157,6 +172,26 @@ impl Rule for Indentation {
             } else if too_shallow {
                 too_shallow = true;
                 expected_indent = Some(expected_for_line);
+            }
+            // Over-indentation (issue #202): an indent deeper than expected
+            // that lands on a multiple of indent_size is silently accepted
+            // today (the `else if` above only fires on non-multiples). The
+            // oracle reports it (`Unexpected indentation (8) (should be 4)`).
+            // Probe-only: reports on rows where the AST classifier AND the
+            // line-scan model agree on the expected value AND the row starts
+            // a fresh statement (never a continuation — alignment indents are
+            // not modelled exactly). Lazy: on already-formatted code
+            // over-indented rows are rare, so the tree walk is almost never
+            // paid.
+            if probe && spaces > expected_for_line {
+                let confident = tree_clean
+                    && ast[i].is_some()
+                    && expected_for_line == scan_expected[i]
+                    && row_starts_statement(_tree, source, i);
+                if confident {
+                    too_shallow = true;
+                    expected_indent = Some(expected_for_line);
+                }
             }
             if too_shallow {
                 let message = match expected_indent {
@@ -1284,28 +1319,12 @@ pub(crate) fn ast_expected(
     let _guard = DepthGuard;
     DEPTH.with(|c| c.set(c.get() + 1));
     if DEPTH.with(|c| c.get()) > 200 {
-        if row == 110 {
-            eprintln!("NONE110 depth>200");
-        }
         return None;
     }
     // A row already being computed higher in the recursion means a cyclic
     // expectation (nested block ↔ header) — bail to the fallback.
     if IN_PROGRESS.with(|c| c.borrow().contains(&row)) {
-        if row == 110 {
-            eprintln!(
-                "NONE110 in-progress {:?}",
-                IN_PROGRESS.with(|c| c.borrow().clone())
-            );
-        }
         return None;
-    }
-    if row >= 105 && row <= 112 {
-        eprintln!(
-            "AE row={row} depth={} prog={:?}",
-            DEPTH.with(|c| c.get()),
-            IN_PROGRESS.with(|c| c.borrow().clone())
-        );
     }
     IN_PROGRESS.with(|c| c.borrow_mut().push(row));
     let line = src.lines().nth(row)?;
@@ -1313,12 +1332,7 @@ pub(crate) fn ast_expected(
     let point = tree_sitter::Point { row, column: col };
     let node = match tree.root_node().descendant_for_point_range(point, point) {
         Some(n) => n,
-        None => {
-            if row == 110 {
-                eprintln!("NONE110 no-node");
-            }
-            return None;
-        }
+        None => return None,
     };
     let trimmed = line.trim();
     // A lambda `{` right after an open `(` (`call(\n    { … }`) sits one
@@ -1331,22 +1345,46 @@ pub(crate) fn ast_expected(
         }
     }
     if trimmed == "{" {
-        // A lambda argument `{` (inside a paren list) is handled by the
-        // value_arguments classification. A true block-opening Allman `{`
+        // A lambda argument `{` (inside a paren list) aligns with the other
+        // arguments — `withUrl(\n    "/",\n    {` puts `{` at the args row
+        // + one level (oracle, issue #202). A true block-opening Allman `{`
         // sits at the previous row + one level — except class/object bodies
         // which stay at the header row (oracle: `class C\n{`).
         let mut up = node;
         let mut kind = "";
+        let mut args_row: Option<usize> = None;
         loop {
             match up.kind() {
                 "value_arguments" | "function_value_parameters" | "class_parameters" => {
                     kind = "args";
+                    args_row = Some(up.start_position().row);
                     break;
                 }
                 "lambda_literal" => {
-                    // Allman lambda `{`: aligns with the lambda's own row —
-                    // a chained lambda (`list\n    .map\n    {`) with the
-                    // chain root (oracle: `{` at the `val r = list` row).
+                    // A lambda argument is classified by its paren-list owner;
+                    // walk up through it. A standalone lambda (chained lambda
+                    // body / Allman lambda) is the "lambda" case below.
+                    let mut w = up;
+                    let mut found_args = None;
+                    while let Some(p) = w.parent() {
+                        match p.kind() {
+                            "value_arguments"
+                            | "function_value_parameters"
+                            | "class_parameters" => {
+                                found_args = Some(p.start_position().row);
+                                break;
+                            }
+                            "statements" | "class_body" | "function_body" | "enum_class_body"
+                            | "lambda_literal" => break,
+                            _ => {}
+                        }
+                        w = p;
+                    }
+                    if let Some(r) = found_args {
+                        kind = "args";
+                        args_row = Some(r);
+                        break;
+                    }
                     kind = "lambda";
                     break;
                 }
@@ -1418,7 +1456,10 @@ pub(crate) fn ast_expected(
             return ast_expected(tree, src, base, is);
         }
         return match kind {
-            "args" => None,
+            "args" => match args_row {
+                Some(r) if r < row => ast_expected(tree, src, r, is).map(|e| e + is),
+                _ => None,
+            },
             "no_lift" => ast_expected(tree, src, row.saturating_sub(1), is),
             _ => ast_expected(tree, src, row.saturating_sub(1), is).map(|e| e + is),
         };
@@ -1457,34 +1498,6 @@ pub(crate) fn ast_expected(
             .max()
             .unwrap_or(row - 1);
         return ast_expected(tree, src, stmt_row, is).map(|e| e + is);
-    }
-    if trimmed == "runBlocking {" && row == 110 {
-        let mut up = node;
-        let mut ks: Vec<(String, usize)> = vec![];
-        loop {
-            ks.push((up.kind().to_string(), up.start_position().row));
-            match up.parent() {
-                Some(p) => up = p,
-                None => break,
-            }
-        }
-        eprintln!(
-            "RB111 chain={ks:?} self={:?} fun={:?} parent={:?}",
-            ast_expected(tree, src, 110, is),
-            ast_expected(tree, src, 105, is),
-            ast_expected(tree, src, 109, is)
-        );
-    }
-    if trimmed == "{" && row >= 3 {
-        let mut up = node;
-        let mut ks: Vec<&str> = vec![];
-        loop {
-            ks.push(up.kind());
-            match up.parent() {
-                Some(p) => up = p,
-                None => break,
-            }
-        }
     }
     for c in &chain {
         match c.kind() {
@@ -1561,7 +1574,28 @@ pub(crate) fn ast_expected(
                     //     "/",\n    {`) sits at the call row + one level.
                     return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
                 }
-                return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
+                // A row continuing a binary/expression continuation inside
+                // the args (`withContext(\n    a +\n        b { … }`) sits
+                // one level deeper than the args themselves (oracle). The
+                // continuation expression started on a previous row inside
+                // the paren list.
+                let nested_continuation = chain.iter().any(|n| {
+                    matches!(
+                        n.kind(),
+                        "additive_expression"
+                            | "multiplicative_expression"
+                            | "comparison_expression"
+                            | "equality_expression"
+                            | "conjunction_expression"
+                            | "disjunction_expression"
+                            | "elvis_expression"
+                            | "range_expression"
+                            | "infix_expression"
+                    ) && n.start_position().row < row
+                        && n.start_position().row > c.start_position().row
+                });
+                let extra = if nested_continuation { 2 * is } else { is };
+                return ast_expected(tree, src, c.start_position().row, is).map(|e| e + extra);
             }
             "lambda_literal" => {
                 if c.start_position().row != row {
@@ -1589,6 +1623,23 @@ pub(crate) fn ast_expected(
             }
             "statements" => {
                 if let Some(owner) = c.parent() {
+                    // Brace-less `for` body: `for (i in 1..10_000)` complete
+                    // on its own line, the following statement is its body at
+                    // +1 level (oracle). tree-sitter parses the body as a
+                    // sibling statement (no control_structure_body in the
+                    // ancestor chain), so detect it textually.
+                    if row > 0 && !trimmed.starts_with('}') {
+                        let prev_raw = src.lines().nth(row - 1).unwrap_or("");
+                        let prev_trim = prev_raw.trim();
+                        let prev_code = prev_trim.split("//").next().unwrap_or("").trim_end();
+                        if prev_code.starts_with("for ") {
+                            if let Some(close) = header_close_paren(prev_code) {
+                                if prev_code[close + 1..].trim().is_empty() {
+                                    return ast_expected(tree, src, row - 1, is).map(|e| e + is);
+                                }
+                            }
+                        }
+                    }
                     // The first row of a property value/assignment
                     // continuation (`client =\n    client`) sits one level
                     // deeper than the `=` row (oracle), but only when it is
@@ -1632,9 +1683,26 @@ pub(crate) fn ast_expected(
                         return ast_expected(tree, src, open_row, is);
                     }
                     if chainish && !chain_param_lambda {
+                        // Elvis lambda bodies: a line-start elvis (`?: run {`)
+                        // lifts its body one level (oracle); a mid-line elvis
+                        // (`.takeIf { } ?: run {`) keeps the body at the
+                        // elvis line's own level. Only the closing `}`
+                        // returns to the elvis row (handled above).
+                        if open_line.starts_with("?: ") || open_line.starts_with("?:{") {
+                            return ast_expected(tree, src, open_row, is).map(|e| e + is);
+                        }
                         return ast_expected(tree, src, open_row, is);
                     }
-                    return ast_expected(tree, src, open_row, is).map(|e| e + is);
+                    // A lambda nested in a control-structure condition
+                    // (`if (a || runCatching {`) lifts its body two levels
+                    // (condition continuation + lambda), not one (oracle).
+                    // Only when the block owner is the lambda itself.
+                    let lift = if owner.kind() == "lambda_literal" && lambda_in_condition(&owner) {
+                        2 * is
+                    } else {
+                        is
+                    };
+                    return ast_expected(tree, src, open_row, is).map(|e| e + lift);
                 }
             }
             "control_structure_body" => {
@@ -1874,6 +1942,87 @@ pub(crate) fn ast_expected(
 }
 
 /// The opening row of the block a `statements` node belongs to.
+/// True when the row's first code token starts a new statement inside a body
+/// container (statements / class_body / …) — as opposed to a continuation of
+/// a statement that began on an earlier line (`.map`, `?: …`, `)`, wrapped
+/// args). Over-indentation is only probed on statement-start rows: a
+/// continuation's legitimate indent is alignment, which the classifier does
+/// not model exactly (issue #202).
+fn row_starts_statement(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+    let line = src.lines().nth(row).unwrap_or("");
+    let col = line.len() - line.trim_start().len();
+    let point = tree_sitter::Point { row, column: col };
+    let Some(mut n) = tree.root_node().descendant_for_point_range(point, point) else {
+        return false;
+    };
+    loop {
+        match n.parent() {
+            Some(p) => {
+                if matches!(
+                    p.kind(),
+                    "statements" | "class_body" | "enum_class_body" | "secondary_constructor"
+                ) {
+                    return n.start_position().row == row;
+                }
+                n = p;
+            }
+            None => return false,
+        }
+    }
+}
+
+/// Index of the `)` that closes the `for (` header, accounting for nested
+/// parens (`for ((a, b) in pairs)`). None when no complete header is found.
+fn header_close_paren(code: &str) -> Option<usize> {
+    let open = code.find('(')?;
+    let mut depth = 0usize;
+    for (i, ch) in code[open..].char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return Some(open + i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// True when a lambda sits inside a control structure's parenthesized
+/// condition (`if (a || runCatching {`, `while (x && run {`) rather than in
+/// its body or elsewhere. Its body then lifts two levels below the control
+/// structure row (condition continuation + lambda body), not one (oracle).
+fn lambda_in_condition(lambda: &tree_sitter::Node) -> bool {
+    // A lambda inside a control structure's condition (`if (a || runCatching
+    // {`, `if (runCatching { … }.isSuccess)`) reaches the control structure
+    // node before any body container. A then/else-branch lambda sits inside
+    // the branch's control_structure_body first.
+    let mut n = *lambda;
+    while let Some(p) = n.parent() {
+        match p.kind() {
+            "if_expression" | "while_statement" | "for_statement" | "do_while_statement" => {
+                return true;
+            }
+            "statements"
+            | "function_body"
+            | "class_body"
+            | "enum_class_body"
+            | "lambda_literal"
+            | "when_entry"
+            | "control_structure_body" => {
+                return false;
+            }
+            _ => {}
+        }
+        n = p;
+    }
+    false
+}
+
+/// The opening row of the block a `statements` node belongs to.
 /// A row that begins a declaration header (`val x`, `fun f`, annotations,
 /// modifiers) is a block member, not a continuation — only rows carrying
 /// the value/body (`val x =\n    foo()`) sit one level deeper.
@@ -1944,6 +2093,77 @@ fn block_open_row(owner: &tree_sitter::Node, src: &str) -> usize {
 mod ast_matrix {
     use crate::parser::KotlinParser;
     use crate::rules::structure::indentation::ast_expected;
+
+    #[test]
+    fn issue202_lambda_arg_brace_aligns_with_args() {
+        // `withUrl(\n    "/",\n    {` — a lambda argument `{` on its own
+        // line aligns with the other arguments (args row + one level).
+        expect_ok(
+            "fun main() {\n    withUrl(\n        \"/\",\n        {\n            method = HttpMethod.Post\n        }\n    )\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 8), (5, 12), (6, 8), (7, 4), (8, 0)],
+        );
+    }
+
+    #[test]
+    fn issue202_line_start_elvis_body_lifts() {
+        // `?: run {` at line start lifts its body one level.
+        expect_ok(
+            "fun main() {\n    val x = listOf(1)\n        ?.firstOrNull()\n        ?.let { a -> a }\n        ?: run {\n            foo()\n        }\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 8), (5, 8), (6, 12)],
+        );
+    }
+
+    #[test]
+    fn issue202_midline_elvis_body_keeps_line_level() {
+        // `.takeIf { } ?: run {` — a mid-line elvis keeps its body at the
+        // elvis line's own level.
+        expect_ok(
+            "fun main() {\n    val x = listOf(1)\n        .takeIf { it.isNotEmpty() } ?: run {\n        foo()\n        return@run null\n    }\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 8), (5, 8), (6, 4), (7, 0)],
+        );
+    }
+
+    #[test]
+    fn issue202_bracless_for_body_lifts() {
+        // `for (i in 1..10_000)` complete on its own line: the following
+        // statement is its body at +1 level (tree-sitter parses it as a
+        // sibling statement, so the classifier detects it textually).
+        expect_ok(
+            "fun main() {\n    buildString {\n        for (i in 1..10_000)\n            appendLine(\"x\")\n    }\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 12), (5, 4), (6, 0)],
+        );
+    }
+
+    #[test]
+    fn issue202_condition_lambda_lifts_twice() {
+        // A lambda inside a control-structure condition (`if (a || runCatching
+        // {`) lifts its body two levels (condition continuation + lambda).
+        expect_ok(
+            "fun main() {\n    if (a || runCatching {\n            foo()\n        }) {\n        bar()\n    }\n}\n",
+            &[(1, 0), (2, 4), (3, 12), (4, 4), (5, 8), (6, 4), (7, 0)],
+        );
+    }
+
+    #[test]
+    fn issue202_args_binary_continuation_lifts() {
+        // `withContext(\n    a +\n        CoroutineExceptionHandler { …` —
+        // a binary continuation inside the args sits one level deeper than
+        // the args themselves.
+        expect_ok(
+            "fun main() {\n    withContext(\n        application.coroutineContext +\n            CoroutineExceptionHandler { _, e ->\n                log(e)\n            }\n    ) { }\n}\n",
+            &[(1, 0), (2, 4), (3, 8), (4, 12), (5, 16)],
+        );
+    }
+
+    #[test]
+    fn issue202_over_indent_reported_when_confident() {
+        // The issue #202 repro: over-indentation on a multiple of
+        // indent_size is reported when the classifier is confident.
+        let src = "package com.example\n\npublic fun exampleFunction(): Int {\n        val value = 1\n    return value\n}\n";
+        let tree = KotlinParser::new().parse(src);
+        assert_eq!(ast_expected(&tree, src, 3, 4), Some(4));
+        assert_eq!(ast_expected(&tree, src, 4, 4), Some(4));
+    }
 
     fn expect_ok(src: &str, row_expected: &[(usize, usize)]) {
         let tree = KotlinParser::new().parse(src);
