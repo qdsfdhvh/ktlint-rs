@@ -671,6 +671,10 @@ pub(crate) fn compute_line_expected(
     // is followed by its primary-constructor annotations and keyword on the
     // class's own indentation level: `class Foo\n    @Inject\n    constructor(`.
     let mut class_annotation_pending = false;
+    // The brace depth when an arrow-parameter lambda body started
+    // (`forEach { (navKey, navItem) ->` + body). While the depth is at or
+    // above it, following rows keep the lifted body level.
+    let mut arrow_body_depth: Option<usize> = None;
     for (i, line) in lines.iter().enumerate() {
         let t = line.trim();
         // Strip strings, comments, and char literals first so the paren counts
@@ -959,10 +963,23 @@ pub(crate) fn compute_line_expected(
                     // governed by the closing-brace logic instead. A row
                     // right after a `{` (a lambda body inside the list:
                     // `navigationSuiteItems = {` + body) is a block body and
-                    // goes through the `{` branch below.
+                    // goes through the `{` branch below. Rows inside an
+                    // arrow lambda body take the higher of the list indent
+                    // and the lifted body level.
+                    if arrow_body_depth.is_some_and(|d| depth >= d) && prev_last_code != Some('{') {
+                        e = e.max(prev_expected);
+                    }
                 } else if prev_last_code == Some('{') && prev_was_supertype {
                     // Class body opened on a supertype continuation line.
                     e = prev_expected;
+                } else if arrow_body_depth.is_some_and(|d| depth >= d)
+                    && !t.starts_with('}')
+                    && !t.starts_with(')')
+                    && prev_last_code != Some('{')
+                {
+                    // Rows inside the arrow lambda body keep the lifted level
+                    // (`val selected`, `item(`, … after `val hasUnread`).
+                    e = e.max(prev_expected);
                 } else if prev_last_code == Some('>') && lines[i - 1].trim_end().ends_with("->") {
                     // Lambda with a parameter list ending on its own line:
                     // `TOP_LEVEL…forEach { (navKey, navItem) ->` — the body
@@ -970,6 +987,9 @@ pub(crate) fn compute_line_expected(
                     // entry (`1 -> "one"`) carries its body on the same line
                     // and never reaches here.
                     e = prev_expected.saturating_add(is);
+                    if arrow_body_depth.is_none() {
+                        arrow_body_depth = Some(depth);
+                    }
                 } else if prev_last_code == Some('{') {
                     // A block opened at the end of the previous line
                     // (`fun f() {`, `runBlocking {`, `if (x) {`): the body
@@ -1083,7 +1103,10 @@ pub(crate) fn compute_line_expected(
             ""
         };
         let binary_cont = binary_operator_row(t, prev_code)
-            || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "));
+            || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "))
+            || (arrow_body_depth.is_some()
+                && t.starts_with('.')
+                && !prev_code.trim_end().ends_with('}'));
         if binary_cont {
             // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
             // level of the previous row; the first continuation lifts one
@@ -1099,6 +1122,9 @@ pub(crate) fn compute_line_expected(
         }
         prev_binary_cont = binary_cont;
         out[i] = e;
+        if arrow_body_depth.is_some_and(|d| depth < d) {
+            arrow_body_depth = None;
+        }
         if class_like_decl_header(t) && !t.ends_with('{') {
             class_annotation_pending = true;
         } else if t.contains('{') {
