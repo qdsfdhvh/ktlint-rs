@@ -950,6 +950,7 @@ pub(crate) fn compute_line_expected(
                     && !t.starts_with('}')
                     && !t.starts_with(')')
                     && prev_last_code != Some('{')
+                    && prev_last_code != Some('=')
                     && !(prev_last_code == Some('>') && lines[i - 1].trim_end().ends_with("->"))
                 {
                     // Inside a paren list the expectation already came from
@@ -1025,6 +1026,14 @@ pub(crate) fn compute_line_expected(
                         && prev_expected > depth * is
                         && i > 1
                         && lines[i - 2].trim_end().ends_with(':');
+                    let mut want = prev_expected.saturating_add(is);
+                    // A named-argument RHS inside a paren list
+                    // (`NiaGradientBackground(\n    gradientColors =\n
+                    //        if (...) {`) sits one level under the argument
+                    // row, not under the list's opener.
+                    if let Some(&(list, _, _)) = paren_expected.last() {
+                        want = want.max(list.saturating_add(is));
+                    }
                     let want = if wrapped_return_type {
                         // The `=` sits on a continuation line itself
                         // (wrapped return type: `fun name():\n    Type =\n
@@ -1036,7 +1045,7 @@ pub(crate) fn compute_line_expected(
                         // from being mistaken for one.
                         prev_expected
                     } else {
-                        prev_expected.saturating_add(is)
+                        want
                     };
 
                     if want > e {

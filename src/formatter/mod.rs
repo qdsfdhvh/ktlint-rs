@@ -1563,7 +1563,10 @@ fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String
     let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
     while let Some(node) = stack.pop() {
         match node.kind() {
-            "property_declaration" | "function_value_parameters" | "function_body" => {
+            "property_declaration"
+            | "function_value_parameters"
+            | "function_body"
+            | "value_argument" => {
                 find_multiline_rhs(&node, source, &mut rewrites);
             }
             _ => {}
