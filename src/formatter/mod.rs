@@ -566,6 +566,9 @@ fn apply_spacing_rules(
         {
             text = fix_supertype_colon_spacing(&text);
         }
+        if rule_enabled(rule_configs, "standard:no-blank-line-in-list", code_style) {
+            text = fix_blank_line_in_list(&text);
+        }
         if rule_enabled(rule_configs, "standard:annotation", code_style)
             || rule_enabled(rule_configs, "standard:annotation-spacing", code_style)
         {
@@ -881,6 +884,7 @@ fn fix_all_spacing(source: &str) -> String {
     let spread_fixed = fix_comment_declaration_spacing(&spread_fixed);
     let spread_fixed = fix_supertype_colon_spacing(&spread_fixed);
     let spread_fixed = fix_annotation_newlines(&spread_fixed);
+    let spread_fixed = fix_blank_line_in_list(&spread_fixed);
     let tree = parser.parse(&spread_fixed);
     if tree.root_node().has_error() {
         return source.to_string();
@@ -3292,12 +3296,117 @@ fn fix_blank_lines(source: &str) -> String {
 }
 
 fn fix_blank_line_in_list(source: &str) -> String {
-    // Disabled: text-level bracket counting cannot distinguish a call's value-
-    // argument list (where ktlint may drop a blank line) from a data-class primary
-    // constructor's property list, where blank lines legitimately group fields —
-    // and ktlint keeps those. Removing them corrupted grouping, so leave blank
-    // lines alone; a real list-blank violation is still reported by the linter.
-    source.to_string()
+    // ktlint 1.8 no-blank-line-in-list: a value-argument / class-parameter /
+    // function-parameter list must not contain blank lines (verified: JVM
+    // drops them in call args AND data-class primary constructors). CST
+    // locates the list spans; blank lines inside string/comment interiors
+    // (raw strings spanning list rows) are excluded via protected ranges.
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut protected: Vec<(usize, usize)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if is_protected_kind(node.kind()) || node.kind().contains("comment") {
+            protected.push((node.start_byte(), node.end_byte()));
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    let in_protected = |pos: usize| protected.iter().any(|&(s, e)| pos >= s && pos < e);
+    let mut deletions: Vec<(usize, usize)> = Vec::new();
+    // Blank lines inside a nested block (a lambda argument's body
+    // `foo(bar {\n    a()\n\n    b()\n})`, a control-structure body inside a
+    // list) are content, not list separators.
+    let mut blocks: Vec<(usize, usize)> = Vec::new();
+    let mut stack2 = vec![tree.root_node()];
+    while let Some(node) = stack2.pop() {
+        if matches!(
+            node.kind(),
+            "lambda_literal"
+                | "block"
+                | "control_structure_body"
+                | "function_body"
+                | "class_body"
+                | "object_body"
+                | "enum_class_body"
+                | "companion_object"
+        ) && node.start_position().row != node.end_position().row
+        {
+            blocks.push((node.start_byte(), node.end_byte()));
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack2.push(c);
+            }
+        }
+    }
+    let in_block = |pos: usize| blocks.iter().any(|&(s, e)| pos >= s && pos < e);
+    let in_block_in_range = |pos: usize, list_start: usize, list_end: usize| {
+        blocks
+            .iter()
+            .any(|&(s, e)| s > list_start && e < list_end && pos >= s && pos < e)
+    };
+    let mut stack2 = vec![tree.root_node()];
+    while let Some(node) = stack2.pop() {
+        if matches!(
+            node.kind(),
+            "value_arguments" | "class_parameters" | "function_value_parameters"
+        ) {
+            // A blank line inside the list (a row that is only whitespace
+            // between the opening and closing tokens) is dropped, unless it
+            // is part of a protected span.
+            let mut row = node.start_position().row;
+            let end_row = node.end_position().row;
+            let mut line_start = bytes[..node.start_byte()]
+                .iter()
+                .rposition(|&b| b == b'\n')
+                .map_or(0, |i| i + 1);
+            while row <= end_row {
+                let line_end = bytes[line_start..]
+                    .iter()
+                    .position(|&b| b == b'\n')
+                    .map_or(bytes.len(), |i| line_start + i);
+                let content = &source[line_start..line_end];
+                let is_blank = content.trim().is_empty();
+                let first_row = row == node.start_position().row;
+                let last_row = row == end_row;
+                if is_blank
+                    && !first_row
+                    && !last_row
+                    && !in_protected(line_start)
+                    && !in_block_in_range(line_start, node.start_byte(), node.end_byte())
+                {
+                    // The blank line (a newline with no content) is dropped:
+                    // remove the newline that ends the previous row.
+                    let prev_nl = bytes[..line_start].iter().rposition(|&b| b == b'\n');
+                    if let Some(prev_nl) = prev_nl {
+                        deletions.push((prev_nl, line_start));
+                    }
+                }
+                row += 1;
+                line_start = line_end + 1;
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack2.push(c);
+            }
+        }
+    }
+    if deletions.is_empty() {
+        return source.to_string();
+    }
+    deletions.sort_by_key(|r| std::cmp::Reverse(r.0));
+    let mut out = source.to_string();
+    for (start, end) in deletions {
+        out.replace_range(start..end, "");
+    }
+    out
 }
 
 fn fix_brace_between(source: &str) -> String {
