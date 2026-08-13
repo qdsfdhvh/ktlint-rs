@@ -580,6 +580,30 @@ pub(crate) fn find_allman_elevated_blocks(
     out
 }
 
+/// True when the line is a class-like declaration header whose body would
+/// open with `{` or whose supertype list follows a `:`.
+fn class_like_decl_line(t: &str) -> bool {
+    (t.starts_with("class ")
+        || t.starts_with("data class ")
+        || t.starts_with("enum class ")
+        || t.starts_with("sealed class ")
+        || t.starts_with("abstract class ")
+        || t.starts_with("open class ")
+        || t.starts_with("internal class ")
+        || t.starts_with("public class ")
+        || t.starts_with("private class ")
+        || t.starts_with("final class ")
+        || t.starts_with("annotation class ")
+        || t.starts_with("value class ")
+        || t.starts_with("inline class ")
+        || t.starts_with("interface ")
+        || t.starts_with("object ")
+        || t.starts_with("data object ")
+        || t.starts_with("sealed object ")
+        || t.starts_with("companion object "))
+        && (t.ends_with('{') || t.ends_with(':'))
+}
+
 pub(crate) fn compute_line_expected(
     lines: &[&str],
     is: usize,
@@ -863,6 +887,51 @@ pub(crate) fn compute_line_expected(
                 } else if prev_last_code == Some('{') && prev_was_supertype {
                     // Class body opened on a supertype continuation line.
                     e = prev_expected;
+                } else if prev_last_code == Some('{') {
+                    // A block opened at the end of the previous line
+                    // (`fun f() {`, `runBlocking {`, `if (x) {`): the body
+                    // sits one level deeper than the opener row. For a
+                    // continuation opener (`val topic =\n    runBlocking {`)
+                    // that is prev_expected + one level; a plain statement
+                    // opener (`fun f() {` at brace depth d) also yields the
+                    // brace-depth expectation, // so this branch is safe for
+                    // both shapes (verified against ktlint 1.8). A class-like
+                    // body whose `{` closes a supertype continuation
+                    // (`class A :\n    B(\n        Servlet(x)\n    ) {`)
+                    // stays at the plain brace depth instead (its body sits
+                    // one level under the class header, not under the
+                    // continuation).
+                    let opener_line = lines[i - 1].trim();
+                    let opener_is_class_header = class_like_decl_line(opener_line);
+                    let opener_is_supertype_close =
+                        opener_line.starts_with(')') && opener_line.trim_end().ends_with('{');
+                    let mut is_class_body_open = opener_is_class_header;
+                    if opener_is_supertype_close {
+                        // `class A :\n    B(\n        Servlet(x)\n    ) {` —
+                        // the `{` closes a supertype continuation; find the
+                        // class declaration above to confirm.
+                        for r in (0..i - 1).rev() {
+                            let tl = lines[r].trim();
+                            if tl.is_empty() {
+                                continue;
+                            }
+                            if class_like_decl_line(tl) {
+                                is_class_body_open = true;
+                                break;
+                            }
+                            if tl.ends_with(')')
+                                || tl.ends_with('(')
+                                || tl.ends_with('>')
+                                || tl.ends_with('?')
+                            {
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                    if !is_class_body_open {
+                        e = prev_expected.saturating_add(is);
+                    }
                 } else if matches!(prev_last_code, Some(':') | Some('=')) {
                     // Body/continuation line (block body, parameter list,
                     // supertype colon, initializer/expression body): the
@@ -870,12 +939,19 @@ pub(crate) fn compute_line_expected(
                     // previous line's last *code* char — a trailing comment
                     // ending in `=`/`:` must not open a continuation.
 
-                    let want = if prev_last_code == Some('=') && prev_expected > depth * is {
+                    let wrapped_return_type = prev_last_code == Some('=')
+                        && prev_expected > depth * is
+                        && i > 1
+                        && lines[i - 2].trim_end().ends_with(':');
+                    let want = if wrapped_return_type {
                         // The `=` sits on a continuation line itself
                         // (wrapped return type: `fun name():\n    Type =\n
                         //    body`): the body sits at the `=` line's own
                         // level (oracle-verified: `when (this) {` at 4, not
-                        // declaration level 0).
+                        // declaration level 0). The extra `:` guard keeps an
+                        // ordinary `val x =` inside a lambda body (whose
+                        // prev_expected is also deeper than the brace depth)
+                        // from being mistaken for one.
                         prev_expected
                     } else {
                         prev_expected.saturating_add(is)

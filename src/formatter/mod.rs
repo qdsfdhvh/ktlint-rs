@@ -74,12 +74,16 @@ fn collect_protected(node: tree_sitter::Node, source: &str, out: &mut Vec<(usize
         // spacing cannot turn it back into `* value`.
         out.push((node.start_byte(), node.start_byte() + 1));
     }
-    if is_protected_kind(node.kind())
-        || is_backtick_identifier(&node, source)
-        || is_space_before_colon(&node)
-    {
+    if is_protected_kind(node.kind()) || is_backtick_identifier(&node, source) {
         // Protect the whole span (including any string interpolation) rather than
         // risk corrupting it — under-formatting is acceptable, corruption is not.
+        out.push((node.start_byte(), node.end_byte()));
+        return;
+    }
+    if is_space_before_colon(&node) {
+        // Supertype colons are owned by fix_supertype_colon_spacing (which runs
+        // on unmasked text and can safely insert the missing space): fix_colons'
+        // line scan must never touch them, so protect unconditionally.
         out.push((node.start_byte(), node.end_byte()));
         return;
     }
@@ -97,6 +101,48 @@ fn collect_protected(node: tree_sitter::Node, source: &str, out: &mut Vec<(usize
 /// with real `\n`s kept between fragments — this keeps line-oriented fixers
 /// (`fix_indentation`, `fix_blank_line_in_list`, `fix_trailing_ws`) seeing the same
 /// line structure, while the fragments contain no character any fixer targets.
+/// Parse the `SENTINEL<id>SENTINEL` payload of a fully-masked line into the
+/// store index.
+/// True when the non-blank line above `row` opens a class-like body with `{`
+/// (`class Foo {`, `object Bar {`, `interface I {`, `enum class E {`,
+/// `companion object {`, …). JVM 1.8 re-indents a flush-left block comment
+/// that starts a class-like body but not one that starts a function body.
+fn preceded_by_class_like_body_open(lines_src: &[&str], row: usize) -> bool {
+    for r in (0..row).rev() {
+        let prev = lines_src[r].trim();
+        if prev.is_empty() {
+            continue;
+        }
+        if !prev.ends_with('{') {
+            return false;
+        }
+        return prev.starts_with("class ")
+            || prev.starts_with("data class ")
+            || prev.starts_with("enum class ")
+            || prev.starts_with("sealed class ")
+            || prev.starts_with("abstract class ")
+            || prev.starts_with("open class ")
+            || prev.starts_with("internal class ")
+            || prev.starts_with("public class ")
+            || prev.starts_with("private class ")
+            || prev.starts_with("final class ")
+            || prev.starts_with("annotation class ")
+            || prev.starts_with("value class ")
+            || prev.starts_with("inline class ")
+            || prev.starts_with("interface ")
+            || prev.starts_with("object ")
+            || prev.starts_with("data object ")
+            || prev.starts_with("sealed object ")
+            || prev.starts_with("companion object ");
+    }
+    false
+}
+
+fn parse_sentinel_id(trimmed: &str) -> Option<usize> {
+    let inner = trimmed.trim_matches(|c| c == SENTINEL || c == '\n' || c == '\r');
+    inner.parse::<usize>().ok()
+}
+
 fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> Option<(String, Vec<String>)> {
     if source.contains(SENTINEL) {
         return None;
@@ -494,6 +540,35 @@ fn apply_spacing_rules(
         ) {
             text = fix_angle_brackets(&text);
         }
+        if rule_enabled(
+            rule_configs,
+            "standard:no-empty-first-line-in-class-body",
+            code_style,
+        ) || rule_enabled(
+            rule_configs,
+            "standard:no-empty-first-line-in-method-block",
+            code_style,
+        ) {
+            text = fix_no_empty_first_line(&text);
+        }
+        if rule_enabled(rule_configs, "standard:colon-spacing", code_style)
+            || rule_enabled(rule_configs, "standard:spacing-around-colon", code_style)
+        {
+            text = fix_supertype_colon_spacing(&text);
+        }
+        if rule_enabled(
+            rule_configs,
+            "standard:spacing-between-declarations-with-comments",
+            code_style,
+        ) || rule_enabled(rule_configs, "standard:no-consecutive-comments", code_style)
+            || rule_enabled(
+                rule_configs,
+                "standard:blank-line-before-declaration",
+                code_style,
+            )
+        {
+            text = fix_comment_declaration_spacing(&text);
+        }
         type Pass = (&'static str, fn(&str) -> String);
         let passes: [Pass; 28] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
@@ -787,6 +862,9 @@ fn fix_all_spacing(source: &str) -> String {
     }
     let spread_fixed = fix_spread_operators(source, &initial_tree);
     let spread_fixed = fix_angle_brackets(&spread_fixed);
+    let spread_fixed = fix_no_empty_first_line(&spread_fixed);
+    let spread_fixed = fix_comment_declaration_spacing(&spread_fixed);
+    let spread_fixed = fix_supertype_colon_spacing(&spread_fixed);
     let tree = parser.parse(&spread_fixed);
     if tree.root_node().has_error() {
         return source.to_string();
@@ -1542,7 +1620,48 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
         // leading spaces are content. A line with real code indent before the
         // fragment (`      ::engine`) is still re-indented.
         let current = line.len() - trimmed.len();
-        if trimmed.is_empty() || (trimmed.starts_with(SENTINEL) && current == 0) {
+        if trimmed.is_empty() {
+            output.push_str(line);
+            continue;
+        }
+        if trimmed.starts_with(SENTINEL) && current == 0 {
+            // A comment's first line (`/**`, `/*`) is re-indented only in the
+            // two shapes JVM ktlint 1.8 actually re-indents (verified by
+            // probing): (1) it already has some indentation (it is raised to
+            // its containing depth), or (2) it directly starts a class-like
+            // body (`class Foo {` + blank + `/**`). A flush-left comment in
+            // any other position (after a property, inside a function body) is
+            // left exactly as written. Continuation comment lines (`* …`,
+            // `*/`) keep their text column untouched.
+            let mut is_first_line = false;
+            if let Some(id) = parse_sentinel_id(trimmed) {
+                if store
+                    .get(id)
+                    .is_some_and(|orig| orig.trim_start().starts_with("/*"))
+                {
+                    is_first_line = true;
+                }
+            }
+            if is_first_line {
+                let raise_nonzero = current > 0;
+                let raise_class_open =
+                    current == 0 && preceded_by_class_like_body_open(&lines_src, row);
+                if (raise_nonzero || raise_class_open) {
+                    if let Some(&want) = scan.get(row) {
+                        let non_multiple = current % indent_size != 0;
+                        let full_level_short = current.saturating_add(indent_size) <= want;
+                        if current < want && (non_multiple || full_level_short) {
+                            let has_nl = line.ends_with('\n');
+                            output.push_str(&" ".repeat(want));
+                            output.push_str(trimmed.trim_end_matches('\n'));
+                            if has_nl {
+                                output.push('\n');
+                            }
+                            continue;
+                        }
+                    }
+                }
+            }
             output.push_str(line);
             continue;
         }
@@ -1907,6 +2026,29 @@ fn fix_angle_brackets(source: &str) -> String {
                             deletions.push((ws_start, gt.start_byte()));
                         }
                     }
+                    // Space directly after `>`: ktlint 1.8 type-argument-list-spacing
+                    // drops it for a call (`foo<Main> ()` to `foo<Main>()`) but NOT
+                    // for a type reference (`val x: Map<String> = ...` keeps the
+                    // space before `=`) nor before a trailing lambda
+                    // (`foo<Int> { ... }` keeps the space before `{`).
+                    if kind == "type_arguments" {
+                        let is_type_reference = node
+                            .parent()
+                            .is_some_and(|p| matches!(p.kind(), "user_type" | "type_identifier"));
+                        let next_is_lambda = bytes.get(gt.end_byte()).is_some_and(|&b| b == b' ')
+                            && bytes.get(gt.end_byte() + 1).is_some_and(|&b| b == b'{');
+                        if !is_type_reference && !next_is_lambda {
+                            let mut ws_end = gt.end_byte();
+                            while ws_end < bytes.len()
+                                && (bytes[ws_end] == b' ' || bytes[ws_end] == b'\t')
+                            {
+                                ws_end += 1;
+                            }
+                            if ws_end > gt.end_byte() {
+                                deletions.push((gt.end_byte(), ws_end));
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1982,8 +2124,18 @@ fn fix_colons(source: &str) -> String {
                 .find(|(_, ch)| !ch.is_alphanumeric() && *ch != '_')
                 .map_or(0, |(offset, ch)| offset + ch.len_utf8());
             if prefix[..word_start].ends_with('@') {
+                // Use-site target colon (`@get: Rule`, `@file: Suppress`): the
+                // colon must not be followed by a space (JVM colon-spacing
+                // "Unexpected spacing after \":\""); a space before it is
+                // dropped too (`@get : Rule`).
+                while output.ends_with(' ') || output.ends_with('\t') {
+                    output.pop();
+                }
                 output.push(':');
                 index += 1;
+                while matches!(chars.get(index), Some(' ' | '\t')) {
+                    index += 1;
+                }
                 continue;
             }
             while output.ends_with(' ') || output.ends_with('\t') {
@@ -2020,8 +2172,16 @@ fn fix_colons(source: &str) -> String {
                     .chars()
                     .next_back()
                     .is_some_and(|c| c.is_alphanumeric() || c == '_');
-            let super_colon =
-                (is_declaration && matches!(prev_char, Some(')' | '>'))) || direct_object;
+            // Supertype colon gets a space before it. `class MainActivity:` —
+            // the class name directly before `:` — also needs one (JVM
+            // SpacingAroundColonRule: parent CLASS/OBJECT_DECLARATION/
+            // SECONDARY_CONSTRUCTOR/TYPE_CONSTRAINT with missing spacing
+            // before). A parameter colon inside an open `(` (`class Foo(a: Int)`)
+            // must NOT get one, so an unclosed paren in the prefix disables it.
+            let paren_open = prefix.matches('(').count() > prefix.matches(')').count();
+            let super_colon = (is_declaration && matches!(prev_char, Some(')' | '>')))
+                || direct_object
+                || (is_declaration && !paren_open);
             let type_constraint =
                 prefix.rfind('<') > prefix.rfind('>') || prefix.contains(" where ");
             // Anonymous-object supertype (`respond(object : X {`) can sit
@@ -2209,6 +2369,179 @@ fn fix_expression_operand_wrapping(source: &str) -> String {
     output
 }
 
+/// ktlint 1.8 SpacingAroundColonRule (addMissingSpacingAround): a supertype
+/// colon (`class Foo : Bar`, `object X : Y`, secondary-constructor delegation
+/// `constructor(...) : this(...)`) needs a space on both sides. Runs on
+/// unmasked text because the mask protects supertype colons from fix_colons.
+fn fix_supertype_colon_spacing(source: &str) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut insertions: Vec<(usize, char)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == ":"
+            && node.parent().is_some_and(|p| {
+                matches!(
+                    p.kind(),
+                    "class_declaration"
+                        | "object_declaration"
+                        | "interface_declaration"
+                        | "enum_declaration"
+                        | "secondary_constructor"
+                )
+            })
+        {
+            let pos = node.start_byte();
+            let prev_same_line = bytes[..pos]
+                .iter()
+                .rposition(|&b| b == b'\n')
+                .map_or(0, |i| i + 1);
+            let has_before = pos > prev_same_line
+                && bytes[prev_same_line..pos]
+                    .iter()
+                    .any(|&b| !b.is_ascii_whitespace())
+                && bytes[pos - 1] != b' ';
+            if has_before && bytes[pos - 1] != b'\t' {
+                insertions.push((pos, ' '));
+            }
+            let after = node.end_byte();
+            if bytes
+                .get(after)
+                .is_some_and(|&b| b != b' ' && b != b'\t' && b != b'\n' && b != b'\r')
+            {
+                insertions.push((after, ' '));
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if insertions.is_empty() {
+        return source.to_string();
+    }
+    insertions.sort_by_key(|(pos, _)| std::cmp::Reverse(*pos));
+    let mut out = source.to_string();
+    for (pos, ch) in insertions {
+        out.insert(pos, ch);
+    }
+    out
+}
+
+/// ktlint 1.8 spacing-between-declarations-with-comments /
+/// no-consecutive-comments / blank-line-before-declaration: at declaration
+/// scope (source file / class-like body), a `//` comment preceded by a code
+/// line gets a blank line before it, and a KDoc preceded by an EOL comment
+/// gets a blank line between them. Inside function bodies nothing is inserted.
+fn fix_comment_declaration_spacing(source: &str) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let lines: Vec<&str> = source.split('\n').collect();
+    let mut insertions: Vec<(usize, String)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "line_comment" {
+            let is_decl_scope = node.parent().is_some_and(|p| {
+                matches!(
+                    p.kind(),
+                    "source_file"
+                        | "class_body"
+                        | "object_body"
+                        | "enum_class_body"
+                        | "companion_object"
+                )
+            });
+            if !is_decl_scope {
+                // still descend into children below
+            } else {
+                let row = node.start_position().row;
+                let prev_row = row.checked_sub(1);
+                let need_before = prev_row.is_some_and(|r| {
+                    let prev = lines[r].trim();
+                    !prev.is_empty() && !prev.starts_with("//")
+                });
+                let next_is_kdoc = lines
+                    .get(row + 1)
+                    .is_some_and(|n| n.trim_start().starts_with("/**"));
+                if need_before {
+                    insertions.push((node.start_byte(), "\n".to_string()));
+                } else if next_is_kdoc {
+                    // blank line goes after the comment line: insert at the
+                    // comment node's end (before its trailing newline is not
+                    // needed — inserting at end of line content works since
+                    // the next physical line starts with the KDoc).
+                    let line_end = node.end_byte();
+                    insertions.push((line_end, "\n".to_string()));
+                }
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if insertions.is_empty() {
+        return source.to_string();
+    }
+    insertions.sort_by_key(|(pos, _)| std::cmp::Reverse(*pos));
+    let mut out = source.to_string();
+    for (pos, text) in insertions {
+        out.insert_str(pos, &text);
+    }
+    out
+}
+
+/// ktlint 1.8 no-empty-first-line-in-class-body / -in-method-block: a
+/// class/object/enum body or a function body must not start with a blank line
+/// (`class Foo {\n\n    ...` / `fun f() {\n\n    ...` drop the blank line).
+/// Runs on unmasked text (masked text with sentinels cannot be parsed).
+fn fix_no_empty_first_line(source: &str) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut deletions: Vec<(usize, usize)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        let kind = node.kind();
+        let body_open = if matches!(
+            kind,
+            "class_body" | "object_body" | "enum_class_body" | "companion_object"
+        ) {
+            node.child(0).filter(|c| c.kind() == "{")
+        } else if kind == "function_body" {
+            node.child(0).filter(|c| c.kind() == "{")
+        } else {
+            None
+        };
+        if let Some(open) = body_open {
+            let after = open.end_byte();
+            if bytes.get(after) == Some(&b'\n') && bytes.get(after + 1) == Some(&b'\n') {
+                deletions.push((after, after + 1));
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if deletions.is_empty() {
+        return source.to_string();
+    }
+    deletions.sort_by_key(|r| std::cmp::Reverse(r.0));
+    let mut out = source.to_string();
+    for (start, end) in deletions {
+        out.replace_range(start..end, "");
+    }
+    out
+}
+
 fn fix_empty_class_body(source: &str) -> String {
     let mut output = String::with_capacity(source.len());
     for line in source.split_inclusive('\n') {
@@ -2378,6 +2711,7 @@ fn block_comment_alignment_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<
                         .take_while(|byte| matches!(byte, b' ' | b'\t'))
                         .count();
                     if line.as_bytes().get(whitespace) == Some(&b'*')
+                        && whitespace > 0
                         && whitespace != expected.len()
                     {
                         edits.push(edit::TextEdit::new(
