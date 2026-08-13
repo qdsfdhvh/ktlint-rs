@@ -975,10 +975,11 @@ pub(crate) fn compute_line_expected(
                 } else if arrow_body_depth.is_some_and(|d| depth >= d)
                     && !t.starts_with('}')
                     && !t.starts_with(')')
-                    && prev_last_code != Some('{')
+                    && !matches!(prev_last_code, Some('{') | Some('=') | Some(':'))
                 {
                     // Rows inside the arrow lambda body keep the lifted level
                     // (`val selected`, `item(`, … after `val hasUnread`).
+                    // Rows after `{`/`=`/`:` go to their own branches.
                     e = e.max(prev_expected);
                 } else if prev_last_code == Some('>') && lines[i - 1].trim_end().ends_with("->") {
                     // Lambda with a parameter list ending on its own line:
