@@ -2749,7 +2749,7 @@ fn next_code_row(lines: &[&str], row: usize) -> Option<usize> {
 /// one level. Excludes import wildcards (`libcurl.*`), postfix `++`/`--`,
 /// and reference operators (`::`) (issue #202).
 fn binary_operator_row(t: &str, prev_code: &str) -> bool {
-    let starts = ["&&", "||", "==", "!=", "<=", ">=", "??", "+", "-"];
+    let starts = ["&&", "||", "==", "!=", "<=", ">=", "??", "?:", "+", "-"];
     let ends = [
         "&&", "||", "==", "!=", "<=", ">=", "??", "+", "-", "*", "/", "%",
     ];
