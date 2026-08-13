@@ -556,6 +556,11 @@ fn apply_spacing_rules(
         {
             text = fix_supertype_colon_spacing(&text);
         }
+        if rule_enabled(rule_configs, "standard:annotation", code_style)
+            || rule_enabled(rule_configs, "standard:annotation-spacing", code_style)
+        {
+            text = fix_annotation_newlines(&text);
+        }
         if rule_enabled(
             rule_configs,
             "standard:spacing-between-declarations-with-comments",
@@ -865,6 +870,7 @@ fn fix_all_spacing(source: &str) -> String {
     let spread_fixed = fix_no_empty_first_line(&spread_fixed);
     let spread_fixed = fix_comment_declaration_spacing(&spread_fixed);
     let spread_fixed = fix_supertype_colon_spacing(&spread_fixed);
+    let spread_fixed = fix_annotation_newlines(&spread_fixed);
     let tree = parser.parse(&spread_fixed);
     if tree.root_node().has_error() {
         return source.to_string();
@@ -1122,7 +1128,7 @@ fn fix_argument_list_wrapping(source: &str, indent_size: usize, max_line_length:
                 let has_lambda = children.iter().any(|c| {
                     let text = &source[c.start_byte()..c.end_byte()];
                     text.trim_start().starts_with('{') || text.trim_end().ends_with('}')
-                });
+                }) || source[node.end_byte()..].trim_start().starts_with('{');
                 if has_lambda {
                     let mut w2 = node.walk();
                     for c in node.children(&mut w2) {
@@ -1570,8 +1576,12 @@ fn find_multiline_rhs(
                     return;
                 }
                 rewrites.push((col, start, end));
+                return;
             }
-            return;
+            // A single-line leading child (e.g. the receiver of
+            // `= benchmarkRule.measureRepeated(`) is not itself multiline,
+            // but the call that follows it is — keep scanning for the first
+            // multiline child so the whole RHS still gets wrapped.
         }
     }
 }
@@ -2322,6 +2332,7 @@ fn fix_spacing_before_annotated_declarations(source: &str) -> String {
             if !previous.is_empty()
                 && !is_annotation_only_line(previous)
                 && looks_like_declaration_line(previous)
+                && !is_ctor_modifier_annotation(&lines, index)
             {
                 output.push('\n');
             }
@@ -2329,6 +2340,15 @@ fn fix_spacing_before_annotated_declarations(source: &str) -> String {
         output.push_str(line);
     }
     output
+}
+
+/// True when the annotation line is the modifier of the class's primary
+/// constructor (`@Inject` right above `constructor(...)`): the class header
+/// above owns it, so no blank line may be inserted between them.
+fn is_ctor_modifier_annotation(lines: &[&str], index: usize) -> bool {
+    lines
+        .get(index + 1)
+        .is_some_and(|l| l.trim_start().starts_with("constructor("))
 }
 
 fn looks_like_declaration_line(line: &str) -> bool {
@@ -2412,6 +2432,69 @@ fn fix_supertype_colon_spacing(source: &str) -> String {
                 .is_some_and(|&b| b != b' ' && b != b'\t' && b != b'\n' && b != b'\r')
             {
                 insertions.push((after, ' '));
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if insertions.is_empty() {
+        return source.to_string();
+    }
+    insertions.sort_by_key(|(pos, _)| std::cmp::Reverse(*pos));
+    let mut out = source.to_string();
+    for (pos, ch) in insertions {
+        out.insert(pos, ch);
+    }
+    out
+}
+
+/// ktlint 1.8 standard:annotation — an annotation that shares a line with a
+/// preceding declaration (`class Foo @Inject constructor(`) or that precedes a
+/// primary `constructor` gets moved onto its own line:
+/// `class Foo @Inject constructor(` -> `class Foo\n    @Inject\n    constructor(`.
+/// `@Composable fun`, `@Inject val` (annotation at line start) are left alone.
+fn fix_annotation_newlines(source: &str) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut insertions: Vec<(usize, char)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "annotation" && bytes.get(node.start_byte()) == Some(&b'@') {
+            let start = node.start_byte();
+            let line_start = bytes[..start]
+                .iter()
+                .rposition(|&b| b == b'\n')
+                .map_or(0, |i| i + 1);
+            // Space before `@` on the same line (`class Foo @Inject`) -> newline.
+            // An annotation inside a type (`List<@TypeMarker String>`) or a
+            // parameter list (`(a: @Foo Int)`) is not a declaration modifier
+            // and must stay put.
+            let prev_code = bytes[..start]
+                .iter()
+                .rev()
+                .find(|&&b| !b.is_ascii_whitespace());
+            let in_type = matches!(prev_code, Some(b'<') | Some(b',') | Some(b'(') | Some(b':'));
+            if !in_type
+                && bytes[line_start..start]
+                    .iter()
+                    .any(|&b| !b.is_ascii_whitespace())
+            {
+                insertions.push((start, '\n'));
+            }
+            // Space after the annotation before a primary `constructor` on the
+            // same line -> newline.
+            let after = node.end_byte();
+            let rest = &source[after..];
+            if rest.starts_with(' ') || rest.starts_with('\t') {
+                let tail = rest.trim_start();
+                if tail.starts_with("constructor") {
+                    insertions.push((after, '\n'));
+                }
             }
         }
         for i in 0..node.child_count() {

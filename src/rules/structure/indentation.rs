@@ -580,6 +580,53 @@ pub(crate) fn find_allman_elevated_blocks(
     out
 }
 
+/// True when the line starts a class-like declaration (`class Foo`, `interface I`,
+/// `object O`, …) regardless of whether a body brace or supertype list follows.
+fn class_like_decl_header(t: &str) -> bool {
+    // `annotation class` is a declaration of the annotation type itself; its
+    // following lines are ordinary code, not constructor modifiers.
+    if t.starts_with("annotation class ") {
+        return false;
+    }
+    t.starts_with("class ")
+        || t.starts_with("data class ")
+        || t.starts_with("enum class ")
+        || t.starts_with("sealed class ")
+        || t.starts_with("abstract class ")
+        || t.starts_with("open class ")
+        || t.starts_with("internal class ")
+        || t.starts_with("public class ")
+        || t.starts_with("private class ")
+        || t.starts_with("final class ")
+        || t.starts_with("annotation class ")
+        || t.starts_with("value class ")
+        || t.starts_with("inline class ")
+        || t.starts_with("interface ")
+        || t.starts_with("object ")
+        || t.starts_with("data object ")
+        || t.starts_with("sealed object ")
+        || t.starts_with("companion object ")
+}
+
+/// True when the line begins a top-level-ish declaration keyword.
+fn starts_declaration_keyword(t: &str) -> bool {
+    t.starts_with("class ")
+        || t.starts_with("interface ")
+        || t.starts_with("object ")
+        || t.starts_with("enum ")
+        || t.starts_with("fun ")
+        || t.starts_with("val ")
+        || t.starts_with("var ")
+        || t.starts_with("typealias ")
+        || t.starts_with("data ")
+        || t.starts_with("sealed ")
+        || t.starts_with("abstract ")
+        || t.starts_with("open ")
+        || t.starts_with("internal ")
+        || t.starts_with("public ")
+        || t.starts_with("private ")
+}
+
 /// True when the line is a class-like declaration header whose body would
 /// open with `{` or whose supertype list follows a `:`.
 fn class_like_decl_line(t: &str) -> bool {
@@ -620,6 +667,10 @@ pub(crate) fn compute_line_expected(
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
     let mut prev_binary_cont = false;
+    // A class-like header without a body brace (`class Foo`, `class Foo :`)
+    // is followed by its primary-constructor annotations and keyword on the
+    // class's own indentation level: `class Foo\n    @Inject\n    constructor(`.
+    let mut class_annotation_pending = false;
     for (i, line) in lines.iter().enumerate() {
         let t = line.trim();
         // Strip strings, comments, and char literals first so the paren counts
@@ -738,6 +789,22 @@ pub(crate) fn compute_line_expected(
             last_code = Some(c);
         }
         let mut e = depth * is;
+        if class_annotation_pending
+            && (t.starts_with('@') || t.starts_with("constructor"))
+            && !t.contains(" class ")
+            && !t.contains(" fun ")
+            && !t.contains(" val ")
+            && !t.contains(" var ")
+            && lines
+                .get(i + 1)
+                .is_none_or(|nxt| !starts_declaration_keyword(nxt.trim_start()))
+        {
+            // `class Foo\n    @Inject\n    constructor(` — the annotation is
+            // the class's constructor modifier. An annotation that opens its
+            // own declaration (`@Deprecated("x") class Second` after a
+            // previous class) is NOT lifted.
+            e = e.max(is);
+        }
         // Allman elevated blocks: the `{` line sits at the header's
         // expectation + one level (except `when`, whose `{` stays standard),
         // and every line inside the block (up to the closing `}`) one level
@@ -1007,6 +1074,11 @@ pub(crate) fn compute_line_expected(
         }
         prev_binary_cont = binary_cont;
         out[i] = e;
+        if class_like_decl_header(t) && !t.ends_with('{') {
+            class_annotation_pending = true;
+        } else if t.contains('{') {
+            class_annotation_pending = false;
+        }
         prev_expected = e;
         prev_last_code = last_code;
         // Count this line's braces outside strings/comments.
