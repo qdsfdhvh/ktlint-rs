@@ -437,7 +437,7 @@ fn statement_line_of(node: &tree_sitter::Node) -> Option<usize> {
     None
 }
 
-fn find_allman_elevated_blocks(
+pub(crate) fn find_allman_elevated_blocks(
     tree: &tree_sitter::Tree,
     source: &str,
 ) -> Vec<(usize, usize, bool, Option<usize>)> {
@@ -580,6 +580,77 @@ fn find_allman_elevated_blocks(
     out
 }
 
+/// True when the line starts a class-like declaration (`class Foo`, `interface I`,
+/// `object O`, …) regardless of whether a body brace or supertype list follows.
+fn class_like_decl_header(t: &str) -> bool {
+    // `annotation class` is a declaration of the annotation type itself; its
+    // following lines are ordinary code, not constructor modifiers.
+    if t.starts_with("annotation class ") {
+        return false;
+    }
+    t.starts_with("class ")
+        || t.starts_with("data class ")
+        || t.starts_with("enum class ")
+        || t.starts_with("sealed class ")
+        || t.starts_with("abstract class ")
+        || t.starts_with("open class ")
+        || t.starts_with("internal class ")
+        || t.starts_with("public class ")
+        || t.starts_with("private class ")
+        || t.starts_with("final class ")
+        || t.starts_with("annotation class ")
+        || t.starts_with("value class ")
+        || t.starts_with("inline class ")
+        || t.starts_with("interface ")
+        || t.starts_with("object ")
+        || t.starts_with("data object ")
+        || t.starts_with("sealed object ")
+        || t.starts_with("companion object ")
+}
+
+/// True when the line begins a top-level-ish declaration keyword.
+fn starts_declaration_keyword(t: &str) -> bool {
+    t.starts_with("class ")
+        || t.starts_with("interface ")
+        || t.starts_with("object ")
+        || t.starts_with("enum ")
+        || t.starts_with("fun ")
+        || t.starts_with("val ")
+        || t.starts_with("var ")
+        || t.starts_with("typealias ")
+        || t.starts_with("data ")
+        || t.starts_with("sealed ")
+        || t.starts_with("abstract ")
+        || t.starts_with("open ")
+        || t.starts_with("internal ")
+        || t.starts_with("public ")
+        || t.starts_with("private ")
+}
+
+/// True when the line is a class-like declaration header whose body would
+/// open with `{` or whose supertype list follows a `:`.
+fn class_like_decl_line(t: &str) -> bool {
+    (t.starts_with("class ")
+        || t.starts_with("data class ")
+        || t.starts_with("enum class ")
+        || t.starts_with("sealed class ")
+        || t.starts_with("abstract class ")
+        || t.starts_with("open class ")
+        || t.starts_with("internal class ")
+        || t.starts_with("public class ")
+        || t.starts_with("private class ")
+        || t.starts_with("final class ")
+        || t.starts_with("annotation class ")
+        || t.starts_with("value class ")
+        || t.starts_with("inline class ")
+        || t.starts_with("interface ")
+        || t.starts_with("object ")
+        || t.starts_with("data object ")
+        || t.starts_with("sealed object ")
+        || t.starts_with("companion object "))
+        && (t.ends_with('{') || t.ends_with(':'))
+}
+
 pub(crate) fn compute_line_expected(
     lines: &[&str],
     is: usize,
@@ -596,6 +667,10 @@ pub(crate) fn compute_line_expected(
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
     let mut prev_binary_cont = false;
+    // A class-like header without a body brace (`class Foo`, `class Foo :`)
+    // is followed by its primary-constructor annotations and keyword on the
+    // class's own indentation level: `class Foo\n    @Inject\n    constructor(`.
+    let mut class_annotation_pending = false;
     for (i, line) in lines.iter().enumerate() {
         let t = line.trim();
         // Strip strings, comments, and char literals first so the paren counts
@@ -714,6 +789,22 @@ pub(crate) fn compute_line_expected(
             last_code = Some(c);
         }
         let mut e = depth * is;
+        if class_annotation_pending
+            && (t.starts_with('@') || t.starts_with("constructor"))
+            && !t.contains(" class ")
+            && !t.contains(" fun ")
+            && !t.contains(" val ")
+            && !t.contains(" var ")
+            && lines
+                .get(i + 1)
+                .is_none_or(|nxt| !starts_declaration_keyword(nxt.trim_start()))
+        {
+            // `class Foo\n    @Inject\n    constructor(` — the annotation is
+            // the class's constructor modifier. An annotation that opens its
+            // own declaration (`@Deprecated("x") class Second` after a
+            // previous class) is NOT lifted.
+            e = e.max(is);
+        }
         // Allman elevated blocks: the `{` line sits at the header's
         // expectation + one level (except `when`, whose `{` stays standard),
         // and every line inside the block (up to the closing `}`) one level
@@ -863,6 +954,51 @@ pub(crate) fn compute_line_expected(
                 } else if prev_last_code == Some('{') && prev_was_supertype {
                     // Class body opened on a supertype continuation line.
                     e = prev_expected;
+                } else if prev_last_code == Some('{') {
+                    // A block opened at the end of the previous line
+                    // (`fun f() {`, `runBlocking {`, `if (x) {`): the body
+                    // sits one level deeper than the opener row. For a
+                    // continuation opener (`val topic =\n    runBlocking {`)
+                    // that is prev_expected + one level; a plain statement
+                    // opener (`fun f() {` at brace depth d) also yields the
+                    // brace-depth expectation, // so this branch is safe for
+                    // both shapes (verified against ktlint 1.8). A class-like
+                    // body whose `{` closes a supertype continuation
+                    // (`class A :\n    B(\n        Servlet(x)\n    ) {`)
+                    // stays at the plain brace depth instead (its body sits
+                    // one level under the class header, not under the
+                    // continuation).
+                    let opener_line = lines[i - 1].trim();
+                    let opener_is_class_header = class_like_decl_line(opener_line);
+                    let opener_is_supertype_close =
+                        opener_line.starts_with(')') && opener_line.trim_end().ends_with('{');
+                    let mut is_class_body_open = opener_is_class_header;
+                    if opener_is_supertype_close {
+                        // `class A :\n    B(\n        Servlet(x)\n    ) {` —
+                        // the `{` closes a supertype continuation; find the
+                        // class declaration above to confirm.
+                        for r in (0..i - 1).rev() {
+                            let tl = lines[r].trim();
+                            if tl.is_empty() {
+                                continue;
+                            }
+                            if class_like_decl_line(tl) {
+                                is_class_body_open = true;
+                                break;
+                            }
+                            if tl.ends_with(')')
+                                || tl.ends_with('(')
+                                || tl.ends_with('>')
+                                || tl.ends_with('?')
+                            {
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                    if !is_class_body_open {
+                        e = prev_expected.saturating_add(is);
+                    }
                 } else if matches!(prev_last_code, Some(':') | Some('=')) {
                     // Body/continuation line (block body, parameter list,
                     // supertype colon, initializer/expression body): the
@@ -870,12 +1006,19 @@ pub(crate) fn compute_line_expected(
                     // previous line's last *code* char — a trailing comment
                     // ending in `=`/`:` must not open a continuation.
 
-                    let want = if prev_last_code == Some('=') && prev_expected > depth * is {
+                    let wrapped_return_type = prev_last_code == Some('=')
+                        && prev_expected > depth * is
+                        && i > 1
+                        && lines[i - 2].trim_end().ends_with(':');
+                    let want = if wrapped_return_type {
                         // The `=` sits on a continuation line itself
                         // (wrapped return type: `fun name():\n    Type =\n
                         //    body`): the body sits at the `=` line's own
                         // level (oracle-verified: `when (this) {` at 4, not
-                        // declaration level 0).
+                        // declaration level 0). The extra `:` guard keeps an
+                        // ordinary `val x =` inside a lambda body (whose
+                        // prev_expected is also deeper than the brace depth)
+                        // from being mistaken for one.
                         prev_expected
                     } else {
                         prev_expected.saturating_add(is)
@@ -915,7 +1058,8 @@ pub(crate) fn compute_line_expected(
         } else {
             ""
         };
-        let binary_cont = binary_operator_row(t, prev_code);
+        let binary_cont = binary_operator_row(t, prev_code)
+            || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "));
         if binary_cont {
             // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
             // level of the previous row; the first continuation lifts one
@@ -931,6 +1075,11 @@ pub(crate) fn compute_line_expected(
         }
         prev_binary_cont = binary_cont;
         out[i] = e;
+        if class_like_decl_header(t) && !t.ends_with('{') {
+            class_annotation_pending = true;
+        } else if t.contains('{') {
+            class_annotation_pending = false;
+        }
         prev_expected = e;
         prev_last_code = last_code;
         // Count this line's braces outside strings/comments.
@@ -2211,7 +2360,7 @@ pub(crate) fn ast_expected(
 /// args). Over-indentation is only probed on statement-start rows: a
 /// continuation's legitimate indent is alignment, which the classifier does
 /// not model exactly (issue #202).
-fn row_starts_statement(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+pub(crate) fn row_starts_statement(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
     let line = src.lines().nth(row).unwrap_or("");
     let col = line.len() - line.trim_start().len();
     let point = tree_sitter::Point { row, column: col };
@@ -2312,7 +2461,11 @@ fn lambda_in_condition(lambda: &tree_sitter::Node) -> bool {
 /// these rows (oracle: any indent is accepted), so over-indentation cannot
 /// be reported on them. A bare positional lambda argument (`call(\n    {`)
 /// stays strict.
-fn lambda_in_unconstrained_argument(tree: &tree_sitter::Tree, src: &str, row: usize) -> bool {
+pub(crate) fn lambda_in_unconstrained_argument(
+    tree: &tree_sitter::Tree,
+    src: &str,
+    row: usize,
+) -> bool {
     let line = src.lines().nth(row).unwrap_or("");
     let col = line.len() - line.trim_start().len();
     let point = tree_sitter::Point { row, column: col };

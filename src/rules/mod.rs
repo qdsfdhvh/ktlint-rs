@@ -199,6 +199,25 @@ impl RuleEngine {
             !(comment_rows.contains(&(v.line.saturating_sub(1)))
                 && spacing_ids.contains(&v.rule_id.as_str()))
         });
+        // @Suppress / @SuppressWarnings / @file:Suppress parity: a violation
+        // on a row covered by a suppression range whose rule matches is
+        // dropped (JVM oracle: `@Suppress("FunctionName")` silences
+        // function-naming, `"ktlint"` silences everything on the element).
+        if !source.contains("@Suppress") && !source.contains("@SuppressWarnings") {
+            return violations;
+        }
+        let suppressions = crate::rules::suppress::collect_suppressions(tree, source);
+        if suppressions.is_empty() {
+            return violations;
+        }
+        violations.retain(|v| {
+            let row = v.line.saturating_sub(1);
+            !suppressions.iter().any(|s| {
+                row >= s.start_row
+                    && row <= s.end_row
+                    && (s.rules.is_empty() || s.rules.contains(v.rule_id.as_str()))
+            })
+        });
         violations
     }
 

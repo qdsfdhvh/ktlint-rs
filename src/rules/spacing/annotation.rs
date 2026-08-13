@@ -139,12 +139,7 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
         i += 1;
     }
 
-    if prev_was_code
-        && !in_params
-        && !is_inline_type_annotation
-        && !annotates_constructor
-        && !indented_annotation_group
-    {
+    if prev_was_code && !in_params && !is_inline_type_annotation && !indented_annotation_group {
         violations.push(Violation {
             file: String::new(),
             line: pos.row + 1,
@@ -164,10 +159,9 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
 fn check_same_line_annotation_groups(source: &str, violations: &mut Vec<Violation>) {
     for (line_index, line) in source.lines().enumerate() {
         let at_positions: Vec<usize> = line.match_indices('@').map(|(p, _)| p).collect();
-        if at_positions.len() < 2 {
+        let Some(&last_at) = at_positions.last() else {
             continue;
-        }
-        let last_at = *at_positions.last().unwrap();
+        };
         // Skip the annotation name (`@Marker`) and any annotation arguments
         // in parens.
         let rest = &line[last_at + 1..];
@@ -176,14 +170,20 @@ fn check_same_line_annotation_groups(source: &str, violations: &mut Vec<Violatio
             .unwrap_or(rest.len());
         let after_name = rest[name_len..].trim_start();
         // The last annotation is followed on the same line by a declaration.
-        let followed_by_decl = after_name.starts_with("val ")
-            || after_name.starts_with("var ")
-            || after_name.starts_with("fun ")
-            || after_name.starts_with("class ")
-            || after_name.starts_with("object ")
-            || after_name.starts_with("interface ")
-            || after_name.starts_with("typealias ")
-            || after_name.starts_with("constructor(");
+        // A primary `constructor` after the last annotation is always
+        // separated (`@Inject constructor` -> `@Inject\nconstructor`, JVM
+        // 1.8); other declaration keywords only when at least two annotations
+        // share the line (`@A("x") @B val` — issue #168). A lone
+        // `@Composable fun` / `@Inject val` stays put.
+        let followed_by_decl = after_name.starts_with("constructor(")
+            || (at_positions.len() >= 2
+                && (after_name.starts_with("val ")
+                    || after_name.starts_with("var ")
+                    || after_name.starts_with("fun ")
+                    || after_name.starts_with("class ")
+                    || after_name.starts_with("object ")
+                    || after_name.starts_with("interface ")
+                    || after_name.starts_with("typealias ")));
         if followed_by_decl {
             violations.push(Violation {
                 file: String::new(),

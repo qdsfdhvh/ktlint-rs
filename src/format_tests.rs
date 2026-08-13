@@ -22,7 +22,11 @@ mod format_tests {
             4,
             true,
             &Default::default(),
-            crate::config::CodeStyle::KtlintOfficial,
+            // The spotless-parity goldens are generated with the reference
+            // android_studio editorconfig (see fixtures README) — the
+            // ktlint-official-only rules (multiline-expression-wrapping
+            // etc.) must stay off to match them byte-for-byte.
+            crate::config::CodeStyle::AndroidStudio,
             120,
         )
         .unwrap();

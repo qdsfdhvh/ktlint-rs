@@ -74,12 +74,16 @@ fn collect_protected(node: tree_sitter::Node, source: &str, out: &mut Vec<(usize
         // spacing cannot turn it back into `* value`.
         out.push((node.start_byte(), node.start_byte() + 1));
     }
-    if is_protected_kind(node.kind())
-        || is_backtick_identifier(&node, source)
-        || is_space_before_colon(&node)
-    {
+    if is_protected_kind(node.kind()) || is_backtick_identifier(&node, source) {
         // Protect the whole span (including any string interpolation) rather than
         // risk corrupting it — under-formatting is acceptable, corruption is not.
+        out.push((node.start_byte(), node.end_byte()));
+        return;
+    }
+    if is_space_before_colon(&node) {
+        // Supertype colons are owned by fix_supertype_colon_spacing (which runs
+        // on unmasked text and can safely insert the missing space): fix_colons'
+        // line scan must never touch them, so protect unconditionally.
         out.push((node.start_byte(), node.end_byte()));
         return;
     }
@@ -97,6 +101,58 @@ fn collect_protected(node: tree_sitter::Node, source: &str, out: &mut Vec<(usize
 /// with real `\n`s kept between fragments — this keeps line-oriented fixers
 /// (`fix_indentation`, `fix_blank_line_in_list`, `fix_trailing_ws`) seeing the same
 /// line structure, while the fragments contain no character any fixer targets.
+/// Parse the `SENTINEL<id>SENTINEL` payload of a fully-masked line into the
+/// store index.
+/// True when the non-blank line above `row` opens a class-like body with `{`
+/// (`class Foo {`, `object Bar {`, `interface I {`, `enum class E {`,
+/// `companion object {`, …). JVM 1.8 re-indents a flush-left block comment
+/// that starts a class-like body but not one that starts a function body.
+fn preceded_by_class_like_body_open(lines_src: &[&str], row: usize) -> bool {
+    for r in (0..row).rev() {
+        let prev = lines_src[r].trim();
+        if prev.is_empty() {
+            continue;
+        }
+        if !prev.ends_with('{') {
+            return false;
+        }
+        return prev.starts_with("class ")
+            || prev.starts_with("data class ")
+            || prev.starts_with("enum class ")
+            || prev.starts_with("sealed class ")
+            || prev.starts_with("abstract class ")
+            || prev.starts_with("open class ")
+            || prev.starts_with("internal class ")
+            || prev.starts_with("public class ")
+            || prev.starts_with("private class ")
+            || prev.starts_with("final class ")
+            || prev.starts_with("annotation class ")
+            || prev.starts_with("value class ")
+            || prev.starts_with("inline class ")
+            || prev.starts_with("interface ")
+            || prev.starts_with("object ")
+            || prev.starts_with("data object ")
+            || prev.starts_with("sealed object ")
+            || prev.starts_with("companion object ");
+    }
+    false
+}
+
+fn parse_sentinel_id(trimmed: &str) -> Option<usize> {
+    // The fragment is `SENTINEL<id>SENTINEL`, possibly followed by code the
+    // mask left outside the protected span (a trailing `,`, `)`, …). Take the
+    // digits between the first sentinel and the next non-digit.
+    let after = trimmed.find(SENTINEL)? + SENTINEL.len_utf8();
+    let digits: String = trimmed[after..]
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    if digits.is_empty() {
+        return None;
+    }
+    digits.parse::<usize>().ok()
+}
+
 fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> Option<(String, Vec<String>)> {
     if source.contains(SENTINEL) {
         return None;
@@ -478,8 +534,58 @@ fn apply_spacing_rules(
                 fix_spread_operators(input, &tree)
             })?;
         }
+        // Generic brackets must run on the UNMASKED text: mask_protected fences
+        // type_arguments/type_parameters with sentinels so text fixers (op-spacing)
+        // cannot corrupt `List<String>`, which would hide the brackets from this
+        // CST-driven pass. It is called directly rather than through
+        // safe_transform: protected_snapshot counts type_arguments/type_parameters
+        // as protected regions (for the text fixers' sake), so a transform whose
+        // whole job is to edit those regions would always fail the
+        // protected-region diff. The pass is inherently safe — it only deletes
+        // single spaces adjacent to CST-verified `<`/`>` tokens.
+        if rule_enabled(
+            rule_configs,
+            "standard:spacing-around-angle-brackets",
+            code_style,
+        ) {
+            text = fix_angle_brackets(&text);
+        }
+        if rule_enabled(
+            rule_configs,
+            "standard:no-empty-first-line-in-class-body",
+            code_style,
+        ) || rule_enabled(
+            rule_configs,
+            "standard:no-empty-first-line-in-method-block",
+            code_style,
+        ) {
+            text = fix_no_empty_first_line(&text);
+        }
+        if rule_enabled(rule_configs, "standard:colon-spacing", code_style)
+            || rule_enabled(rule_configs, "standard:spacing-around-colon", code_style)
+        {
+            text = fix_supertype_colon_spacing(&text);
+        }
+        if rule_enabled(rule_configs, "standard:annotation", code_style)
+            || rule_enabled(rule_configs, "standard:annotation-spacing", code_style)
+        {
+            text = fix_annotation_newlines(&text);
+        }
+        if rule_enabled(
+            rule_configs,
+            "standard:spacing-between-declarations-with-comments",
+            code_style,
+        ) || rule_enabled(rule_configs, "standard:no-consecutive-comments", code_style)
+            || rule_enabled(
+                rule_configs,
+                "standard:blank-line-before-declaration",
+                code_style,
+            )
+        {
+            text = fix_comment_declaration_spacing(&text);
+        }
         type Pass = (&'static str, fn(&str) -> String);
-        let passes: [Pass; 29] = [
+        let passes: [Pass; 28] = [
             ("standard:annotation-spacing", fix_annotation_blank_lines),
             ("standard:modifier-list-spacing", fix_annotation_blank_lines),
             (
@@ -516,7 +622,6 @@ fn apply_spacing_rules(
             ("standard:op-spacing", fix_operators),
             ("standard:comma-spacing", fix_commas),
             ("standard:paren-spacing", fix_parens),
-            ("standard:spacing-around-angle-brackets", fix_angle_brackets),
             ("standard:colon-spacing", fix_colons),
             ("standard:fun-keyword-spacing", fix_keyword_spacing),
             ("standard:function-return-type-spacing", fix_colons),
@@ -608,6 +713,15 @@ fn format_once(
     if rule_enabled(rule_configs, "standard:statement-wrapping", code_style) {
         text = safe_transform("standard:statement-wrapping", &text, |input| {
             fix_statement_wrapping(input, indent_size)
+        })?;
+    }
+    if rule_enabled(
+        rule_configs,
+        "standard:multiline-expression-wrapping",
+        code_style,
+    ) {
+        text = safe_transform("standard:multiline-expression-wrapping", &text, |input| {
+            fix_multiline_expression_wrapping(input, indent_size)
         })?;
     }
     if rule_enabled(rule_configs, "standard:indent", code_style) {
@@ -762,6 +876,11 @@ fn fix_all_spacing(source: &str) -> String {
         return source.to_string();
     }
     let spread_fixed = fix_spread_operators(source, &initial_tree);
+    let spread_fixed = fix_angle_brackets(&spread_fixed);
+    let spread_fixed = fix_no_empty_first_line(&spread_fixed);
+    let spread_fixed = fix_comment_declaration_spacing(&spread_fixed);
+    let spread_fixed = fix_supertype_colon_spacing(&spread_fixed);
+    let spread_fixed = fix_annotation_newlines(&spread_fixed);
     let tree = parser.parse(&spread_fixed);
     if tree.root_node().has_error() {
         return source.to_string();
@@ -778,7 +897,6 @@ fn fix_all_spacing(source: &str) -> String {
         text = fix_operators(&text);
         text = fix_commas(&text);
         text = fix_parens(&text);
-        text = fix_angle_brackets(&text);
         text = fix_colons(&text);
         text = fix_keyword_spacing(&text);
         text = fix_range_spacing(&text);
@@ -827,6 +945,7 @@ fn fix_wrapping(source: &str, indent_size: usize, max_line_length: usize) -> Str
     };
     let mut text = source.to_string();
     text = fix_function_body_merge(&text, max_line_length);
+    text = fix_single_parameter_fold(&text, max_line_length);
     text = fix_property_wrapping(&text, indent_size, max_line_length);
     text = fix_argument_list_wrapping(&text, indent_size, max_line_length);
     text
@@ -838,6 +957,74 @@ fn fix_wrapping(source: &str, indent_size: usize, max_line_length: usize) -> Str
 /// Conservative: only merges single-line signatures with a genuine `=`
 /// assignment (tree-sitter can mis-parse `= a == b` into `=` tokens), and only
 /// when the body expression starts on the next line.
+/// ktlint 1.8 function-signature: a multi-line parameter list with exactly
+/// one unannotated parameter collapses onto the signature line when it fits
+/// (`fun f(\n    a: Int,\n) {` -> `fun f(a: Int) {`). Multi-parameter lists
+/// stay multi-line (oracle-verified; only single-parameter functions fold).
+fn fix_single_parameter_fold(source: &str, max_line_length: usize) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "function_declaration" {
+            let mut node_walk = node.walk();
+            let params = node
+                .children(&mut node_walk)
+                .find(|c| c.kind() == "function_value_parameters");
+            if let Some(params) = params {
+                let multiline = params.start_position().row != params.end_position().row;
+                if multiline {
+                    let mut pw = params.walk();
+                    let args: Vec<tree_sitter::Node> = params
+                        .children(&mut pw)
+                        .filter(|c| !matches!(c.kind(), "(" | ")" | ","))
+                        .filter(|c| c.is_named())
+                        .collect();
+                    let foldable = args.len() == 1
+                        && args[0].start_position().row == args[0].end_position().row
+                        && !bytes[args[0].start_byte()..args[0].end_byte()]
+                            .iter()
+                            .any(|&b| b == b'@');
+                    if foldable {
+                        let open = params.start_byte();
+                        let close = params.end_byte();
+                        let line_start = bytes[..open]
+                            .iter()
+                            .rposition(|&b| b == b'\n')
+                            .map_or(0, |i| i + 1);
+                        let arg_text = source[args[0].start_byte()..args[0].end_byte()]
+                            .trim()
+                            .trim_end_matches(',')
+                            .trim();
+                        let prefix = &source[line_start..open];
+                        let line_len = prefix.len() + 1 + arg_text.len() + 1;
+                        if line_len <= max_line_length {
+                            edits.push((open, close, format!("({})", arg_text)));
+                        }
+                    }
+                }
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if edits.is_empty() {
+        return source.to_string();
+    }
+    edits.sort_by_key(|(start, _, _)| std::cmp::Reverse(*start));
+    let mut out = source.to_string();
+    for (start, end, text) in edits {
+        out.replace_range(start..end, &text);
+    }
+    out
+}
+
 fn fix_function_body_merge(source: &str, max_line_length: usize) -> String {
     let mut parser = KotlinParser::new();
     let tree = parser.parse(source);
@@ -1020,7 +1207,7 @@ fn fix_argument_list_wrapping(source: &str, indent_size: usize, max_line_length:
                 let has_lambda = children.iter().any(|c| {
                     let text = &source[c.start_byte()..c.end_byte()];
                     text.trim_start().starts_with('{') || text.trim_end().ends_with('}')
-                });
+                }) || source[node.end_byte()..].trim_start().starts_with('{');
                 if has_lambda {
                     let mut w2 = node.walk();
                     for c in node.children(&mut w2) {
@@ -1363,6 +1550,121 @@ fn fix_semicolon_newlines(source: &str, _indent_size: usize) -> String {
     text
 }
 
+/// standard:multiline-expression-wrapping — move a multiline RHS of `=`
+/// (property initializer, expression-body function, parameter default) onto
+/// its own line when its first token shares the `=` line, and indent the
+/// whole RHS one level deeper (JVM oracle, issue #202). A bare lambda RHS
+/// (`val f = { x ->`) is exempt, matching the check rule.
+fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String {
+    let mut parser = KotlinParser::new();
+    let tree = parser.parse(source);
+    // (rhs_col, rhs_start_row, rhs_end_row)
+    let mut rewrites: Vec<(usize, usize, usize)> = Vec::new();
+    let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        match node.kind() {
+            "property_declaration" | "function_value_parameters" | "function_body" => {
+                find_multiline_rhs(&node, source, &mut rewrites);
+            }
+            _ => {}
+        }
+        for i in (0..node.child_count()).rev() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if rewrites.is_empty() {
+        return source.to_string();
+    }
+    let lines: Vec<&str> = source.split_inclusive('\n').collect();
+    let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+    // Apply bottom-up so earlier row edits do not shift later rows.
+    rewrites.sort_by_key(|&(_, start, _)| std::cmp::Reverse(start));
+    for &(eq_col, start, end) in &rewrites {
+        let first = &out[start];
+        let base_indent = first.len() - first.trim_start().len();
+        let col = eq_col.min(first.len());
+        let before = &first[..col].trim_end(); // `... =`
+        let rhs_head = first[col..].trim_start().trim_end_matches('\n');
+        let indent = " ".repeat(base_indent + indent_size);
+        let mut first_line = format!("{}\n{}{}", before, indent, rhs_head);
+        if first.ends_with('\n') {
+            first_line.push('\n');
+        }
+        out[start] = first_line;
+        // Shift the remaining RHS rows one level deeper than their current
+        // indent (the whole RHS block moves right by one level).
+        for row in (start + 1)..=end {
+            let l = &out[row];
+            let cur_indent = l.len() - l.trim_start().len();
+            let body = l.trim_start().trim_end_matches('\n');
+            if !body.is_empty() {
+                out[row] = format!(
+                    "{}{}{}",
+                    " ".repeat(cur_indent + indent_size),
+                    body,
+                    if l.ends_with('\n') { "\n" } else { "" }
+                );
+            }
+        }
+    }
+    out.concat()
+}
+
+/// Find the first named node after `=` in a property/parameter/expression-body
+/// container and record its `=` end byte plus the RHS row span when the
+/// expression is multiline while its first token shares the `=` line. A bare
+/// lambda literal is exempt.
+fn find_multiline_rhs(
+    node: &tree_sitter::Node,
+    source: &str,
+    rewrites: &mut Vec<(usize, usize, usize)>,
+) {
+    // Expression-body function whose signature itself spans multiple lines
+    // (`fun f(\n    a: Int,\n) = apply {`) is exempt — the check rule
+    // reports nothing there either (oracle), so the fixer must not split.
+    if node.kind() == "function_body"
+        && node.parent().is_some_and(|p| {
+            p.children(&mut p.walk()).any(|c| {
+                c.kind() == "function_value_parameters"
+                    && c.start_position().row != c.end_position().row
+            })
+        })
+    {
+        return;
+    }
+    let mut after_eq = false;
+    for c in node.children(&mut node.walk()) {
+        if c.kind() == "=" {
+            after_eq = true;
+            continue;
+        }
+        if after_eq && c.is_named() {
+            if c.kind() == "lambda_literal" {
+                return;
+            }
+            let start = c.start_position().row;
+            let end = c.end_position().row;
+            if end > start {
+                // First token must share the `=` line (not already on its
+                // own line).
+                let line = source.lines().nth(start).unwrap_or("");
+                let col = c.start_position().column.min(line.len());
+                if line[..col].trim().is_empty() {
+                    return;
+                }
+                rewrites.push((col, start, end));
+                return;
+            }
+            // A single-line leading child (e.g. the receiver of
+            // `= benchmarkRule.measureRepeated(`) is not itself multiline,
+            // but the call that follows it is — keep scanning for the first
+            // multiline child so the whole RHS still gets wrapped.
+        }
+    }
+}
+
 fn fix_indentation(source: &str, indent_size: usize) -> String {
     let mut parser = KotlinParser::new();
     let tree = parser.parse(source);
@@ -1380,14 +1682,24 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
     // Per-line expected indentation — the same rolling computation the
     // check uses (`compute_line_expected`: brace depth, continuation after
     // `{`/`:`/`=`, closing-brace correction, supertype class bodies), so
-    // `--format` fixes exactly what `check` reports. Runs on the masked
-    // text: SENTINELs are inert (no `{`/`:`/`=`), comments are already
-    // masked. We only *raise* lines whose current indent is clearly too
-    // shallow — never lower existing indentation, so continuation/wrapped
-    // lines are preserved.
-    let lines_owned: Vec<&str> = masked.split('\n').collect();
-    let expected =
-        crate::rules::structure::indentation::compute_line_expected(&lines_owned, indent_size, &[]);
+    // `--format` fixes exactly what `check` reports. Runs on the original
+    // text with the AST expectations alongside: raising too-shallow lines
+    // uses the line-scan expectation, and *lowering* over-indented lines is
+    // gated on the AST classifier AND the line-scan model agreeing on the
+    // value AND the row starting a fresh statement — the same confidence
+    // the over-indent probe uses (issue #202) — so continuation and
+    // alignment indents are never mangled.
+    let lines_src: Vec<&str> = source.split('\n').collect();
+    let elevated = crate::rules::structure::indentation::find_allman_elevated_blocks(&tree, source);
+    let scan = crate::rules::structure::indentation::compute_line_expected(
+        &lines_src,
+        indent_size,
+        &elevated,
+    );
+    let ast: Vec<Option<usize>> = (0..lines_src.len())
+        .map(|r| crate::rules::structure::indentation::ast_expected(&tree, source, r, indent_size))
+        .collect();
+    let tree_clean = !tree.root_node().has_error();
     let lines: Vec<&str> = masked.split_inclusive('\n').collect();
     let mut output = String::with_capacity(masked.len());
     for (row, line) in lines.iter().enumerate() {
@@ -1397,11 +1709,108 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
         // leading spaces are content. A line with real code indent before the
         // fragment (`      ::engine`) is still re-indented.
         let current = line.len() - trimmed.len();
-        if trimmed.is_empty() || (trimmed.starts_with(SENTINEL) && current == 0) {
+        if trimmed.is_empty() {
             output.push_str(line);
             continue;
         }
-        if let Some(&want) = expected.get(row) {
+        if trimmed.starts_with(SENTINEL) && current == 0 {
+            // Fully-masked line: comment/string content, or code that was
+            // masked whole (e.g. `ExperimentalMaterial3Api::class` — the
+            // callable_reference span is one sentinel fragment). Content
+            // keeps its text column; code rows are re-indented like any
+            // other code row.
+            let mut content = true;
+            if let Some(id) = parse_sentinel_id(trimmed) {
+                if let Some(orig) = store.get(id) {
+                    let ot = orig.trim_start();
+                    content = ot.starts_with('*')
+                        || ot.starts_with("//")
+                        || ot.starts_with("/*")
+                        || ot.starts_with("\"\"\"")
+                        || ot.starts_with("\"")
+                        || ot.is_empty();
+                }
+            }
+            // A masked fragment with code after it on the same line
+            // (`\u{e000}0\u{e000},` — a `::class` argument, `@TypeMarker
+            // String>` fragment) is a code row: re-indent it. A content row
+            // (comment/string interior) is the whole line.
+            if !content {
+                let after = trimmed
+                    .rfind(SENTINEL)
+                    .map_or(0, |i| i + SENTINEL.len_utf8());
+                let trailing: String = trimmed[after..]
+                    .chars()
+                    .filter(|c| !c.is_whitespace())
+                    .collect();
+                content = trailing.is_empty();
+            }
+            if !content {
+                if let Some(&want) = scan.get(row) {
+                    let non_multiple = current % indent_size != 0;
+                    let full_level_short = current.saturating_add(indent_size) <= want;
+                    if current < want && (non_multiple || full_level_short) {
+                        let has_nl = line.ends_with('\n');
+                        output.push_str(&" ".repeat(want));
+                        output.push_str(trimmed.trim_end_matches('\n'));
+                        if has_nl {
+                            output.push('\n');
+                        }
+                        continue;
+                    }
+                }
+                output.push_str(line);
+                continue;
+            }
+            // Comment content: first lines (`/**`, `/*`) are re-indented only
+            // in the two shapes JVM ktlint 1.8 actually re-indents (verified
+            // by probing): (1) it already has some indentation (it is raised
+            // to its containing depth), or (2) it directly starts a
+            // class-like body (`class Foo {` + blank + `/**`). A flush-left
+            // comment in any other position (after a property, inside a
+            // function body) is left exactly as written. Continuation comment
+            // lines (`* …`, `*/`) keep their text column untouched.
+            let mut is_first_line = false;
+            if let Some(id) = parse_sentinel_id(trimmed) {
+                if store
+                    .get(id)
+                    .is_some_and(|orig| orig.trim_start().starts_with("/*"))
+                {
+                    is_first_line = true;
+                }
+            }
+            if is_first_line {
+                let raise_nonzero = current > 0;
+                let raise_class_open =
+                    current == 0 && preceded_by_class_like_body_open(&lines_src, row);
+                if (raise_nonzero || raise_class_open) {
+                    if let Some(&want) = scan.get(row) {
+                        let non_multiple = current % indent_size != 0;
+                        let full_level_short = current.saturating_add(indent_size) <= want;
+                        if current < want && (non_multiple || full_level_short) {
+                            let has_nl = line.ends_with('\n');
+                            output.push_str(&" ".repeat(want));
+                            output.push_str(trimmed.trim_end_matches('\n'));
+                            if has_nl {
+                                output.push('\n');
+                            }
+                            continue;
+                        }
+                    }
+                }
+            }
+            output.push_str(line);
+            continue;
+        }
+        let mut write_indent = |want: usize| {
+            let has_nl = line.ends_with('\n');
+            output.push_str(&" ".repeat(want));
+            output.push_str(trimmed.trim_end_matches('\n'));
+            if has_nl {
+                output.push('\n');
+            }
+        };
+        if let Some(&want) = scan.get(row) {
             // Raise clearly-too-shallow lines: either the indent is not a
             // multiple of indent_size (explicitly wrong — matches the rule's
             // "should be multiple of N" report), or it is at least a full
@@ -1412,16 +1821,24 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
             let non_multiple = current % indent_size != 0;
             let full_level_short = current.saturating_add(indent_size) <= want;
             if current < want && (non_multiple || full_level_short) {
-                // Only *raise* too-shallow lines. Never lower: continuation
-                // and alignment indents that the line-based expectation does
-                // not model (operator/chain continuations) must be preserved,
-                // and over-indented lines would otherwise be mangled.
-                let has_nl = line.ends_with('\n');
-                output.push_str(&" ".repeat(want));
-                output.push_str(trimmed.trim_end_matches('\n'));
-                if has_nl {
-                    output.push('\n');
-                }
+                write_indent(want);
+                continue;
+            }
+            // Lower clearly-over-indented lines — only when the AST
+            // classifier and the line-scan model agree on the expected
+            // value, the tree is clean, and the row starts a fresh
+            // statement (the over-indent probe's confidence gate). Never
+            // lower a continuation or alignment row whose true indent the
+            // models do not pin down.
+            if current > want
+                && tree_clean
+                && ast.get(row) == Some(&Some(want))
+                && crate::rules::structure::indentation::row_starts_statement(&tree, source, row)
+                && !crate::rules::structure::indentation::lambda_in_unconstrained_argument(
+                    &tree, source, row,
+                )
+            {
+                write_indent(want);
                 continue;
             }
         }
@@ -1680,11 +2097,113 @@ fn fix_commas(source: &str) -> String {
 }
 
 fn fix_angle_brackets(source: &str) -> String {
-    // Disabled: a text-level `< `→`<` / ` >`→`>` cannot tell a generic (`List<T>`,
-    // now masked anyway) from the comparison operators `a < b` / `a >= b`, and
-    // corrupted the latter. Generic tidy is handled by masking; comparison spacing
-    // by fix_operators. Kept as a no-op so the pipeline order is unchanged.
-    source.to_string()
+    // CST-driven mirror of ktlint 1.8 spacing-around-angle-brackets: for every
+    // type-argument/type-parameter list, drop a space directly before `<`
+    // (unless the token before it is `fun`/`val`/`var`), directly after `<`, and
+    // directly before `>`. Newline whitespace (multiline generic lists) is left
+    // to the indentation pass, and the space after `>` is never touched.
+    // A text-level pass cannot do this safely — `a < b` is a comparison, not a
+    // generic — so we walk the CST, which only marks true generic brackets.
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut deletions: Vec<(usize, usize)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        let kind = node.kind();
+        if kind == "type_arguments" || kind == "type_parameters" {
+            if let Some(lt) = node.child(0) {
+                if lt.kind() == "<" {
+                    // Space directly before `<`: drop unless preceded by fun/val/var.
+                    let before = &bytes[..lt.start_byte()];
+                    if let Some(ws_start) = before
+                        .iter()
+                        .rposition(|&b| !b.is_ascii_whitespace())
+                        .map(|i| i + 1)
+                    {
+                        if ws_start < lt.start_byte() {
+                            let mut p = ws_start;
+                            while p > 0
+                                && (bytes[p - 1].is_ascii_alphanumeric() || bytes[p - 1] == b'_')
+                            {
+                                p -= 1;
+                            }
+                            let prev_tok = &source[p..ws_start];
+                            if prev_tok != "fun" && prev_tok != "val" && prev_tok != "var" {
+                                deletions.push((ws_start, lt.start_byte()));
+                            }
+                        }
+                    }
+                    // Space directly after `<` (no newline): drop.
+                    let mut ws_end = lt.end_byte();
+                    while ws_end < bytes.len() && (bytes[ws_end] == b' ' || bytes[ws_end] == b'\t')
+                    {
+                        ws_end += 1;
+                    }
+                    if ws_end > lt.end_byte() {
+                        deletions.push((lt.end_byte(), ws_end));
+                    }
+                }
+            }
+            if let Some(gt) = node.child(node.child_count() - 1) {
+                if gt.kind() == ">" {
+                    // Space directly before `>` (no newline): drop.
+                    let before = &bytes[..gt.start_byte()];
+                    if let Some(ws_start) = before
+                        .iter()
+                        .rposition(|&b| !b.is_ascii_whitespace())
+                        .map(|i| i + 1)
+                    {
+                        if ws_start < gt.start_byte()
+                            && bytes[ws_start..gt.start_byte()]
+                                .iter()
+                                .all(|&b| b == b' ' || b == b'\t')
+                        {
+                            deletions.push((ws_start, gt.start_byte()));
+                        }
+                    }
+                    // Space directly after `>`: ktlint 1.8 type-argument-list-spacing
+                    // drops it for a call (`foo<Main> ()` to `foo<Main>()`) but NOT
+                    // for a type reference (`val x: Map<String> = ...` keeps the
+                    // space before `=`) nor before a trailing lambda
+                    // (`foo<Int> { ... }` keeps the space before `{`).
+                    if kind == "type_arguments" {
+                        let is_type_reference = node
+                            .parent()
+                            .is_some_and(|p| matches!(p.kind(), "user_type" | "type_identifier"));
+                        let next_is_lambda = bytes.get(gt.end_byte()).is_some_and(|&b| b == b' ')
+                            && bytes.get(gt.end_byte() + 1).is_some_and(|&b| b == b'{');
+                        if !is_type_reference && !next_is_lambda {
+                            let mut ws_end = gt.end_byte();
+                            while ws_end < bytes.len()
+                                && (bytes[ws_end] == b' ' || bytes[ws_end] == b'\t')
+                            {
+                                ws_end += 1;
+                            }
+                            if ws_end > gt.end_byte() {
+                                deletions.push((gt.end_byte(), ws_end));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(child) = node.child(i) {
+                stack.push(child);
+            }
+        }
+    }
+    if deletions.is_empty() {
+        return source.to_string();
+    }
+    deletions.sort_by_key(|r| std::cmp::Reverse(r.0));
+    let mut out = source.to_string();
+    for (start, end) in deletions {
+        out.replace_range(start..end, "");
+    }
+    out
 }
 
 fn fix_parens(source: &str) -> String {
@@ -1742,8 +2261,18 @@ fn fix_colons(source: &str) -> String {
                 .find(|(_, ch)| !ch.is_alphanumeric() && *ch != '_')
                 .map_or(0, |(offset, ch)| offset + ch.len_utf8());
             if prefix[..word_start].ends_with('@') {
+                // Use-site target colon (`@get: Rule`, `@file: Suppress`): the
+                // colon must not be followed by a space (JVM colon-spacing
+                // "Unexpected spacing after \":\""); a space before it is
+                // dropped too (`@get : Rule`).
+                while output.ends_with(' ') || output.ends_with('\t') {
+                    output.pop();
+                }
                 output.push(':');
                 index += 1;
+                while matches!(chars.get(index), Some(' ' | '\t')) {
+                    index += 1;
+                }
                 continue;
             }
             while output.ends_with(' ') || output.ends_with('\t') {
@@ -1780,8 +2309,16 @@ fn fix_colons(source: &str) -> String {
                     .chars()
                     .next_back()
                     .is_some_and(|c| c.is_alphanumeric() || c == '_');
-            let super_colon =
-                (is_declaration && matches!(prev_char, Some(')' | '>'))) || direct_object;
+            // Supertype colon gets a space before it. `class MainActivity:` —
+            // the class name directly before `:` — also needs one (JVM
+            // SpacingAroundColonRule: parent CLASS/OBJECT_DECLARATION/
+            // SECONDARY_CONSTRUCTOR/TYPE_CONSTRAINT with missing spacing
+            // before). A parameter colon inside an open `(` (`class Foo(a: Int)`)
+            // must NOT get one, so an unclosed paren in the prefix disables it.
+            let paren_open = prefix.matches('(').count() > prefix.matches(')').count();
+            let super_colon = (is_declaration && matches!(prev_char, Some(')' | '>')))
+                || direct_object
+                || (is_declaration && !paren_open);
             let type_constraint =
                 prefix.rfind('<') > prefix.rfind('>') || prefix.contains(" where ");
             // Anonymous-object supertype (`respond(object : X {`) can sit
@@ -1922,6 +2459,7 @@ fn fix_spacing_before_annotated_declarations(source: &str) -> String {
             if !previous.is_empty()
                 && !is_annotation_only_line(previous)
                 && looks_like_declaration_line(previous)
+                && !is_ctor_modifier_annotation(&lines, index)
             {
                 output.push('\n');
             }
@@ -1929,6 +2467,15 @@ fn fix_spacing_before_annotated_declarations(source: &str) -> String {
         output.push_str(line);
     }
     output
+}
+
+/// True when the annotation line is the modifier of the class's primary
+/// constructor (`@Inject` right above `constructor(...)`): the class header
+/// above owns it, so no blank line may be inserted between them.
+fn is_ctor_modifier_annotation(lines: &[&str], index: usize) -> bool {
+    lines
+        .get(index + 1)
+        .is_some_and(|l| l.trim_start().starts_with("constructor("))
 }
 
 fn looks_like_declaration_line(line: &str) -> bool {
@@ -1967,6 +2514,242 @@ fn fix_expression_operand_wrapping(source: &str) -> String {
         }
     }
     output
+}
+
+/// ktlint 1.8 SpacingAroundColonRule (addMissingSpacingAround): a supertype
+/// colon (`class Foo : Bar`, `object X : Y`, secondary-constructor delegation
+/// `constructor(...) : this(...)`) needs a space on both sides. Runs on
+/// unmasked text because the mask protects supertype colons from fix_colons.
+fn fix_supertype_colon_spacing(source: &str) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut insertions: Vec<(usize, char)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == ":"
+            && node.parent().is_some_and(|p| {
+                matches!(
+                    p.kind(),
+                    "class_declaration"
+                        | "object_declaration"
+                        | "interface_declaration"
+                        | "enum_declaration"
+                        | "secondary_constructor"
+                )
+            })
+        {
+            let pos = node.start_byte();
+            let prev_same_line = bytes[..pos]
+                .iter()
+                .rposition(|&b| b == b'\n')
+                .map_or(0, |i| i + 1);
+            let has_before = pos > prev_same_line
+                && bytes[prev_same_line..pos]
+                    .iter()
+                    .any(|&b| !b.is_ascii_whitespace())
+                && bytes[pos - 1] != b' ';
+            if has_before && bytes[pos - 1] != b'\t' {
+                insertions.push((pos, ' '));
+            }
+            let after = node.end_byte();
+            if bytes
+                .get(after)
+                .is_some_and(|&b| b != b' ' && b != b'\t' && b != b'\n' && b != b'\r')
+            {
+                insertions.push((after, ' '));
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if insertions.is_empty() {
+        return source.to_string();
+    }
+    insertions.sort_by_key(|(pos, _)| std::cmp::Reverse(*pos));
+    let mut out = source.to_string();
+    for (pos, ch) in insertions {
+        out.insert(pos, ch);
+    }
+    out
+}
+
+/// ktlint 1.8 standard:annotation — an annotation that shares a line with a
+/// preceding declaration (`class Foo @Inject constructor(`) or that precedes a
+/// primary `constructor` gets moved onto its own line:
+/// `class Foo @Inject constructor(` -> `class Foo\n    @Inject\n    constructor(`.
+/// `@Composable fun`, `@Inject val` (annotation at line start) are left alone.
+fn fix_annotation_newlines(source: &str) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut insertions: Vec<(usize, char)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "annotation" && bytes.get(node.start_byte()) == Some(&b'@') {
+            let start = node.start_byte();
+            let line_start = bytes[..start]
+                .iter()
+                .rposition(|&b| b == b'\n')
+                .map_or(0, |i| i + 1);
+            // Space before `@` on the same line (`class Foo @Inject`) -> newline.
+            // An annotation inside a type (`List<@TypeMarker String>`) or a
+            // parameter list (`(a: @Foo Int)`) is not a declaration modifier
+            // and must stay put.
+            let prev_code = bytes[..start]
+                .iter()
+                .rev()
+                .find(|&&b| !b.is_ascii_whitespace());
+            let in_type = matches!(prev_code, Some(b'<') | Some(b',') | Some(b'(') | Some(b':'));
+            if !in_type
+                && bytes[line_start..start]
+                    .iter()
+                    .any(|&b| !b.is_ascii_whitespace())
+            {
+                insertions.push((start, '\n'));
+            }
+            // Space after the annotation before a primary `constructor` on the
+            // same line -> newline.
+            let after = node.end_byte();
+            let rest = &source[after..];
+            if rest.starts_with(' ') || rest.starts_with('\t') {
+                let tail = rest.trim_start();
+                if tail.starts_with("constructor") {
+                    insertions.push((after, '\n'));
+                }
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if insertions.is_empty() {
+        return source.to_string();
+    }
+    insertions.sort_by_key(|(pos, _)| std::cmp::Reverse(*pos));
+    let mut out = source.to_string();
+    for (pos, ch) in insertions {
+        out.insert(pos, ch);
+    }
+    out
+}
+
+/// ktlint 1.8 spacing-between-declarations-with-comments /
+/// no-consecutive-comments / blank-line-before-declaration: at declaration
+/// scope (source file / class-like body), a `//` comment preceded by a code
+/// line gets a blank line before it, and a KDoc preceded by an EOL comment
+/// gets a blank line between them. Inside function bodies nothing is inserted.
+fn fix_comment_declaration_spacing(source: &str) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let lines: Vec<&str> = source.split('\n').collect();
+    let mut insertions: Vec<(usize, String)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "line_comment" {
+            let is_decl_scope = node.parent().is_some_and(|p| {
+                matches!(
+                    p.kind(),
+                    "source_file"
+                        | "class_body"
+                        | "object_body"
+                        | "enum_class_body"
+                        | "companion_object"
+                )
+            });
+            if !is_decl_scope {
+                // still descend into children below
+            } else {
+                let row = node.start_position().row;
+                let prev_row = row.checked_sub(1);
+                let need_before = prev_row.is_some_and(|r| {
+                    let prev = lines[r].trim();
+                    !prev.is_empty() && !prev.starts_with("//")
+                });
+                let next_is_kdoc = lines
+                    .get(row + 1)
+                    .is_some_and(|n| n.trim_start().starts_with("/**"));
+                if need_before {
+                    insertions.push((node.start_byte(), "\n".to_string()));
+                } else if next_is_kdoc {
+                    // blank line goes after the comment line: insert at the
+                    // comment node's end (before its trailing newline is not
+                    // needed — inserting at end of line content works since
+                    // the next physical line starts with the KDoc).
+                    let line_end = node.end_byte();
+                    insertions.push((line_end, "\n".to_string()));
+                }
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if insertions.is_empty() {
+        return source.to_string();
+    }
+    insertions.sort_by_key(|(pos, _)| std::cmp::Reverse(*pos));
+    let mut out = source.to_string();
+    for (pos, text) in insertions {
+        out.insert_str(pos, &text);
+    }
+    out
+}
+
+/// ktlint 1.8 no-empty-first-line-in-class-body / -in-method-block: a
+/// class/object/enum body or a function body must not start with a blank line
+/// (`class Foo {\n\n    ...` / `fun f() {\n\n    ...` drop the blank line).
+/// Runs on unmasked text (masked text with sentinels cannot be parsed).
+fn fix_no_empty_first_line(source: &str) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut deletions: Vec<(usize, usize)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        let kind = node.kind();
+        let body_open = if matches!(
+            kind,
+            "class_body" | "object_body" | "enum_class_body" | "companion_object"
+        ) {
+            node.child(0).filter(|c| c.kind() == "{")
+        } else if kind == "function_body" {
+            node.child(0).filter(|c| c.kind() == "{")
+        } else {
+            None
+        };
+        if let Some(open) = body_open {
+            let after = open.end_byte();
+            if bytes.get(after) == Some(&b'\n') && bytes.get(after + 1) == Some(&b'\n') {
+                deletions.push((after, after + 1));
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if deletions.is_empty() {
+        return source.to_string();
+    }
+    deletions.sort_by_key(|r| std::cmp::Reverse(r.0));
+    let mut out = source.to_string();
+    for (start, end) in deletions {
+        out.replace_range(start..end, "");
+    }
+    out
 }
 
 fn fix_empty_class_body(source: &str) -> String {
@@ -2138,6 +2921,7 @@ fn block_comment_alignment_edits(source: &str, tree: &tree_sitter::Tree) -> Vec<
                         .take_while(|byte| matches!(byte, b' ' | b'\t'))
                         .count();
                     if line.as_bytes().get(whitespace) == Some(&b'*')
+                        && whitespace > 0
                         && whitespace != expected.len()
                     {
                         edits.push(edit::TextEdit::new(
@@ -3299,6 +4083,46 @@ catch(e: E) { b() }"
         let src = "val r = if (a >= b) x else y\n";
         let r = fix_all_spacing(src);
         assert!(r.contains("a >= b"), "comparison mangled: {r:?}");
+    }
+
+    #[test]
+    fn nested_generic_and_comparison_left_alone() {
+        // Nested generic lists (inner and outer) are both tidied. A bare type
+        // expression as a property initializer (`val x = Map<String, ...`) is not
+        // valid Kotlin anyway and fails closed in tree-sitter; the real shape is a
+        // return/parameter type.
+        let src = "fun f(): Map<String, List < Int > > = mapOf()\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("Map<String, List<Int>>"),
+            "nested generic: {r:?}"
+        );
+        // Comparison chains are not generic lists and keep their spaces.
+        let src2 = "val y = a < b > c\n";
+        let r2 = fix_all_spacing(src2);
+        assert!(r2.contains("a < b > c"), "comparison mangled: {r2:?}");
+    }
+
+    #[test]
+    fn generic_angle_spacing_fixed() {
+        // ktlint 1.8 spacing-around-angle-brackets: `<` before/after and `>`
+        // before get their spaces dropped; `>` after is untouched.
+        let src = "fun f(): ReadOnlyProperty < Any, String> = ReadOnlyProperty { x -> x }\n";
+        let r = fix_all_spacing(src);
+        assert!(
+            r.contains("ReadOnlyProperty<Any, String> ="),
+            "generic spacing not fixed: {r:?}"
+        );
+    }
+
+    #[test]
+    fn fun_type_parameter_keeps_space() {
+        // `fun <T> foo()` keeps the space after `fun` (ELEMENT_TYPES_ALLOWING_
+        // PRECEDING_WHITESPACE), while `Foo <T>` becomes `Foo<T>`.
+        let src = "fun <T> foo(x: Foo <T>) = x\n";
+        let r = fix_all_spacing(src);
+        assert!(r.contains("fun <T> foo"), "fun space dropped: {r:?}");
+        assert!(r.contains("Foo<T>"), "class name space kept: {r:?}");
     }
 
     #[test]
