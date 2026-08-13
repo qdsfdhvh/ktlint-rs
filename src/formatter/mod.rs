@@ -1601,12 +1601,18 @@ fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String
         }
         out[start] = first_line;
         // Shift the remaining RHS rows one level deeper than their current
-        // indent (the whole RHS block moves right by one level).
+        // indent (the whole RHS block moves right by one level). Comment rows
+        // are content (JVM keeps a `//` comment flush-left even inside the
+        // wrapped RHS); they are left for the indent pass to place.
         for row in (start + 1)..=end {
             let l = &out[row];
             let cur_indent = l.len() - l.trim_start().len();
             let body = l.trim_start().trim_end_matches('\n');
             if !body.is_empty() {
+                let is_comment = body.starts_with("//") || body.starts_with("/*");
+                if is_comment {
+                    continue;
+                }
                 out[row] = format!(
                     "{}{}{}",
                     " ".repeat(cur_indent + indent_size),
