@@ -1058,7 +1058,8 @@ pub(crate) fn compute_line_expected(
         } else {
             ""
         };
-        let binary_cont = binary_operator_row(t, prev_code);
+        let binary_cont = binary_operator_row(t, prev_code)
+            || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "));
         if binary_cont {
             // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
             // level of the previous row; the first continuation lifts one

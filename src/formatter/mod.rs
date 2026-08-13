@@ -945,6 +945,7 @@ fn fix_wrapping(source: &str, indent_size: usize, max_line_length: usize) -> Str
     };
     let mut text = source.to_string();
     text = fix_function_body_merge(&text, max_line_length);
+    text = fix_single_parameter_fold(&text, max_line_length);
     text = fix_property_wrapping(&text, indent_size, max_line_length);
     text = fix_argument_list_wrapping(&text, indent_size, max_line_length);
     text
@@ -956,6 +957,74 @@ fn fix_wrapping(source: &str, indent_size: usize, max_line_length: usize) -> Str
 /// Conservative: only merges single-line signatures with a genuine `=`
 /// assignment (tree-sitter can mis-parse `= a == b` into `=` tokens), and only
 /// when the body expression starts on the next line.
+/// ktlint 1.8 function-signature: a multi-line parameter list with exactly
+/// one unannotated parameter collapses onto the signature line when it fits
+/// (`fun f(\n    a: Int,\n) {` -> `fun f(a: Int) {`). Multi-parameter lists
+/// stay multi-line (oracle-verified; only single-parameter functions fold).
+fn fix_single_parameter_fold(source: &str, max_line_length: usize) -> String {
+    let Some(tree) = parse_clean(source) else {
+        return source.to_string();
+    };
+    let bytes = source.as_bytes();
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+    let mut stack = vec![tree.root_node()];
+    while let Some(node) = stack.pop() {
+        if node.kind() == "function_declaration" {
+            let mut node_walk = node.walk();
+            let params = node
+                .children(&mut node_walk)
+                .find(|c| c.kind() == "function_value_parameters");
+            if let Some(params) = params {
+                let multiline = params.start_position().row != params.end_position().row;
+                if multiline {
+                    let mut pw = params.walk();
+                    let args: Vec<tree_sitter::Node> = params
+                        .children(&mut pw)
+                        .filter(|c| !matches!(c.kind(), "(" | ")" | ","))
+                        .filter(|c| c.is_named())
+                        .collect();
+                    let foldable = args.len() == 1
+                        && args[0].start_position().row == args[0].end_position().row
+                        && !bytes[args[0].start_byte()..args[0].end_byte()]
+                            .iter()
+                            .any(|&b| b == b'@');
+                    if foldable {
+                        let open = params.start_byte();
+                        let close = params.end_byte();
+                        let line_start = bytes[..open]
+                            .iter()
+                            .rposition(|&b| b == b'\n')
+                            .map_or(0, |i| i + 1);
+                        let arg_text = source[args[0].start_byte()..args[0].end_byte()]
+                            .trim()
+                            .trim_end_matches(',')
+                            .trim();
+                        let prefix = &source[line_start..open];
+                        let line_len = prefix.len() + 1 + arg_text.len() + 1;
+                        if line_len <= max_line_length {
+                            edits.push((open, close, format!("({})", arg_text)));
+                        }
+                    }
+                }
+            }
+        }
+        for i in 0..node.child_count() {
+            if let Some(c) = node.child(i) {
+                stack.push(c);
+            }
+        }
+    }
+    if edits.is_empty() {
+        return source.to_string();
+    }
+    edits.sort_by_key(|(start, _, _)| std::cmp::Reverse(*start));
+    let mut out = source.to_string();
+    for (start, end, text) in edits {
+        out.replace_range(start..end, &text);
+    }
+    out
+}
+
 fn fix_function_body_merge(source: &str, max_line_length: usize) -> String {
     let mut parser = KotlinParser::new();
     let tree = parser.parse(source);
