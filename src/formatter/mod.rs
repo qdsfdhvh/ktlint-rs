@@ -139,8 +139,18 @@ fn preceded_by_class_like_body_open(lines_src: &[&str], row: usize) -> bool {
 }
 
 fn parse_sentinel_id(trimmed: &str) -> Option<usize> {
-    let inner = trimmed.trim_matches(|c| c == SENTINEL || c == '\n' || c == '\r');
-    inner.parse::<usize>().ok()
+    // The fragment is `SENTINEL<id>SENTINEL`, possibly followed by code the
+    // mask left outside the protected span (a trailing `,`, `)`, …). Take the
+    // digits between the first sentinel and the next non-digit.
+    let after = trimmed.find(SENTINEL)? + SENTINEL.len_utf8();
+    let digits: String = trimmed[after..]
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    if digits.is_empty() {
+        return None;
+    }
+    digits.parse::<usize>().ok()
 }
 
 fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> Option<(String, Vec<String>)> {
@@ -1635,14 +1645,62 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
             continue;
         }
         if trimmed.starts_with(SENTINEL) && current == 0 {
-            // A comment's first line (`/**`, `/*`) is re-indented only in the
-            // two shapes JVM ktlint 1.8 actually re-indents (verified by
-            // probing): (1) it already has some indentation (it is raised to
-            // its containing depth), or (2) it directly starts a class-like
-            // body (`class Foo {` + blank + `/**`). A flush-left comment in
-            // any other position (after a property, inside a function body) is
-            // left exactly as written. Continuation comment lines (`* …`,
-            // `*/`) keep their text column untouched.
+            // Fully-masked line: comment/string content, or code that was
+            // masked whole (e.g. `ExperimentalMaterial3Api::class` — the
+            // callable_reference span is one sentinel fragment). Content
+            // keeps its text column; code rows are re-indented like any
+            // other code row.
+            let mut content = true;
+            if let Some(id) = parse_sentinel_id(trimmed) {
+                if let Some(orig) = store.get(id) {
+                    let ot = orig.trim_start();
+                    content = ot.starts_with('*')
+                        || ot.starts_with("//")
+                        || ot.starts_with("/*")
+                        || ot.starts_with("\"\"\"")
+                        || ot.starts_with("\"")
+                        || ot.is_empty();
+                }
+            }
+            // A masked fragment with code after it on the same line
+            // (`\u{e000}0\u{e000},` — a `::class` argument, `@TypeMarker
+            // String>` fragment) is a code row: re-indent it. A content row
+            // (comment/string interior) is the whole line.
+            if !content {
+                let after = trimmed
+                    .rfind(SENTINEL)
+                    .map_or(0, |i| i + SENTINEL.len_utf8());
+                let trailing: String = trimmed[after..]
+                    .chars()
+                    .filter(|c| !c.is_whitespace())
+                    .collect();
+                content = trailing.is_empty();
+            }
+            if !content {
+                if let Some(&want) = scan.get(row) {
+                    let non_multiple = current % indent_size != 0;
+                    let full_level_short = current.saturating_add(indent_size) <= want;
+                    if current < want && (non_multiple || full_level_short) {
+                        let has_nl = line.ends_with('\n');
+                        output.push_str(&" ".repeat(want));
+                        output.push_str(trimmed.trim_end_matches('\n'));
+                        if has_nl {
+                            output.push('\n');
+                        }
+                        continue;
+                    }
+                }
+                output.push_str(line);
+                continue;
+            }
+            // Comment content: first lines (`/**`, `/*`) are re-indented only
+            // in the two shapes JVM ktlint 1.8 actually re-indents (verified
+            // by probing): (1) it already has some indentation (it is raised
+            // to its containing depth), or (2) it directly starts a
+            // class-like body (`class Foo {` + blank + `/**`). A flush-left
+            // comment in any other position (after a property, inside a
+            // function body) is left exactly as written. Continuation comment
+            // lines (`* …`, `*/`) keep their text column untouched.
             let mut is_first_line = false;
             if let Some(id) = parse_sentinel_id(trimmed) {
                 if store
