@@ -946,14 +946,29 @@ pub(crate) fn compute_line_expected(
                 // `(`/`=` continuation must not push it back out (empty
                 // split argument list `inner(\n)` shape, issue #183).
             } else if !prev_inert {
-                if paren_depth > 0 && !t.starts_with('}') && !t.starts_with(')') {
+                if paren_depth > 0
+                    && !t.starts_with('}')
+                    && !t.starts_with(')')
+                    && prev_last_code != Some('{')
+                    && !(prev_last_code == Some('>') && lines[i - 1].trim_end().ends_with("->"))
+                {
                     // Inside a paren list the expectation already came from
                     // the list indent; keep it. A `}` row (lambda close on
                     // the same line as trailing arguments — `}, 1, …)`) is
-                    // governed by the closing-brace logic instead.
+                    // governed by the closing-brace logic instead. A row
+                    // right after a `{` (a lambda body inside the list:
+                    // `navigationSuiteItems = {` + body) is a block body and
+                    // goes through the `{` branch below.
                 } else if prev_last_code == Some('{') && prev_was_supertype {
                     // Class body opened on a supertype continuation line.
                     e = prev_expected;
+                } else if prev_last_code == Some('>') && lines[i - 1].trim_end().ends_with("->") {
+                    // Lambda with a parameter list ending on its own line:
+                    // `TOP_LEVEL…forEach { (navKey, navItem) ->` — the body
+                    // sits one level under the lambda's own row. A `when`
+                    // entry (`1 -> "one"`) carries its body on the same line
+                    // and never reaches here.
+                    e = prev_expected.saturating_add(is);
                 } else if prev_last_code == Some('{') {
                     // A block opened at the end of the previous line
                     // (`fun f() {`, `runBlocking {`, `if (x) {`): the body
