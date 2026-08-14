@@ -949,6 +949,12 @@ pub(crate) fn compute_line_expected(
                 // belongs to — the paren stack already popped it, and a prev
                 // `(`/`=` continuation must not push it back out (empty
                 // split argument list `inner(\n)` shape, issue #183).
+            } else if prev_trim.starts_with("//") && paren_depth > 0 && prev_last_code == Some('{')
+            {
+                // A comment row after a `{` inside a paren-list block
+                // (`setupBlock = {` at list+1): the comment's own row already
+                // sits at the block-body level, so the following row keeps it.
+                e = prev_expected;
             } else if !prev_inert {
                 if paren_depth > 0
                     && !t.starts_with('}')
@@ -1132,7 +1138,10 @@ pub(crate) fn compute_line_expected(
             class_annotation_pending = false;
         }
         prev_expected = e;
-        prev_last_code = last_code;
+        let is_comment_row = t.starts_with("//") || t.starts_with("/*");
+        if !is_comment_row {
+            prev_last_code = last_code;
+        }
         // Count this line's braces outside strings/comments.
         depth = depth
             .saturating_add(brace_opens)
