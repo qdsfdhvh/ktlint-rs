@@ -979,8 +979,13 @@ pub(crate) fn compute_line_expected(
             {
                 // A comment row after a `{` inside a paren-list block
                 // (`setupBlock = {` at list+1): the comment's own row already
-                // sits at the block-body level, so the following row keeps it.
+                // sits at the block-body level, so the following row keeps
+                // it — and the lifted level persists for the rest of the
+                // block body (rows after a comment still continue the block).
                 e = prev_expected;
+                if arrow_body_depth.is_none() {
+                    arrow_body_depth = Some(depth);
+                }
             } else if !prev_inert {
                 if paren_depth > 0
                     && !t.starts_with('}')
@@ -1074,6 +1079,16 @@ pub(crate) fn compute_line_expected(
                     }
                     if !is_class_body_open {
                         e = prev_expected.saturating_add(is);
+                        // Persist the lifted body level for the rest of the
+                        // block when the block itself is lifted above the
+                        // raw brace depth: a paren-list continuation
+                        // (`setupBlock = {` at list+2) or a trailing lambda
+                        // after a wrapped call (`) {` on its own row).
+                        // Statement-level blocks (`fun f() {`, `lazy {`)
+                        // match the brace depth and must not pin.
+                        if paren_depth > 0 && arrow_body_depth.is_none() {
+                            arrow_body_depth = Some(depth);
+                        }
                     }
                 } else if matches!(prev_last_code, Some(':') | Some('=')) {
                     // Body/continuation line (block body, parameter list,
