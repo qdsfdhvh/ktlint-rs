@@ -627,6 +627,32 @@ fn starts_declaration_keyword(t: &str) -> bool {
         || t.starts_with("private ")
 }
 
+/// True when scanning upward from `row` (exclusive) hits a class-like
+/// declaration after only supertype-continuation rows (`...,`, `...)`, `...(`,
+/// `...>`, `...?`). Used to recognize a class body `{` that closes a
+/// supertype list (`class A :\n    B,\n    C {`).
+fn supertype_chain_leads_to_class(lines: &[&str], row: usize) -> bool {
+    for r in (0..=row).rev() {
+        let tl = lines[r].trim();
+        if tl.is_empty() {
+            continue;
+        }
+        if class_like_decl_header(tl) {
+            return true;
+        }
+        if tl.ends_with(')')
+            || tl.ends_with('(')
+            || tl.ends_with('>')
+            || tl.ends_with('?')
+            || tl.ends_with(',')
+        {
+            continue;
+        }
+        break;
+    }
+    false
+}
+
 /// True when the line is a class-like declaration header whose body would
 /// open with `{` or whose supertype list follows a `:`.
 fn class_like_decl_line(t: &str) -> bool {
@@ -1013,8 +1039,15 @@ pub(crate) fn compute_line_expected(
                     // continuation).
                     let opener_line = lines[i - 1].trim();
                     let opener_is_class_header = class_like_decl_line(opener_line);
-                    let opener_is_supertype_close =
-                        opener_line.starts_with(')') && opener_line.trim_end().ends_with('{');
+                    // The `{` closes a class body when it sits at the end
+                    // of the header (`class Foo {`), after a `)` (`class
+                    // Foo(...) {`), or on a supertype-continuation row
+                    // (`class A :\n    B(\n        x\n    ) {` or a second
+                    // supertype `) : X,\n    Y {`) — the opener's own line
+                    // may start with a supertype name, not `)`.
+                    let opener_is_supertype_close = opener_line.trim_end().ends_with('{')
+                        && (opener_line.starts_with(')')
+                            || supertype_chain_leads_to_class(lines, i - 1));
                     let mut is_class_body_open = opener_is_class_header;
                     if opener_is_supertype_close {
                         // `class A :\n    B(\n        Servlet(x)\n    ) {` —
