@@ -877,6 +877,14 @@ pub(crate) fn compute_line_expected(
                 // keeps its first line at the statement indent).
                 if open_elevated {
                     e = e.saturating_add(is);
+                } else if stmt.is_some() {
+                    // A lambda frame (open_elevated = false, stmt = its
+                    // statement line): every body row is pinned to the
+                    // lambda's own row + one, unconditionally. A trailing
+                    // lambda whose `{` sits on a wrapped call's closing row
+                    // (`) {`) is lifted by the wrapping pass; its body must
+                    // follow even when the raw brace depth is lower.
+                    e = e.max(out[open].saturating_add(is));
                 } else if !in_for_header_first
                     && !closing_of_for_header
                     && !in_for_header_body
