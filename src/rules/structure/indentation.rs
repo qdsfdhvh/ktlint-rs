@@ -1011,9 +1011,6 @@ pub(crate) fn compute_line_expected(
                     // goes through the `{` branch below. Rows inside an
                     // arrow lambda body take the higher of the list indent
                     // and the lifted body level.
-                    if arrow_body_depth.is_some_and(|d| depth >= d) && prev_last_code != Some('{') {
-                        e = e.max(prev_expected);
-                    }
                 } else if prev_last_code == Some('{') && prev_was_supertype {
                     // Class body opened on a supertype continuation line.
                     e = prev_expected;
