@@ -1909,7 +1909,24 @@ fn fix_dot_spacing(source: &str) -> String {
         out.push_str(head);
         let mut rest = rest.to_string();
         if !rest.starts_with('.') {
-            rest = rest.replace(" .", ".");
+            // Collapse ` .` (a chained-call dot on the same line) but keep
+            // the space before a decimal-point dot (`* .45f` — the `.` is
+            // part of the number literal).
+            let bytes: Vec<char> = rest.chars().collect();
+            let mut fixed = String::with_capacity(rest.len());
+            let mut i = 0;
+            while i < bytes.len() {
+                if bytes[i] == ' '
+                    && bytes.get(i + 1) == Some(&'.')
+                    && !bytes.get(i + 2).is_some_and(|c| c.is_ascii_digit())
+                {
+                    i += 1;
+                    continue;
+                }
+                fixed.push(bytes[i]);
+                i += 1;
+            }
+            rest = fixed;
         }
         rest = rest.replace(".  ", ". ");
         out.push_str(&rest);
