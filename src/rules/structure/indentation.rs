@@ -440,19 +440,37 @@ fn statement_line_of(node: &tree_sitter::Node) -> Option<usize> {
 pub(crate) fn find_allman_elevated_blocks(
     tree: &tree_sitter::Tree,
     source: &str,
-) -> Vec<(usize, usize, bool, Option<usize>)> {
+) -> Vec<(usize, usize, bool, Option<usize>, bool)> {
     let mut out = Vec::new();
     let mut stack: Vec<tree_sitter::Node> = vec![tree.root_node()];
     while let Some(node) = stack.pop() {
         // (open_line, close_line, open_elevated, statement_line)
-        let mut blocks: Vec<(usize, usize, bool, Option<usize>)> = Vec::new();
+        let mut blocks: Vec<(usize, usize, bool, Option<usize>, bool)> = Vec::new();
         match node.kind() {
             "if_expression" => {
                 // The if body and any else body are control_structure_body
                 // children; `else if` chains nest their own if_expression.
                 for c in node.children(&mut node.walk()) {
                     if c.kind() == "control_structure_body" {
-                        blocks.push((c.start_position().row, c.end_position().row, true, None));
+                        // stmt = open row keeps the frame for an inline
+                        // `if (x) {` so its `}`/`} else` aligns with the if's
+                        // own row; is_lambda=false so body rows are not
+                        // unconditionally pinned (only the closing alignment).
+                        // open_elevated only for Allman `if (x)\n{` bodies,
+                        // whose rows are lifted above the brace depth; inline
+                        // bodies are handled by the `{` branch.
+                        let allman = source
+                            .lines()
+                            .nth(c.start_position().row)
+                            .map(|l| l.trim() == "{")
+                            .unwrap_or(false);
+                        blocks.push((
+                            c.start_position().row,
+                            c.end_position().row,
+                            allman,
+                            Some(c.start_position().row),
+                            false,
+                        ));
                     }
                 }
             }
@@ -471,7 +489,7 @@ pub(crate) fn find_allman_elevated_blocks(
                         .find(|c| c.kind() == "}")
                         .map(|c| c.start_position().row)
                         .unwrap_or(node.end_position().row);
-                    blocks.push((open.start_position().row, close, !has_subject, None));
+                    blocks.push((open.start_position().row, close, !has_subject, None, false));
                 }
             }
             "when_entry" => {
@@ -490,6 +508,7 @@ pub(crate) fn find_allman_elevated_blocks(
                             body.end_position().row,
                             true,
                             None,
+                            false,
                         ));
                     }
                 }
@@ -501,7 +520,7 @@ pub(crate) fn find_allman_elevated_blocks(
                         .find(|c| c.kind() == "}")
                         .map(|c| c.start_position().row)
                         .unwrap_or(node.end_position().row);
-                    blocks.push((open.start_position().row, close, true, None));
+                    blocks.push((open.start_position().row, close, true, None, false));
                 }
             }
             "function_declaration" => {
@@ -518,6 +537,7 @@ pub(crate) fn find_allman_elevated_blocks(
                             body.end_position().row,
                             true,
                             None,
+                            false,
                         ));
                     }
                 }
@@ -532,6 +552,7 @@ pub(crate) fn find_allman_elevated_blocks(
                         body.end_position().row,
                         false,
                         None,
+                        false,
                     ));
                 }
             }
@@ -542,7 +563,7 @@ pub(crate) fn find_allman_elevated_blocks(
                         .find(|c| c.kind() == "}")
                         .map(|c| c.start_position().row)
                         .unwrap_or(node.end_position().row);
-                    blocks.push((open.start_position().row, close, false, None));
+                    blocks.push((open.start_position().row, close, false, None, false));
                 }
             }
             "lambda_literal" => {
@@ -557,18 +578,18 @@ pub(crate) fn find_allman_elevated_blocks(
                         .map(|c| c.start_position().row)
                         .unwrap_or(node.end_position().row);
                     let stmt = statement_line_of(&node);
-                    blocks.push((open.start_position().row, close, false, stmt));
+                    blocks.push((open.start_position().row, close, false, stmt, true));
                 }
             }
             _ => {}
         }
-        for (open, close, open_elevated, stmt) in blocks {
+        for (open, close, open_elevated, stmt, is_lambda) in blocks {
             let line = source.lines().nth(open).map(|l| l.trim()).unwrap_or("");
             // Lambda frames are recorded even when `{` shares its line with
             // the call (`foo { x ->`); every other kind needs the `{` alone
             // (Allman) to matter.
             if line == "{" || stmt.is_some() {
-                out.push((open, close, open_elevated, stmt));
+                out.push((open, close, open_elevated, stmt, is_lambda));
             }
         }
         for i in (0..node.child_count()).rev() {
@@ -680,7 +701,7 @@ fn class_like_decl_line(t: &str) -> bool {
 pub(crate) fn compute_line_expected(
     lines: &[&str],
     is: usize,
-    elevated: &[(usize, usize, bool, Option<usize>)],
+    elevated: &[(usize, usize, bool, Option<usize>, bool)],
 ) -> Vec<usize> {
     let mut out = vec![0usize; lines.len()];
     let mut depth = 0usize;
@@ -865,7 +886,7 @@ pub(crate) fn compute_line_expected(
                 .last()
                 .is_some_and(|&(_, fh, or)| fh && i > or + 1 && !t.starts_with(')'));
         let mut closest_close: Option<(usize, usize)> = None;
-        for &(open, close, open_elevated, stmt) in elevated.iter() {
+        for &(open, close, open_elevated, stmt, is_lambda) in elevated.iter() {
             if i > open && i < close {
                 // Every block's body sits at its opening line + one level —
                 // for elevated frames that's an extra lift on top of the
@@ -877,13 +898,15 @@ pub(crate) fn compute_line_expected(
                 // keeps its first line at the statement indent).
                 if open_elevated {
                     e = e.saturating_add(is);
-                } else if stmt.is_some() {
-                    // A lambda frame (open_elevated = false, stmt = its
-                    // statement line): every body row is pinned to the
+                } else if is_lambda {
+                    // A lambda frame: every body row is pinned to the
                     // lambda's own row + one, unconditionally. A trailing
                     // lambda whose `{` sits on a wrapped call's closing row
                     // (`) {`) is lifted by the wrapping pass; its body must
-                    // follow even when the raw brace depth is lower.
+                    // follow even when the raw brace depth is lower. Other
+                    // frames (if/when/fun) keep the guarded pin so rows
+                    // already indented inside are lifted but a following
+                    // top-level declaration is not.
                     e = e.max(out[open].saturating_add(is));
                 } else if !in_for_header_first
                     && !closing_of_for_header
