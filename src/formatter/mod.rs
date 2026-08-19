@@ -1197,7 +1197,15 @@ fn fix_argument_list_wrapping(source: &str, indent_size: usize, max_line_length:
     while let Some(node) = stack.pop() {
         if matches!(node.kind(), "value_arguments" | "function_value_parameters")
             && node.start_position().row == node.end_position().row
+            && !source[..node.start_byte()]
+                .rsplit('\n')
+                .next()
+                .unwrap_or("")
+                .contains(" by ")
         {
+            // A delegated property (`val x by foo(...)`) is not wrapped by
+            // the JVM argument-list rule; skip it so an overlong delegate
+            // line stays put.
             let line_start = source[..node.start_byte()].rfind('\n').map_or(0, |i| i + 1);
             let line_end = source[node.end_byte()..]
                 .find('\n')
