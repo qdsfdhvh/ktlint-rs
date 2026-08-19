@@ -563,7 +563,18 @@ pub(crate) fn find_allman_elevated_blocks(
                         .find(|c| c.kind() == "}")
                         .map(|c| c.start_position().row)
                         .unwrap_or(node.end_position().row);
-                    blocks.push((open.start_position().row, close, false, None, false));
+                    // stmt = open row keeps the frame when `{` shares the
+                    // header row (`class Foo(...) : Base {`) so the closing
+                    // `}` aligns with the body's own level — the class body
+                    // opened by a primary-constructor `)` (`class X @Inject
+                    // constructor(...) {`) sits one level under the header.
+                    blocks.push((
+                        open.start_position().row,
+                        close,
+                        false,
+                        Some(open.start_position().row),
+                        false,
+                    ));
                 }
             }
             "lambda_literal" => {
