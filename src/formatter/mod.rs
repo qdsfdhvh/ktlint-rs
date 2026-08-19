@@ -1573,6 +1573,9 @@ fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String
             | "value_argument" => {
                 find_multiline_rhs(&node, source, &mut rewrites);
             }
+            "binary_expression" | "additive_expression" | "multiplicative_expression" => {
+                find_binary_rhs(&node, source, &mut rewrites);
+            }
             _ => {}
         }
         for i in (0..node.child_count()).rev() {
@@ -1586,25 +1589,50 @@ fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String
     }
     let lines: Vec<&str> = source.split_inclusive('\n').collect();
     let mut out: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
-    // Apply bottom-up so earlier row edits do not shift later rows.
+    // Apply bottom-up so earlier row edits do not shift later rows. Multiple
+    // splits on the same row (`val x = center + Offset(` — a `=` wrap and a
+    // `+` wrap both start on row `start`) are merged right-to-left, each
+    // deeper split indented one more level.
     rewrites.sort_by_key(|&(_, start, _)| std::cmp::Reverse(start));
-    for &(eq_col, start, end) in &rewrites {
-        let first = &out[start];
-        let base_indent = first.len() - first.trim_start().len();
-        let col = eq_col.min(first.len());
-        let before = &first[..col].trim_end(); // `... =`
-        let rhs_head = first[col..].trim_start().trim_end_matches('\n');
-        let indent = " ".repeat(base_indent + indent_size);
-        let mut first_line = format!("{}\n{}{}", before, indent, rhs_head);
-        if first.ends_with('\n') {
-            first_line.push('\n');
+    let mut groups: Vec<(usize, Vec<(usize, usize, usize)>)> = Vec::new();
+    for &(col, start, end) in &rewrites {
+        if let Some((s, list)) = groups.last_mut() {
+            if *s == start {
+                list.push((col, start, end));
+                continue;
+            }
         }
-        out[start] = first_line;
+        groups.push((start, vec![(col, start, end)]));
+    }
+    for (start, rs) in groups {
+        let first = out[start].clone();
+        let base_indent = first.len() - first.trim_start().len();
+        let n = rs.len();
+        let mut rs_sorted = rs.clone();
+        rs_sorted.sort_by_key(|(c, _, _)| std::cmp::Reverse(*c));
+        let mut current = first.clone();
+        let mut max_end = start;
+        for (idx, &(eq_col, _, end)) in rs_sorted.iter().enumerate() {
+            let col = eq_col.min(current.len());
+            let (before, after) = current.split_at(col);
+            let before_trim = before.trim_end();
+            let after_trim = after.trim_start().trim_end_matches('\n');
+            // Deeper (rightmost) splits get more levels: the outermost
+            // `=`/binary wrap sits at base+1, nested splits one more each.
+            let depth = n - idx;
+            let indent = " ".repeat(base_indent + depth * indent_size);
+            current = format!("{}\n{}{}", before_trim, indent, after_trim);
+            max_end = max_end.max(end);
+        }
+        out[start] = current;
+        if !out[start].ends_with('\n') && first.ends_with('\n') {
+            out[start].push('\n');
+        }
         // Shift the remaining RHS rows one level deeper than their current
         // indent (the whole RHS block moves right by one level). Comment rows
         // are content (JVM keeps a `//` comment flush-left even inside the
         // wrapped RHS); they are left for the indent pass to place.
-        for row in (start + 1)..=end {
+        for row in (start + 1)..=max_end {
             let l = &out[row];
             let cur_indent = l.len() - l.trim_start().len();
             let body = l.trim_start().trim_end_matches('\n');
@@ -1623,6 +1651,40 @@ fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String
         }
     }
     out.concat()
+}
+
+/// A binary expression whose RHS is a multiline call/expression sharing the
+/// operator line (`center + Offset(\n    …)`) is split after the operator
+/// (`center +` / `Offset(` on the next line) — JVM multiline-expression-
+/// wrapping "A multiline expression should start on a new line".
+fn find_binary_rhs(
+    node: &tree_sitter::Node,
+    source: &str,
+    rewrites: &mut Vec<(usize, usize, usize)>,
+) {
+    let mut after_op = false;
+    for c in node.children(&mut node.walk()) {
+        if matches!(c.kind(), "+" | "-" | "&&" | "||" | "?:") {
+            after_op = true;
+            continue;
+        }
+        if after_op && c.is_named() {
+            if c.kind() == "lambda_literal" {
+                return;
+            }
+            let start = c.start_position().row;
+            let end = c.end_position().row;
+            if end > start {
+                let line = source.lines().nth(start).unwrap_or("");
+                let col = c.start_position().column.min(line.len());
+                if line[..col].trim().is_empty() {
+                    return;
+                }
+                rewrites.push((col, start, end));
+            }
+            return;
+        }
+    }
 }
 
 /// Find the first named node after `=` in a property/parameter/expression-body
