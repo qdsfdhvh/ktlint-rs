@@ -489,7 +489,21 @@ pub(crate) fn find_allman_elevated_blocks(
                         .find(|c| c.kind() == "}")
                         .map(|c| c.start_position().row)
                         .unwrap_or(node.end_position().row);
-                    blocks.push((open.start_position().row, close, !has_subject, None, false));
+                    // open_elevated only for Allman `when\n{` (the `{` alone
+                    // on its row); an inline `= when {` keeps its entries at
+                    // the when row + one via the unconditional body pin.
+                    let allman = source
+                        .lines()
+                        .nth(open.start_position().row)
+                        .map(|l| l.trim() == "{")
+                        .unwrap_or(false);
+                    blocks.push((
+                        open.start_position().row,
+                        close,
+                        allman,
+                        Some(open.start_position().row),
+                        true,
+                    ));
                 }
             }
             "when_entry" => {
