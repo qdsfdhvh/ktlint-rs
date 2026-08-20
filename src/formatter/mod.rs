@@ -1715,11 +1715,13 @@ fn find_multiline_rhs(
                 return;
             }
             // Expression-body function whose signature itself spans multiple
-            // lines (`fun f(\n    a: Int,\n) = apply {`) is exempt — except
-            // when the RHS is an object expression (`) = object : Foo() {`,
-            // JVM wraps those even with a multiline signature).
+            // lines (`fun f(\n    a: Int,\n) = apply {`) is exempt — a bare
+            // lambda body stays on the signature line. Any other RHS
+            // (a call, a call with a trailing lambda
+            // `) = DeviceConfigurationOverride { … }`, an object expression)
+            // is still wrapped by JVM.
             if node.kind() == "function_body"
-                && !matches!(c.kind(), "object_expression" | "object_literal")
+                && c.kind() == "lambda_literal"
                 && node.parent().is_some_and(|p| {
                     p.children(&mut p.walk()).any(|cc| {
                         cc.kind() == "function_value_parameters"
