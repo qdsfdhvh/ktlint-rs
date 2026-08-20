@@ -2274,9 +2274,24 @@ fn fix_angle_brackets(source: &str) -> String {
                         let is_type_reference = node
                             .parent()
                             .is_some_and(|p| matches!(p.kind(), "user_type" | "type_identifier"));
+                        // `Foo<Bar> ()` — a generic type followed by a call
+                        // (`object : Foo<Bar> () {`) drops the space before
+                        // the `(` even in a type context (JVM).
+                        let next_is_call = bytes.get(gt.end_byte()).is_some_and(|&b| b == b' ')
+                            && bytes.get(gt.end_byte() + 1).is_some_and(|&b| b == b'(');
                         let next_is_lambda = bytes.get(gt.end_byte()).is_some_and(|&b| b == b' ')
                             && bytes.get(gt.end_byte() + 1).is_some_and(|&b| b == b'{');
                         if !is_type_reference && !next_is_lambda {
+                            let mut ws_end = gt.end_byte();
+                            while ws_end < bytes.len()
+                                && (bytes[ws_end] == b' ' || bytes[ws_end] == b'\t')
+                            {
+                                ws_end += 1;
+                            }
+                            if ws_end > gt.end_byte() {
+                                deletions.push((gt.end_byte(), ws_end));
+                            }
+                        } else if next_is_call {
                             let mut ws_end = gt.end_byte();
                             while ws_end < bytes.len()
                                 && (bytes[ws_end] == b' ' || bytes[ws_end] == b'\t')
