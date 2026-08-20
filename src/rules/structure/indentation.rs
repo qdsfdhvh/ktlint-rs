@@ -1092,7 +1092,12 @@ pub(crate) fn compute_line_expected(
                     let opener_is_supertype_close = opener_line.trim_end().ends_with('{')
                         && (opener_line.starts_with(')')
                             || supertype_chain_leads_to_class(lines, i - 1));
-                    let mut is_class_body_open = opener_is_class_header;
+                    // Only a supertype-continuation `{` (`) : X,` + `Y {`)
+                    // keeps the body at the brace depth (the opener row is a
+                    // continuation, not a declaration header). A header-shared
+                    // `{` (`class Foo {`, `companion object {`) gets the
+                    // body at the header row + one level.
+                    let mut is_class_body_open = false;
                     if opener_is_supertype_close {
                         // `class A :\n    B(\n        Servlet(x)\n    ) {` —
                         // the `{` closes a supertype continuation; find the
