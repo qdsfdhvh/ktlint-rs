@@ -1207,9 +1207,9 @@ pub(crate) fn compute_line_expected(
             // the chain) and after a binary continuation (the `?:`/`&&`
             // chain keeps its own lifted level, verified by oracle).
             || (t.starts_with('.')
-                && !prev_binary_cont
                 && !prev_code.trim_end().ends_with('}')
-                && !prev_code.trim_end().ends_with('{'));
+                && !prev_code.trim_end().ends_with('{')
+                && (!prev_binary_cont || prev_code.trim_start().starts_with('.')));
         if binary_cont {
             // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
             // level of the previous row; the first continuation lifts one
