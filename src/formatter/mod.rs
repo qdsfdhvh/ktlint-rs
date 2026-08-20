@@ -1704,19 +1704,6 @@ fn find_multiline_rhs(
     source: &str,
     rewrites: &mut Vec<(usize, usize, usize)>,
 ) {
-    // Expression-body function whose signature itself spans multiple lines
-    // (`fun f(\n    a: Int,\n) = apply {`) is exempt — the check rule
-    // reports nothing there either (oracle), so the fixer must not split.
-    if node.kind() == "function_body"
-        && node.parent().is_some_and(|p| {
-            p.children(&mut p.walk()).any(|c| {
-                c.kind() == "function_value_parameters"
-                    && c.start_position().row != c.end_position().row
-            })
-        })
-    {
-        return;
-    }
     let mut after_eq = false;
     for c in node.children(&mut node.walk()) {
         if c.kind() == "=" {
@@ -1725,6 +1712,21 @@ fn find_multiline_rhs(
         }
         if after_eq && c.is_named() {
             if c.kind() == "lambda_literal" {
+                return;
+            }
+            // Expression-body function whose signature itself spans multiple
+            // lines (`fun f(\n    a: Int,\n) = apply {`) is exempt — except
+            // when the RHS is an object expression (`) = object : Foo() {`,
+            // JVM wraps those even with a multiline signature).
+            if node.kind() == "function_body"
+                && !matches!(c.kind(), "object_expression" | "object_literal")
+                && node.parent().is_some_and(|p| {
+                    p.children(&mut p.walk()).any(|cc| {
+                        cc.kind() == "function_value_parameters"
+                            && cc.start_position().row != cc.end_position().row
+                    })
+                })
+            {
                 return;
             }
             let start = c.start_position().row;
