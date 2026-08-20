@@ -1200,7 +1200,16 @@ pub(crate) fn compute_line_expected(
             || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "))
             || (arrow_body_depth.is_some()
                 && t.starts_with('.')
-                && !prev_code.trim_end().ends_with('}'));
+                && !prev_code.trim_end().ends_with('}'))
+            // A continuation row starting with `.` (a wrapped call chain
+            // `onNodeWithTag(...)\n    .fetchSemanticsNode()`) sits one level
+            // under its code row. Skipped after a closing brace (a `}` ends
+            // the chain) and after a binary continuation (the `?:`/`&&`
+            // chain keeps its own lifted level, verified by oracle).
+            || (t.starts_with('.')
+                && !prev_binary_cont
+                && !prev_code.trim_end().ends_with('}')
+                && !prev_code.trim_end().ends_with('{'));
         if binary_cont {
             // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
             // level of the previous row; the first continuation lifts one

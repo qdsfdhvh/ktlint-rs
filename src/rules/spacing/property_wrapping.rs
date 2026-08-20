@@ -77,8 +77,11 @@ impl PropertyWrapping {
         }
 
         // 3. Before the call expression: `val x: Type = <newline> foo(...)` —
-        //    when the whole line exceeds the limit and there is a call.
-        if text.contains('(') && text.contains(')') {
+        //    when the whole line exceeds the limit and there is a call. A
+        //    delegated property (`val x by foo(...)`) is not wrapped by
+        //    property-wrapping (JVM 1.8 reports nothing on overlong
+        //    delegates).
+        if text.contains('(') && text.contains(')') && !text.contains(" by ") {
             let line_len = source[line_start..node.end_byte()].chars().count();
             if line_len > max_line_length {
                 // Report at the first `(` of the call (wrap before it).
