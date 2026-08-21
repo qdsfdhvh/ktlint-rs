@@ -172,8 +172,14 @@ fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> Option<(String, Vec
             continue; // defensive: skip any overlap
         }
         out.push_str(&source[last..start]);
+        // Split preserving line count: a span ending in `\n` must not gain
+        // a trailing empty part (which would insert a line and shift every
+        // later row's index between the scan model and the formatter loop).
         let mut first = true;
         for part in source[start..end].split('\n') {
+            if part.is_empty() && !first {
+                continue;
+            }
             if !first {
                 out.push('\n');
             }
