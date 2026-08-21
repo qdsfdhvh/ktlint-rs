@@ -739,6 +739,10 @@ pub(crate) fn compute_line_expected(
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
     let mut prev_binary_cont = false;
+    // Chain state of each open brace (true when the `{` row was a chained
+    // call: `.preparePost(...) {`): a lambda tail `}` restores it so a
+    // following `.` row keeps the chain level instead of lifting one more.
+    let mut brace_chain_stack: Vec<bool> = Vec::new();
     // A class-like header without a body brace (`class Foo`, `class Foo :`)
     // is followed by its primary-constructor annotations and keyword on the
     // class's own indentation level: `class Foo\n    @Inject\n    constructor(`.
@@ -1215,7 +1219,7 @@ pub(crate) fn compute_line_expected(
         } else {
             ""
         };
-        let binary_cont = binary_operator_row(t, prev_code)
+        let mut binary_cont = binary_operator_row(t, prev_code)
             || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "))
             || (arrow_body_depth.is_some()
                 && t.starts_with('.')
@@ -1226,7 +1230,6 @@ pub(crate) fn compute_line_expected(
             // the chain) and after a binary continuation (the `?:`/`&&`
             // chain keeps its own lifted level, verified by oracle).
             || (t.starts_with('.')
-                && !prev_code.trim_end().ends_with('}')
                 && !prev_code.trim_end().ends_with('{')
                 && (!prev_binary_cont || prev_code.trim_start().starts_with('.')));
         if binary_cont {
@@ -1241,6 +1244,20 @@ pub(crate) fn compute_line_expected(
             if want > e {
                 e = want;
             }
+        }
+        // A bare closing brace restores the chain state of its opener
+        // (`.preparePost(...) { ... }` + `.execute { ... }` — the `}` row
+        // is the lambda tail of a chain row, so the next `.` row is still
+        // inside the chain and keeps the chain level instead of lifting one
+        // more). A continuation opener (`) {` — a wrapped call's closing
+        // paren row) pops false, so the following `.` row lifts one level
+        // (JVM oracle: `combine(...) { }.onEach` at `) {` + one).
+        if t.trim_end().ends_with('}') && !t.starts_with('.') && !t.starts_with('{') {
+            binary_cont = brace_chain_stack.pop().unwrap_or(false);
+        } else if t.contains('{') {
+            // A plain call opener (`foo {`, `?.let {`) keeps the chain
+            // level across the lambda tail.
+            brace_chain_stack.push(binary_cont || !t.trim_start().starts_with(')'));
         }
         prev_binary_cont = binary_cont;
         out[i] = e;
