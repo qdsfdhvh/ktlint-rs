@@ -2103,7 +2103,10 @@ fn fix_curly_braces(source: &str) -> String {
         next.push(ch);
         if ch == '{' {
             let after = s[i + ch.len_utf8()..].chars().next();
-            if matches!(after, Some(c) if !c.is_whitespace() && c != '\n') {
+            // An empty lambda/body (`{}`) keeps no space — ktlint's
+            // curly-spacing leaves `{}` as-is and `{ }` as-is (JVM 1.8
+            // preserves both forms, oracle-probed).
+            if matches!(after, Some(c) if !c.is_whitespace() && c != '\n' && c != '}') {
                 next.push(' ');
             }
         }
@@ -2122,7 +2125,6 @@ fn fix_curly_braces(source: &str) -> String {
         s = s.replace(&format!("}}{}", kw), &format!("}} {}", kw));
     }
     s = s.replace("}\nelse if", "} else if");
-    s = s.replace("{ }", "{}");
     s
 }
 
