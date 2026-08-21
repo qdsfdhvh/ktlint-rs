@@ -172,8 +172,15 @@ fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> Option<(String, Vec
             continue; // defensive: skip any overlap
         }
         out.push_str(&source[last..start]);
+        // Split preserving line count: strip the single trailing `\n` of a
+        // span (the split would otherwise gain an empty part and insert a
+        // line, shifting every later row's index between the scan model and
+        // the formatter loop). Interior blank lines are kept.
+        let span = source[start..end]
+            .strip_suffix('\n')
+            .unwrap_or(&source[start..end]);
         let mut first = true;
-        for part in source[start..end].split('\n') {
+        for part in span.split('\n') {
             if !first {
                 out.push('\n');
             }
@@ -2103,7 +2110,10 @@ fn fix_curly_braces(source: &str) -> String {
         next.push(ch);
         if ch == '{' {
             let after = s[i + ch.len_utf8()..].chars().next();
-            if matches!(after, Some(c) if !c.is_whitespace() && c != '\n') {
+            // An empty lambda/body (`{}`) keeps no space — ktlint's
+            // curly-spacing leaves `{}` as-is and `{ }` as-is (JVM 1.8
+            // preserves both forms, oracle-probed).
+            if matches!(after, Some(c) if !c.is_whitespace() && c != '\n' && c != '}') {
                 next.push(' ');
             }
         }
@@ -2122,7 +2132,6 @@ fn fix_curly_braces(source: &str) -> String {
         s = s.replace(&format!("}}{}", kw), &format!("}} {}", kw));
     }
     s = s.replace("}\nelse if", "} else if");
-    s = s.replace("{ }", "{}");
     s
 }
 

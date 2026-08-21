@@ -739,6 +739,10 @@ pub(crate) fn compute_line_expected(
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
     let mut prev_binary_cont = false;
+    // True when the previous row was a wrapped call's closing paren whose
+    // opener was a chain row (`.setDecorFitsSystemWindows(\n    ...\n)`):
+    // a following `.` row continues the chain at the paren row's depth.
+    let mut prev_paren_close_chain = false;
     // The previous non-blank row's expected indent (blank rows must not
     // erase it: a chain row after a wrapped call's `)` keeps that depth).
     let mut prev_expected_code = 0usize;
@@ -1274,7 +1278,9 @@ pub(crate) fn compute_line_expected(
             // chain keeps its own lifted level, verified by oracle).
             || (t.starts_with('.')
                 && !prev_code.trim_end().ends_with('{')
-                && (!prev_binary_cont || prev_code.trim_start().starts_with('.')));
+                && (!prev_binary_cont
+                    || prev_code.trim_start().starts_with('.')
+                    || prev_paren_close_chain));
         if binary_cont {
             // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
             // level of the previous row; the first continuation lifts one
@@ -1297,7 +1303,10 @@ pub(crate) fn compute_line_expected(
         // (JVM oracle: `combine(...) { }.onEach` at `) {` + one).
         if t.trim_end().ends_with('}') && !t.starts_with('.') && !t.starts_with('{') {
             binary_cont = brace_chain_stack.pop().unwrap_or(false);
-        } else if t.trim_end().ends_with(')') && !t.starts_with('.') {
+        } else if t.trim_end().ends_with(')')
+            && !t.starts_with('.')
+            && !binary_operator_row(t, prev_code)
+        {
             // A wrapped call's closing-paren row whose opener is a chain row
             // (`.setDecorFitsSystemWindows(\n    ...\n)` + `.setInsets`)
             // keeps the chain state so the next `.` row stays on the chain
@@ -1311,12 +1320,16 @@ pub(crate) fn compute_line_expected(
                     break;
                 }
             }
+            prev_paren_close_chain = binary_cont;
         } else if t.contains('{') {
             // A plain call opener (`foo {`, `?.let {`) keeps the chain
             // level across the lambda tail.
             brace_chain_stack.push(binary_cont || !t.trim_start().starts_with(')'));
         }
         prev_binary_cont = binary_cont;
+        if !t.trim_end().ends_with(')') {
+            prev_paren_close_chain = false;
+        }
         out[i] = e;
         if arrow_body_depth.is_some_and(|d| depth < d) {
             arrow_body_depth = None;
