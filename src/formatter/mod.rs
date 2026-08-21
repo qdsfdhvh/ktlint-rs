@@ -1842,7 +1842,13 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
     // value AND the row starting a fresh statement — the same confidence
     // the over-indent probe uses (issue #202) — so continuation and
     // alignment indents are never mangled.
-    let lines_src: Vec<&str> = source.split('\n').collect();
+    // split() gains a trailing empty part when the source ends in `\n`,
+    // shifting every scan index by one against the formatter loop's
+    // split_inclusive rows — drop it so scan[row] and lines[row] align.
+    let mut lines_src: Vec<&str> = source.split('\n').collect();
+    if lines_src.last() == Some(&"") {
+        lines_src.pop();
+    }
     let elevated = crate::rules::structure::indentation::find_allman_elevated_blocks(&tree, source);
     let scan = crate::rules::structure::indentation::compute_line_expected(
         &lines_src,
