@@ -1715,13 +1715,11 @@ fn find_multiline_rhs(
                 return;
             }
             // Expression-body function whose signature itself spans multiple
-            // lines (`fun f(\n    a: Int,\n) = apply {`) is exempt — a bare
-            // lambda body stays on the signature line. Any other RHS
-            // (a call, a call with a trailing lambda
-            // `) = DeviceConfigurationOverride { … }`, an object expression)
-            // is still wrapped by JVM.
+            // lines (`fun f(\n    a: Int,\n) = apply {`) is exempt — except
+            // when the RHS is an object expression (`) = object : Foo() {`,
+            // JVM wraps those even with a multiline signature).
             if node.kind() == "function_body"
-                && c.kind() == "lambda_literal"
+                && !matches!(c.kind(), "object_expression" | "object_literal")
                 && node.parent().is_some_and(|p| {
                     p.children(&mut p.walk()).any(|cc| {
                         cc.kind() == "function_value_parameters"
@@ -2725,7 +2723,18 @@ fn fix_annotation_newlines(source: &str) -> String {
                 .rev()
                 .find(|&&b| !b.is_ascii_whitespace());
             let in_type = matches!(prev_code, Some(b'<') | Some(b',') | Some(b'(') | Some(b':'));
+            // A bare annotation group (`@StartStop @JvmStatic`) shares the
+            // line (JVM allows it); only an annotation after code
+            // (`class Foo @Inject`) moves to its own line.
+            // The token directly before `@` on this line starts with `@`
+            // (`@StartStop @JvmStatic`): the pair shares the line.
+            let mut prev_tok_start = start;
+            while prev_tok_start > line_start && !bytes[prev_tok_start - 1].is_ascii_whitespace() {
+                prev_tok_start -= 1;
+            }
+            let prev_is_annotation = prev_tok_start > line_start && bytes[prev_tok_start] == b'@';
             if !in_type
+                && !prev_is_annotation
                 && bytes[line_start..start]
                     .iter()
                     .any(|&b| !b.is_ascii_whitespace())
