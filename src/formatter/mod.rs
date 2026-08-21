@@ -2729,6 +2729,9 @@ fn fix_annotation_newlines(source: &str) -> String {
             // The token directly before `@` on this line starts with `@`
             // (`@StartStop @JvmStatic`): the pair shares the line.
             let mut prev_tok_start = start;
+            while prev_tok_start > line_start && bytes[prev_tok_start - 1].is_ascii_whitespace() {
+                prev_tok_start -= 1;
+            }
             while prev_tok_start > line_start && !bytes[prev_tok_start - 1].is_ascii_whitespace() {
                 prev_tok_start -= 1;
             }
