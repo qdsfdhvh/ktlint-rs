@@ -1819,7 +1819,11 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
             // A masked fragment with code after it on the same line
             // (`\u{e000}0\u{e000},` — a `::class` argument, `@TypeMarker
             // String>` fragment) is a code row: re-indent it. A content row
-            // (comment/string interior) is the whole line.
+            // (comment/string interior) is the whole line. A string literal
+            // that is an argument (`"snackbar_compact_medium",`) or a call
+            // (`"implementation"(...)`) also carries trailing code, but only
+            // for `(`/`,`/`)`/`.`/`{` tails — a `+` (string concatenation)
+            // keeps the whole expression as one content span.
             if !content {
                 let after = trimmed
                     .rfind(SENTINEL)
@@ -1829,6 +1833,18 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
                     .filter(|c| !c.is_whitespace())
                     .collect();
                 content = trailing.is_empty();
+            }
+            if content && trimmed.starts_with(SENTINEL) {
+                let after = trimmed
+                    .rfind(SENTINEL)
+                    .map_or(0, |i| i + SENTINEL.len_utf8());
+                let tail_first = trimmed[after..].chars().find(|c| !c.is_whitespace());
+                if matches!(
+                    tail_first,
+                    Some('(') | Some(',') | Some(')') | Some('.') | Some('{')
+                ) {
+                    content = false;
+                }
             }
             if !content {
                 if let Some(&want) = scan.get(row) {
