@@ -739,6 +739,10 @@ pub(crate) fn compute_line_expected(
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
     let mut prev_binary_cont = false;
+    // Chain state of each open brace (true when the `{` row was a chained
+    // call: `.preparePost(...) {`): a lambda tail `}` restores it so a
+    // following `.` row keeps the chain level instead of lifting one more.
+    let mut brace_chain_stack: Vec<bool> = Vec::new();
     // A class-like header without a body brace (`class Foo`, `class Foo :`)
     // is followed by its primary-constructor annotations and keyword on the
     // class's own indentation level: `class Foo\n    @Inject\n    constructor(`.
@@ -881,6 +885,12 @@ pub(crate) fn compute_line_expected(
             // previous class) is NOT lifted.
             e = e.max(is);
         }
+        // An annotation row keeps the previous row's lifted level
+        // (`@Deprecated` after a KDoc inside an object body sits at the
+        // body depth, not the lambda pin below it).
+        if t.starts_with('@') && prev_expected > e {
+            e = prev_expected;
+        }
         // Allman elevated blocks: the `{` line sits at the header's
         // expectation + one level (except `when`, whose `{` stays standard),
         // and every line inside the block (up to the closing `}`) one level
@@ -922,7 +932,12 @@ pub(crate) fn compute_line_expected(
                 // are governed by the paren logic instead (a `for (` header
                 // keeps its first line at the statement indent).
                 if open_elevated {
-                    e = e.saturating_add(is);
+                    // An annotation row is not lifted by the elevated frame
+                    // (its own row keeps the enclosing body depth via the
+                    // `@` handling above).
+                    if !t.starts_with('@') {
+                        e = e.saturating_add(is);
+                    }
                 } else if is_lambda {
                     // A lambda frame: every body row is pinned to the
                     // lambda's own row + one, unconditionally. A trailing
@@ -932,7 +947,12 @@ pub(crate) fn compute_line_expected(
                     // frames (if/when/fun) keep the guarded pin so rows
                     // already indented inside are lifted but a following
                     // top-level declaration is not.
-                    e = e.max(out[open].saturating_add(is));
+                    // An annotation row (`@Deprecated("...")` before an
+                    // override in an object body) is not lifted by the
+                    // lambda pin: it sits at the enclosing body's depth.
+                    if !t.starts_with('@') {
+                        e = e.max(out[open].saturating_add(is));
+                    }
                 } else if !in_for_header_first
                     && !closing_of_for_header
                     && !in_for_header_body
@@ -988,6 +1008,13 @@ pub(crate) fn compute_line_expected(
                 if !(first_of_for_header || closing_of_for_header) && list > e {
                     e = list;
                 }
+                // A block body nested inside the paren list (an object
+                // literal or lambda body inside a call) keeps the previous
+                // row's lifted level: rows after the body's `{` continue
+                // the body, not the list indent.
+                if arrow_body_depth.is_some() && prev_expected > e {
+                    e = prev_expected;
+                }
             }
         } else if paren_depth > 0 && t.starts_with(')') {
             // A `)` row sits at its opener's own indent — a `)` closing a
@@ -1025,6 +1052,18 @@ pub(crate) fn compute_line_expected(
                 // blocks reach this branch.
                 if closest_close.is_none() {
                     e = depth.saturating_sub(1) * is;
+                    // A `}` inside a paren list closes a block body nested
+                    // in the list (an object body inside `AndroidView(`):
+                    // the brace-depth model has no paren awareness, so pin
+                    // to the previous row minus one level when deeper. A
+                    // chain tail (`.connect()` in MockWebServerTest) is not
+                    // a body — the `}` stays at the brace depth.
+                    if paren_depth > 0
+                        && prev_expected > e.saturating_add(is)
+                        && !lines[i - 1].trim_start().starts_with('.')
+                    {
+                        e = prev_expected.saturating_sub(is);
+                    }
                 }
             } else if t.starts_with(')') {
                 // A closing-paren line (`)`, `) {`, `),`) closes the list it
@@ -1215,7 +1254,7 @@ pub(crate) fn compute_line_expected(
         } else {
             ""
         };
-        let binary_cont = binary_operator_row(t, prev_code)
+        let mut binary_cont = binary_operator_row(t, prev_code)
             || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "))
             || (arrow_body_depth.is_some()
                 && t.starts_with('.')
@@ -1226,7 +1265,6 @@ pub(crate) fn compute_line_expected(
             // the chain) and after a binary continuation (the `?:`/`&&`
             // chain keeps its own lifted level, verified by oracle).
             || (t.starts_with('.')
-                && !prev_code.trim_end().ends_with('}')
                 && !prev_code.trim_end().ends_with('{')
                 && (!prev_binary_cont || prev_code.trim_start().starts_with('.')));
         if binary_cont {
@@ -1241,6 +1279,20 @@ pub(crate) fn compute_line_expected(
             if want > e {
                 e = want;
             }
+        }
+        // A bare closing brace restores the chain state of its opener
+        // (`.preparePost(...) { ... }` + `.execute { ... }` — the `}` row
+        // is the lambda tail of a chain row, so the next `.` row is still
+        // inside the chain and keeps the chain level instead of lifting one
+        // more). A continuation opener (`) {` — a wrapped call's closing
+        // paren row) pops false, so the following `.` row lifts one level
+        // (JVM oracle: `combine(...) { }.onEach` at `) {` + one).
+        if t.trim_end().ends_with('}') && !t.starts_with('.') && !t.starts_with('{') {
+            binary_cont = brace_chain_stack.pop().unwrap_or(false);
+        } else if t.contains('{') {
+            // A plain call opener (`foo {`, `?.let {`) keeps the chain
+            // level across the lambda tail.
+            brace_chain_stack.push(binary_cont || !t.trim_start().starts_with(')'));
         }
         prev_binary_cont = binary_cont;
         out[i] = e;

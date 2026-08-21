@@ -705,12 +705,19 @@ fn format_once(
             masked_transform(input, fix_single_line_control_blocks)
         })?;
     }
+    let function_signature_enabled =
+        rule_enabled(rule_configs, "standard:function-signature", code_style);
     if rule_enabled(rule_configs, "standard:argument-list-wrapping", code_style)
         || rule_enabled(rule_configs, "standard:property-wrapping", code_style)
-        || rule_enabled(rule_configs, "standard:function-signature", code_style)
+        || function_signature_enabled
     {
         text = safe_transform("standard:wrapping-fix", &text, |input| {
-            fix_wrapping(input, indent_size, max_line_length)
+            fix_wrapping(
+                input,
+                indent_size,
+                max_line_length,
+                function_signature_enabled,
+            )
         })?;
     }
     if rule_enabled(rule_configs, "standard:statement-wrapping", code_style) {
@@ -941,15 +948,22 @@ fn fix_all_wrapping(source: &str) -> String {
 /// valid. All passes are conservative: they never touch strings/comments (via
 /// masked_transform in the caller) and only fire when the line actually
 /// exceeds max_line_length.
-fn fix_wrapping(source: &str, indent_size: usize, max_line_length: usize) -> String {
+fn fix_wrapping(
+    source: &str,
+    indent_size: usize,
+    max_line_length: usize,
+    function_signature_enabled: bool,
+) -> String {
     let max_line_length = if max_line_length == 0 {
         120
     } else {
         max_line_length
     };
     let mut text = source.to_string();
-    text = fix_function_body_merge(&text, max_line_length);
-    text = fix_single_parameter_fold(&text, max_line_length);
+    if function_signature_enabled {
+        text = fix_function_body_merge(&text, max_line_length);
+        text = fix_single_parameter_fold(&text, max_line_length);
+    }
     text = fix_property_wrapping(&text, indent_size, max_line_length);
     text = fix_argument_list_wrapping(&text, indent_size, max_line_length);
     text
@@ -1584,7 +1598,21 @@ fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String
             "binary_expression" | "additive_expression" | "multiplicative_expression" => {
                 find_binary_rhs(&node, source, &mut rewrites);
             }
-            _ => {}
+            // tree-sitter parses `state = remember(...) { ... }` (an
+            // assignment inside a lambda body) under a node kind that is not
+            // a declaration — scan every node for a `=` whose RHS spans rows
+            // and deduplicate by (start row, column).
+            "assignment"
+            | "simple_assignment"
+            | "expression_statement"
+            | "augmented_assignment_expression" => {
+                find_multiline_rhs(&node, source, &mut rewrites);
+            }
+            _ => {
+                if node.kind() != "lambda_literal" && node.kind() != "call_expression" {
+                    find_multiline_rhs(&node, source, &mut rewrites);
+                }
+            }
         }
         for i in (0..node.child_count()).rev() {
             if let Some(c) = node.child(i) {
@@ -1602,6 +1630,7 @@ fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String
     // `+` wrap both start on row `start`) are merged right-to-left, each
     // deeper split indented one more level.
     rewrites.sort_by_key(|&(_, start, _)| std::cmp::Reverse(start));
+    rewrites.dedup_by_key(|(col, start, _)| (*col, *start));
     let mut groups: Vec<(usize, Vec<(usize, usize, usize)>)> = Vec::new();
     for &(col, start, end) in &rewrites {
         if let Some((s, list)) = groups.last_mut() {
@@ -1645,7 +1674,8 @@ fn fix_multiline_expression_wrapping(source: &str, indent_size: usize) -> String
             let cur_indent = l.len() - l.trim_start().len();
             let body = l.trim_start().trim_end_matches('\n');
             if !body.is_empty() {
-                let is_comment = body.starts_with("//") || body.starts_with("/*");
+                let is_comment =
+                    body.starts_with("//") || body.starts_with("/*") || body.starts_with("*");
                 if is_comment {
                     continue;
                 }
@@ -1699,6 +1729,36 @@ fn find_binary_rhs(
 /// container and record its `=` end byte plus the RHS row span when the
 /// expression is multiline while its first token shares the `=` line. A bare
 /// lambda literal is exempt.
+/// True when the RHS contains a lambda literal with an explicit arrow
+/// parameter (`foo { x -> ... }`). JVM's multiline-expression-wrapping
+/// splits a `fun f(...) = call { x -> ... }` body even when the function
+/// signature spans multiple lines; a bare lambda (`= apply { ... }`) does
+/// not split (isValueInAnAssignment's fun branch, default body-wrapping).
+fn rhs_has_arrow_lambda(rhs: &tree_sitter::Node, source: &str) -> bool {
+    let mut stack = vec![*rhs];
+    while let Some(n) = stack.pop() {
+        if n.kind() == "lambda_literal" {
+            let text = n.utf8_text(source.as_bytes()).unwrap_or("");
+            let body = text.trim();
+            if let Some(inner) = body.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
+                let inner = inner.trim_start();
+                if !inner.starts_with("->") && inner.contains("->") {
+                    return true;
+                }
+                if inner.starts_with('(') && inner.contains("->") {
+                    return true;
+                }
+            } else if body.contains("->") {
+                return true;
+            }
+        }
+        for c in n.children(&mut n.walk()) {
+            stack.push(c);
+        }
+    }
+    false
+}
+
 fn find_multiline_rhs(
     node: &tree_sitter::Node,
     source: &str,
@@ -1726,6 +1786,7 @@ fn find_multiline_rhs(
                             && cc.start_position().row != cc.end_position().row
                     })
                 })
+                && !rhs_has_arrow_lambda(&c, source)
             {
                 return;
             }
@@ -4740,7 +4801,7 @@ catch(e: E) { b() }"
     #[test]
     fn wrapping_fix_argument_list_expands_single_line_overlong() {
         let src = "package com.example\n\nval result = combineValues(firstValueName, secondValueName, thirdValueName, fourthValueName, fifthValueName, sixthValueName, seventhValueName)\n";
-        let out = fix_wrapping(src, 4, 120);
+        let out = fix_wrapping(src, 4, 120, true);
         assert!(
             out.contains("combineValues(\n"),
             "should open after callee: {out}"
@@ -4762,7 +4823,7 @@ catch(e: E) { b() }"
     #[test]
     fn wrapping_fix_body_merge_joins_fitting_body() {
         let src = "package com.example\n\nfun build(extra: Array<Pair<String, String>>): Map<String, String> =\n    buildString()\n";
-        let out = fix_wrapping(src, 4, 120);
+        let out = fix_wrapping(src, 4, 120, true);
         assert!(
             out.contains("Map<String, String> = buildString("),
             "body should join signature line: {out}"
@@ -4773,7 +4834,7 @@ catch(e: E) { b() }"
     fn wrapping_fix_property_breaks_overlong_line_after_equal() {
         let src =
             "package com.example\n\nval result = combineValues(firstValueName, secondValueName, thirdValueName, fourthValueName, fifthValueName, sixthValueName)\n";
-        let out = fix_wrapping(src, 4, 120);
+        let out = fix_wrapping(src, 4, 120, true);
         assert!(
             out.contains("val result =\n    combineValues("),
             "property should break after =: {out}"
@@ -4783,7 +4844,7 @@ catch(e: E) { b() }"
     #[test]
     fn wrapping_fix_leaves_short_code_untouched() {
         let src = "package com.example\n\nval ok = shortCall(a, b)\n";
-        assert_eq!(fix_wrapping(src, 4, 120), src);
+        assert_eq!(fix_wrapping(src, 4, 120, true), src);
     }
 }
 
