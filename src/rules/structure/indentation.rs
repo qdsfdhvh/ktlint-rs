@@ -739,6 +739,9 @@ pub(crate) fn compute_line_expected(
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
     let mut prev_binary_cont = false;
+    // The previous non-blank row's expected indent (blank rows must not
+    // erase it: a chain row after a wrapped call's `)` keeps that depth).
+    let mut prev_expected_code = 0usize;
     // Chain state of each open brace (true when the `{` row was a chained
     // call: `.preparePost(...) {`): a lambda tail `}` restores it so a
     // following `.` row keeps the chain level instead of lifting one more.
@@ -1011,8 +1014,13 @@ pub(crate) fn compute_line_expected(
                 // A block body nested inside the paren list (an object
                 // literal or lambda body inside a call) keeps the previous
                 // row's lifted level: rows after the body's `{` continue
-                // the body, not the list indent.
-                if arrow_body_depth.is_some() && prev_expected > e {
+                // the body, not the list indent. A row after a trailing
+                // lambda with a comma (`) { darkTheme },`) is a new list
+                // argument — the list indent governs it.
+                if arrow_body_depth.is_some()
+                    && prev_expected > e
+                    && !lines[i - 1].trim_end().ends_with(',')
+                {
                     e = prev_expected;
                 }
             }
@@ -1289,6 +1297,20 @@ pub(crate) fn compute_line_expected(
         // (JVM oracle: `combine(...) { }.onEach` at `) {` + one).
         if t.trim_end().ends_with('}') && !t.starts_with('.') && !t.starts_with('{') {
             binary_cont = brace_chain_stack.pop().unwrap_or(false);
+        } else if t.trim_end().ends_with(')') && !t.starts_with('.') {
+            // A wrapped call's closing-paren row whose opener is a chain row
+            // (`.setDecorFitsSystemWindows(\n    ...\n)` + `.setInsets`)
+            // keeps the chain state so the next `.` row stays on the chain
+            // level instead of lifting one more.
+            let mut depth = 0i32;
+            for r in (0..i).rev() {
+                let l = lines[r];
+                depth += l.matches('(').count() as i32 - l.matches(')').count() as i32;
+                if depth > 0 {
+                    binary_cont = l.trim_start().starts_with('.');
+                    break;
+                }
+            }
         } else if t.contains('{') {
             // A plain call opener (`foo {`, `?.let {`) keeps the chain
             // level across the lambda tail.
@@ -1305,6 +1327,9 @@ pub(crate) fn compute_line_expected(
             class_annotation_pending = false;
         }
         prev_expected = e;
+        if !t.is_empty() {
+            prev_expected_code = e;
+        }
         let is_comment_row = t.starts_with("//") || t.starts_with("/*");
         if !is_comment_row {
             prev_last_code = last_code;
