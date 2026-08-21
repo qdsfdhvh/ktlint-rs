@@ -1388,6 +1388,13 @@ pub(crate) fn compute_line_expected(
         } else if t.contains('{') {
             class_annotation_pending = false;
         }
+        // A KDoc content row's expectation never exceeds the previous row's
+        // level: comment rows are content (not re-indented) but their value
+        // feeds the next row's expectation (@Deprecated after a KDoc must
+        // not inherit a lifted frame value).
+        if t.starts_with('*') && e > prev_expected {
+            e = prev_expected;
+        }
         prev_expected = e;
         if !t.is_empty() {
             prev_expected_code = e;
