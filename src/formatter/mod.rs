@@ -172,14 +172,15 @@ fn mask_protected(source: &str, tree: &tree_sitter::Tree) -> Option<(String, Vec
             continue; // defensive: skip any overlap
         }
         out.push_str(&source[last..start]);
-        // Split preserving line count: a span ending in `\n` must not gain
-        // a trailing empty part (which would insert a line and shift every
-        // later row's index between the scan model and the formatter loop).
+        // Split preserving line count: strip the single trailing `\n` of a
+        // span (the split would otherwise gain an empty part and insert a
+        // line, shifting every later row's index between the scan model and
+        // the formatter loop). Interior blank lines are kept.
+        let span = source[start..end]
+            .strip_suffix('\n')
+            .unwrap_or(&source[start..end]);
         let mut first = true;
-        for part in source[start..end].split('\n') {
-            if part.is_empty() && !first {
-                continue;
-            }
+        for part in span.split('\n') {
             if !first {
                 out.push('\n');
             }
