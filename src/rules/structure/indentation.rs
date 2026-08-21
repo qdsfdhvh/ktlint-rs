@@ -723,6 +723,44 @@ fn class_like_decl_line(t: &str) -> bool {
         && (t.ends_with('{') || t.ends_with(':'))
 }
 
+/// The opener row of the first non-blank row above `row` when that row
+/// closes a class-like body (`companion object {`, `class Foo {`) — a blank
+/// line then a class member keeps the body depth (the opener's own level).
+/// A lambda/block close (`apply {`, `when {`) returns None: the member
+/// after it starts a fresh statement at the brace depth.
+fn class_like_body_close_opener(lines: &[&str], row: usize) -> Option<usize> {
+    let mut close_row = None;
+    for r in (0..row).rev() {
+        let prev = lines[r].trim_end();
+        if prev.is_empty() {
+            continue;
+        }
+        close_row = Some(r);
+        break;
+    }
+    let close_row = close_row?;
+    if !lines[close_row].trim_end().ends_with('}') {
+        return None;
+    }
+    let mut depth = 0i32;
+    for r in (0..close_row).rev() {
+        let l = lines[r];
+        let opens = l.matches('{').count() as i32;
+        let closes = l.matches('}').count() as i32;
+        depth += opens - closes;
+        if depth > 0 {
+            // The first opener matching this `}` decides: a class-like body
+            // keeps the depth for the member after a blank line; any other
+            // opener (try/catch/while, an object expression `object : Base`)
+            // starts a fresh statement.
+            let trimmed = lines[r].trim();
+            let is_class_like = class_like_decl_line(trimmed) && !trimmed.starts_with("object :");
+            return is_class_like.then_some(r);
+        }
+    }
+    None
+}
+
 pub(crate) fn compute_line_expected(
     lines: &[&str],
     is: usize,
@@ -1082,6 +1120,17 @@ pub(crate) fn compute_line_expected(
                 // belongs to — the paren stack already popped it, and a prev
                 // `(`/`=` continuation must not push it back out (empty
                 // split argument list `inner(\n)` shape, issue #183).
+            } else if i > 0
+                && lines[i - 1].trim().is_empty()
+                && class_like_body_close_opener(lines, i).is_some_and(|o| out[o] > e)
+            {
+                // A member after a blank line following a class-like body
+                // close (a companion object `}` then a blank line then the
+                // next class member) stays at the class-body depth — the
+                // opener's own level, not the raw brace depth.
+                if let Some(o) = class_like_body_close_opener(lines, i) {
+                    e = out[o];
+                }
             } else if prev_trim.starts_with("//") && paren_depth > 0 && prev_last_code == Some('{')
             {
                 // A comment row after a `{` inside a paren-list block
