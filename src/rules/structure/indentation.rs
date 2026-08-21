@@ -885,6 +885,12 @@ pub(crate) fn compute_line_expected(
             // previous class) is NOT lifted.
             e = e.max(is);
         }
+        // An annotation row keeps the previous row's lifted level
+        // (`@Deprecated` after a KDoc inside an object body sits at the
+        // body depth, not the lambda pin below it).
+        if t.starts_with('@') && prev_expected > e {
+            e = prev_expected;
+        }
         // Allman elevated blocks: the `{` line sits at the header's
         // expectation + one level (except `when`, whose `{` stays standard),
         // and every line inside the block (up to the closing `}`) one level
@@ -926,7 +932,12 @@ pub(crate) fn compute_line_expected(
                 // are governed by the paren logic instead (a `for (` header
                 // keeps its first line at the statement indent).
                 if open_elevated {
-                    e = e.saturating_add(is);
+                    // An annotation row is not lifted by the elevated frame
+                    // (its own row keeps the enclosing body depth via the
+                    // `@` handling above).
+                    if !t.starts_with('@') {
+                        e = e.saturating_add(is);
+                    }
                 } else if is_lambda {
                     // A lambda frame: every body row is pinned to the
                     // lambda's own row + one, unconditionally. A trailing
@@ -936,7 +947,12 @@ pub(crate) fn compute_line_expected(
                     // frames (if/when/fun) keep the guarded pin so rows
                     // already indented inside are lifted but a following
                     // top-level declaration is not.
-                    e = e.max(out[open].saturating_add(is));
+                    // An annotation row (`@Deprecated("...")` before an
+                    // override in an object body) is not lifted by the
+                    // lambda pin: it sits at the enclosing body's depth.
+                    if !t.starts_with('@') {
+                        e = e.max(out[open].saturating_add(is));
+                    }
                 } else if !in_for_header_first
                     && !closing_of_for_header
                     && !in_for_header_body
@@ -992,6 +1008,13 @@ pub(crate) fn compute_line_expected(
                 if !(first_of_for_header || closing_of_for_header) && list > e {
                     e = list;
                 }
+                // A block body nested inside the paren list (an object
+                // literal or lambda body inside a call) keeps the previous
+                // row's lifted level: rows after the body's `{` continue
+                // the body, not the list indent.
+                if arrow_body_depth.is_some() && prev_expected > e {
+                    e = prev_expected;
+                }
             }
         } else if paren_depth > 0 && t.starts_with(')') {
             // A `)` row sits at its opener's own indent — a `)` closing a
@@ -1029,6 +1052,18 @@ pub(crate) fn compute_line_expected(
                 // blocks reach this branch.
                 if closest_close.is_none() {
                     e = depth.saturating_sub(1) * is;
+                    // A `}` inside a paren list closes a block body nested
+                    // in the list (an object body inside `AndroidView(`):
+                    // the brace-depth model has no paren awareness, so pin
+                    // to the previous row minus one level when deeper. A
+                    // chain tail (`.connect()` in MockWebServerTest) is not
+                    // a body — the `}` stays at the brace depth.
+                    if paren_depth > 0
+                        && prev_expected > e.saturating_add(is)
+                        && !lines[i - 1].trim_start().starts_with('.')
+                    {
+                        e = prev_expected.saturating_sub(is);
+                    }
                 }
             } else if t.starts_with(')') {
                 // A closing-paren line (`)`, `) {`, `),`) closes the list it
