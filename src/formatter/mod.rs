@@ -1037,7 +1037,15 @@ fn fix_single_parameter_fold(source: &str, max_line_length: usize) -> String {
                             .position(|&b| b == b'\n')
                             .map_or(bytes.len(), |i| close + i);
                         let tail = &source[close..line_end];
-                        let line_len = prefix.len() + 1 + arg_text.len() + tail.trim_end().len();
+                        // `close` sits after `)` — the folded line is
+                        // prefix + `(` + arg + `)` + tail. Count chars, not
+                        // bytes (CJK args would overcount), and include the
+                        // closing paren (max+1 lines must not fold).
+                        let line_len = prefix.chars().count()
+                            + 1
+                            + arg_text.chars().count()
+                            + 1
+                            + tail.trim_end().chars().count();
                         if line_len <= max_line_length {
                             edits.push((open, close, format!("({})", arg_text)));
                         }

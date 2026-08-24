@@ -97,7 +97,13 @@ impl ParenSpacing {
                 // preceding token is an `@Name` annotation — a genuine
                 // annotation call (`@Suppress ("x")`) has non-empty content,
                 // and `foo (x)` has no leading `@` (kataris corpus, #260).
-                || annotation_leading_empty_paren(node, bytes));
+                || annotation_leading_empty_paren(node, bytes)
+                // A line-leading grouping paren (`    (current + turnId)
+                // .takeLast(…)` — a wrapped expression's continuation row)
+                // is mis-parsed as an empty value_arguments by
+                // tree-sitter-kotlin-sg; the space before it is indentation,
+                // legal (kataris corpus, oracle clean).
+                || Self::grouping_paren_at_line_start(node, bytes));
         if node
             .parent()
             .is_some_and(|p| matches!(p.kind(), "value_arguments" | "function_value_parameters"))
@@ -115,6 +121,25 @@ impl ParenSpacing {
             });
         }
     }
+
+/// True when the `(` starts a grouping expression on its own row — the row
+/// up to `(` is pure indentation (a wrapped expression's continuation:
+/// `    (current + turnId)\n    .takeLast(…)`). tree-sitter-kotlin-sg
+/// mis-parses these as empty value_arguments, and the space before `(` is
+/// legal indentation (kataris corpus, oracle clean).
+fn grouping_paren_at_line_start(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+    let start = node.start_byte();
+    if start == 0 {
+        return false;
+    }
+    let line_start = bytes[..start]
+        .iter()
+        .rposition(|&b| b == b'\n')
+        .map_or(0, |i| i + 1);
+    bytes[line_start..start]
+        .iter()
+        .all(|&b| b == b' ' || b == b'\t')
+}
 
     fn check_close_paren(
         &self,
@@ -166,8 +191,7 @@ fn annotation_leading_empty_paren(node: &tree_sitter::Node, bytes: &[u8]) -> boo
     // Walk back over the whitespace run, then expect `@` + identifier chars
     // (annotation-then-type: `@Composable (…`) or identifier chars + `:`
     // (typed parameter: `onOpenMedia: (url: String, …) -> Unit`) — both are
-    // function-TYPE parens where the space is legal. A real call (`foo (x)`,
-    // `@Suppress ("x")`) has a bare identifier (no `:`/`@`) before the space.
+    // function-TYPE parens where the space is legal.
     let mut j = start_byte - 1;
     while j > 0 && (bytes[j - 1] == b' ' || bytes[j - 1] == b'\t') {
         j -= 1;
@@ -176,7 +200,46 @@ fn annotation_leading_empty_paren(node: &tree_sitter::Node, bytes: &[u8]) -> boo
     while k > 0 && (bytes[k - 1].is_ascii_alphanumeric() || bytes[k - 1] == b'_') {
         k -= 1;
     }
-    k > 0 && (bytes[k - 1] == b'@' || bytes[k - 1] == b':')
+    let leading = if k > 0 && bytes[k - 1] == b'@' {
+        Some(b'@')
+    } else if k > 0 && bytes[k - 1] == b':' {
+        Some(b':')
+    } else {
+        None
+    };
+    let Some(leading) = leading else { return false };
+    // A genuine annotation call (`@Suppress ("x")`) has non-empty content
+    // and must keep the report (oracle reports 3:10 for `@Suppress ("x")`)
+    // — the `@` fallback only applies to an EMPTY misparsed list or a
+    // type-starting content (`@Composable (StoryDetailSectionState) -> Unit`
+    // keeps its parameter type in the list, starting with an uppercase
+    // identifier, `(` or a nested `@`). A typed-parameter colon
+    // (`name: (Type)`) is exempt regardless of content.
+    if leading == b'@' {
+        let empty_list = node.parent().is_some_and(|p| p.child_count() <= 2);
+        if !empty_list {
+            // Non-empty content: exempt only when it is function-type shaped
+            // (`@Composable (draft: StoryPreviewDraft, onBack: () -> Unit)`
+            // keeps its content: a `:` typed-parameter or `->` arrow). A
+            // genuine annotation call (`@Suppress ("x")`, `@Suppress (x)`,
+            // `@Suppress (Foo::class)`) has neither.
+            let content_end = node
+                .parent()
+                .map(|p| p.end_byte())
+                .unwrap_or(start_byte);
+            let content = std::str::from_utf8(
+                &bytes[start_byte.saturating_add(1)..content_end.min(bytes.len())],
+            )
+            .unwrap_or("");
+            let type_like = content.contains(':')
+                || content.contains("->")
+                || content.trim_start().starts_with(char::is_uppercase);
+            if !type_like {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 #[cfg(test)]
@@ -212,5 +275,27 @@ mod tests {
     #[test]
     fn empty_parens_ok() {
         assert!(check("fun foo()\n").is_empty());
+    }
+}
+
+#[cfg(test)]
+mod paren_annotated_call_negative_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ParenSpacing.check(&tree, src)
+    }
+
+    // Issue #260 negative: `@Suppress ("x")` is a genuine annotation call —
+    // the space before `(` must still report (oracle 1.8: 3:10).
+    #[test]
+    fn suppress_call_with_space_reports() {
+        let src = "package com.example\n\n@Suppress (\"unused\")\nfun b() {}\n";
+        assert!(
+            check(src).iter().any(|x| x.message.contains("before \"(\"")),
+            "@Suppress (\"x\") must report paren-spacing"
+        );
     }
 }

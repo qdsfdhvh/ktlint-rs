@@ -193,3 +193,23 @@ mod tests {
         assert!(c("val x = listOf(1, 2).map { it * 2 }\n").is_empty());
     }
 }
+
+#[cfg(test)]
+mod argument_list_cjk_width_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ArgumentListWrapping.check(&tree, src)
+    }
+
+    // Issue #260: a CJK argument is 3 UTF-8 bytes per char — the width must
+    // be counted in chars so a ~100-char line with 40 CJK chars does not
+    // look 250 bytes wide (oracle 1.8 stays silent).
+    #[test]
+    fn cjk_argument_not_byte_inflated() {
+        let src = "package com.example\n\nfun preview() {\n    previewStory(\"sto_1\", \"身代わり婚のはずが、冷酷な黒竜様の狂おしい執着愛から逃げられません\", 187000)\n    use()\n}\n";
+        assert!(check(src).is_empty());
+    }
+}

@@ -226,5 +226,34 @@ fn leading_type_token(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
     while k > 0 && (bytes[k - 1].is_ascii_alphanumeric() || bytes[k - 1] == b'_') {
         k -= 1;
     }
-    k > 0 && (bytes[k - 1] == b'@' || bytes[k - 1] == b':')
+    let leading = if k > 0 && bytes[k - 1] == b'@' {
+        Some(b'@')
+    } else if k > 0 && bytes[k - 1] == b':' {
+        Some(b':')
+    } else {
+        None
+    };
+    let Some(leading) = leading else { return false };
+    // `@Name ` needs an EMPTY misparsed list or type-starting content (a
+    // genuine `@Suppress ("x")` keeps the wrapping report); a
+    // typed-parameter `name: ` colon is exempt regardless of content.
+    if leading == b'@' {
+        let empty_list = node.parent().is_some_and(|p| p.child_count() <= 2);
+        if !empty_list {
+            // Non-empty content: exempt only when function-type shaped
+            // (`@Composable (draft: …)` — a `:` typed-param or `->` arrow).
+            let content_end = node.parent().map(|p| p.end_byte()).unwrap_or(start);
+            let content = std::str::from_utf8(
+                &bytes[start.saturating_add(1)..content_end.min(bytes.len())],
+            )
+            .unwrap_or("");
+            let type_like = content.contains(':')
+                || content.contains("->")
+                || content.trim_start().starts_with(char::is_uppercase);
+            if !type_like {
+                return false;
+            }
+        }
+    }
+    true
 }

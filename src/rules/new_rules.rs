@@ -91,28 +91,78 @@ impl Rule for SpacingAroundSquareBrackets {
         let mut v = Vec::new();
         // Issue #260: the line scan must not fire inside comments (KDoc
         // prose quoting `[ … ]`) or string literals (a `[ ` / ` ]` inside
-        // a JSON-ish string). Collect the rows spanned by comment and
-        // string-literal CST nodes and skip them — the scan then only sees
-        // code rows, matching ktlint 1.8 (which reports index expressions
-        // and collection literals only).
+        // a JSON-ish string). Collect the BYTE spans of comment and
+        // string-literal CST nodes and skip only the matches that fall
+        // inside them — a mixed row (`val s = "[ ]"; val x = a[ 0 ]`)
+        // still reports the real code brackets.
         let mut protected: Vec<(usize, usize)> = Vec::new();
         let mut stack = vec![tree.root_node()];
         while let Some(node) = stack.pop() {
             let kind = node.kind();
             if kind.contains("comment") || kind.contains("string") {
-                protected.push((node.start_position().row, node.end_position().row));
+                protected.push((node.start_byte(), node.end_byte()));
             }
             let mut w = node.walk();
             for c in node.children(&mut w) {
                 stack.push(c);
             }
         }
-        for (i, l) in s.lines().enumerate() {
-            if protected.iter().any(|&(rs, re)| rs <= i && i <= re) {
-                continue;
+        let in_protected = |pos: usize| {
+            protected
+                .iter()
+                .any(|&(s, e)| pos >= s && pos < e)
+        };
+        // Escape-aware quote state: true when `pos` (relative to the line)
+        // falls inside a double-quoted string. tree-sitter-kotlin-sg splits
+        // ESCAPED strings (`"[ { \"a\": 1 } ]"`) into fragments, so the
+        // CST spans above do not cover the whole literal — the quote parity
+        // closes the gap without a line scan.
+        let in_string_at = |line: &str, pos: usize| {
+            // Byte-level scan: backslash escapes the next byte, a `"` toggles
+            // the string state. Clamped to the line length.
+            let bytes = line.as_bytes();
+            let mut in_str = false;
+            let mut i = 0usize;
+            while i < pos.min(bytes.len()) {
+                match bytes[i] {
+                    b'\\' => i += 2,
+                    b'"' => {
+                        in_str = !in_str;
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
             }
-            let t = l.trim();
-            if t.contains("[ ") || t.contains(" ]") {
+            in_str
+        };
+        let mut line_offset = 0usize;
+        for (i, l) in s.lines().enumerate() {
+            let mut search_from = 0usize;
+            // Any `[ ` or ` ]` in the row whose bytes are outside a
+            // protected span AND outside a string literal is a code
+            // index/collection bracket. Find the EARLIEST of either
+            // pattern on each iteration.
+            let mut candidate = None;
+            loop {
+                let open = l[search_from..].find("[ ").map(|p| (p, "[ "));
+                let close = l[search_from..].find(" ]").map(|p| (p, " ]"));
+                let next = match (open, close) {
+                    (Some((a, _)), Some((b, _))) if a <= b => open,
+                    (Some(_), Some(_)) => close,
+                    (Some(x), None) => Some(x),
+                    (None, Some(x)) => Some(x),
+                    (None, None) => None,
+                };
+                let Some((rel, pat)) = next else { break };
+                let abs = line_offset + search_from + rel;
+                let rel_pos = search_from + rel;
+                if !in_protected(abs) && !in_string_at(l, rel_pos) {
+                    candidate = Some(abs);
+                    break;
+                }
+                search_from += rel + pat.len();
+            }
+            if candidate.is_some() {
                 v.push(Violation {
                     file: String::new(),
                     line: i + 1,
@@ -122,6 +172,7 @@ impl Rule for SpacingAroundSquareBrackets {
                     auto_fixable: true,
                 });
             }
+            line_offset += l.len() + 1;
         }
         v
     }
@@ -373,7 +424,7 @@ mod square_brackets_spacing_tests {
             " */\n",
             "public class SquareBrackets {\n",
             "    public fun value(): Int {\n",
-            "        val json = \"[ { \\\"a\": 1 } ]\"\n",
+            "        val json = \"[ { a: 1 } ]\"\n",
             "        return 1\n",
             "    }\n",
             "}\n",
