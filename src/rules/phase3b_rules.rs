@@ -268,10 +268,39 @@ impl FunctionSignatureSpacing {
         let Some(body_expr) = body_expr else {
             return;
         };
-        // The expression body must span multiple lines — a single-line body
-        // is never reported, however long it is (oracle: 140-char single-line
-        // expression bodies stay untouched; a `= launch {\n…` body reports).
-        if body_expr.start_position().row == body_expr.end_position().row {
+        // Issue #259: under `ktlint_code_style = android_studio`, ktlint
+        // 1.8.0 stays silent on multiline expression bodies (`= flow {` /
+        // `= when {` / `= if {` …) when the collapsed signature plus the
+        // first line of the body still fits max_line_length (measured oracle
+        // matrix A/B/C/F/H/I/J/O2). It DOES report the same shape when the
+        // signature + ` = ` + first body line exceeds the limit (kataris
+        // C1b: 114-char signature + `CharacterRosterMessage(` = 140 > 120
+        // reports). ktlint_official reports all multiline bodies
+        // (multiline-expression-wrapping demands the newline).
+        let body_multiline = body_expr.start_position().row != body_expr.end_position().row;
+        if body_multiline && self.code_style == crate::config::CodeStyle::AndroidStudio {
+            // Signature (incl. ` =`) + first line of the body expression,
+            // measured in characters (oracle: C1b 116-char signature + 24-char
+            // `CharacterRosterMessage(` = 140 > 120 reports; A's short
+            // signature + `flow {` fits and stays silent).
+            let body_first_line_end = bytes[body_expr.start_byte()..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .map_or(bytes.len(), |i| body_expr.start_byte() + i);
+            let body_first_line_len = bytes[body_expr.start_byte()..body_first_line_end]
+                .iter()
+                .filter(|b| **b != b' ' && **b != b'\t')
+                .count();
+            let total = sig_len + body_first_line_len;
+            if total <= self.max_length {
+                return;
+            }
+        }
+        // A single-line body is never reported, however long it is
+        // (oracle: a `= launch {\n…` body reports; a single-line body keeps
+        // the signature on one line unless the oracle's own width rules
+        // fire elsewhere).
+        if !body_multiline {
             return;
         }
         // The first token of the body must share the `=` line — a body that
@@ -563,12 +592,32 @@ impl FunctionSignatureSpacing {
             while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
                 e -= 1;
             }
-            // An expression body (`) : Int = expr`) must not count: the
-            // collapse decision covers the signature only (oracle).
+            // An expression body (`) : Int = expr`) must not count toward
+            // the collapse width (signature only).
             if let Some(eq) = bytes[byte..e].iter().position(|&b| b == b'=') {
                 e = byte + eq;
             }
             e
+        };
+        // The oracle's fit threshold for expression-body functions is
+        // tighter than for block bodies: the collapsed signature (incl.
+        // indent) must be <= max_line_length - 3 (the ` = ` after `)`),
+        // matching ktlint 1.8.0 — a 118-char collapsed signature with
+        // `= expr` is NOT collapsed (kataris K1 shape), a 117-char one is
+        // (G117). Block bodies collapse up to max_line_length itself
+        // (issue #195: 120 collapses, 121 stays).
+        let expression_body = {
+            let byte = params.end_byte();
+            let line_end = bytes[byte..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .map_or(bytes.len(), |i| byte + i);
+            bytes[byte..line_end].iter().any(|&b| b == b'=')
+        };
+        let fit_max = if expression_body {
+            self.max_length.saturating_sub(3)
+        } else {
+            self.max_length
         };
         if end <= start {
             return false;
@@ -600,7 +649,7 @@ impl FunctionSignatureSpacing {
             }
             len
         };
-        indent_len + collapsed_len <= self.max_length
+        indent_len + collapsed_len <= fit_max
     }
 
     /// Byte offset where the signature measurement starts: the first
@@ -750,22 +799,29 @@ impl Rule for KeywordSpacing {
             }
             // `catch`/`finally` on their own line after a `}` (Allman) —
             // oracle: "Unexpected newline before \"catch\"" at the keyword.
+            // `} finally {` with the keyword on the SAME line as the brace is
+            // legal (kataris corpus — ktlint 1.8 stays silent).
             if matches!(node.kind(), "catch" | "finally") {
                 let start = node.start_byte();
                 let line_start = s[..start].rfind('\n').map_or(0, |i| i + 1);
-                let prev_line_end = line_start.saturating_sub(1);
-                let prev_line_start = s[..prev_line_end].rfind('\n').map_or(0, |i| i + 1);
-                let prev_trimmed = s[prev_line_start..prev_line_end].trim();
-                if prev_trimmed.ends_with('}') {
-                    let pos = node.start_position();
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: pos.row + 1,
-                        col: pos.column + 1,
-                        rule_id: self.id().into(),
-                        message: format!("Unexpected newline before \"{}\"", node.kind()),
-                        auto_fixable: true,
-                    });
+                // Same-line prefix before the keyword: `} finally` has `}`
+                // on this line — legal, skip.
+                let same_line_prefix = s[line_start..start].trim();
+                if same_line_prefix.is_empty() {
+                    let prev_line_end = line_start.saturating_sub(1);
+                    let prev_line_start = s[..prev_line_end].rfind('\n').map_or(0, |i| i + 1);
+                    let prev_trimmed = s[prev_line_start..prev_line_end].trim();
+                    if prev_trimmed.ends_with('}') {
+                        let pos = node.start_position();
+                        violations.push(Violation {
+                            file: String::new(),
+                            line: pos.row + 1,
+                            col: pos.column + 1,
+                            rule_id: self.id().into(),
+                            message: format!("Unexpected newline before \"{}\"", node.kind()),
+                            auto_fixable: true,
+                        });
+                    }
                 }
             }
             for index in (0..node.child_count()).rev() {
@@ -988,5 +1044,79 @@ mod tests {
         assert_eq!(fs.len(), 1);
         assert_eq!(fs[0].line, 4);
         assert_eq!(fs[0].col, 46);
+    }
+
+    // Issue #259: "Newline expected before expression body" is a
+    // ktlint_official-only report for multiline expression bodies
+    // (`= flow {` / `= when {` / `= if {`). Under android_studio ktlint
+    // 1.8.0 stays silent (verified oracle matrix A/B/C/F/H/I/J/O2).
+    // Single-line bodies keep the report under both styles (D/L/R).
+    #[test]
+    fn expr_body_newline_is_official_only_for_multiline_bodies() {
+        let flow = "package com.example\n\npublic interface SampleRepository {\n    public fun observeItems(): Flow<Result<List<Item>>> = flow {\n        emit(getItems())\n    }\n}\n";
+        let studio = fn_check(flow, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            studio.is_empty(),
+            "android_studio must stay silent on multiline flow body: {:?}",
+            studio.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
+        let official = fn_check(flow, crate::config::CodeStyle::KtlintOfficial);
+        assert!(
+            official
+                .iter()
+                .any(|x| x.message == "Newline expected before expression body"),
+            "ktlint_official must report: {:?}",
+            official.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
+
+        let when_body = "package com.example\n\npublic fun describe(kind: Int): String = when (kind) {\n    0 -> \"zero\"\n    else -> \"other\"\n}\n";
+        assert!(
+            fn_check(when_body, crate::config::CodeStyle::AndroidStudio).is_empty(),
+            "android_studio must stay silent on multiline when body"
+        );
+        assert!(
+            fn_check(when_body, crate::config::CodeStyle::KtlintOfficial)
+                .iter()
+                .any(|x| x.message == "Newline expected before expression body")
+        );
+
+        // Single-line bodies: ktlint-rs currently never reports them even
+        // when the line exceeds max_line_length (oracle D/L/R shapes do).
+        // Known gap in the MISSING-report direction (not a false positive),
+        // pre-existing, out of scope for #259 — recorded so the gate change
+        // here provably does not affect single-line behavior.
+        let long_single = "package com.example\n\npublic fun shortName(): Int = someFunctionCallWithAVeryLongArgumentList(firstArgument, secondArgument, thirdArgument, fourthArgument)\n";
+        let single = fn_check(long_single, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            !single
+                .iter()
+                .any(|x| x.message == "Newline expected before expression body"),
+            "single-line bodies stay unreported (known width gap, oracle reports)"
+        );
+    }
+}
+
+#[cfg(test)]
+mod keyword_finally_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn kc(source: &str) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(source);
+        KeywordSpacing.check(&tree, source)
+    }
+
+    // Issue #260 / kataris: `} finally {` on one line is legal; only the
+    // Allman `}\nfinally {` reports "Unexpected newline before finally".
+    #[test]
+    fn finally_same_line_ok_allman_bad() {
+        let same = "package com.example\n\nfun a() {\n    try {\n        run()\n    } finally {\n        cleanup()\n    }\n}\n";
+        assert!(kc(same).is_empty(), "same-line finally is legal");
+        let allman = "package com.example\n\nfun a() {\n    try {\n        run()\n    }\n    finally {\n        cleanup()\n    }\n}\n";
+        assert!(
+            kc(allman).iter().any(|x| x.message.contains("finally")),
+            "Allman finally must report"
+        );
     }
 }

@@ -132,4 +132,53 @@ mod format_tests {
             "formatter output must match Spotless byte-for-byte"
         );
     }
+
+    #[test]
+    fn issue262_raw_string_guard_not_tripped_and_byte_identical() {
+        // Issue #262: the indent fixer used to re-indent the closing
+        // delimiter row of a raw string that follows a `when`-expression-body
+        // function (`    """.trimIndent()` 4 → 8 spaces), corrupting the
+        // string content and tripping the protected-region guard, which then
+        // aborted the entire `--format` run. The file must pass through
+        // auto_fix byte-identical with no error.
+        let source = concat!(
+            "package com.example\n",
+            "\n",
+            "internal object Defaults {\n",
+            "    fun of(name: Name): String = when (name) {\n",
+            "        Name.CORE -> CORE\n",
+            "    }\n",
+            "\n",
+            "    private val CORE = \"\"\"\n",
+            "        {\n",
+            "          \"a\": \"0.0.0\"\n",
+            "        }\n",
+            "    \"\"\".trimIndent()\n",
+            "}\n",
+        );
+        let mut f = NamedTempFile::new().unwrap();
+        f.write_all(source.as_bytes()).unwrap();
+        // auto_fix with the issue's android_studio config (multiline-
+        // expression-wrapping is official-only and off here, so the indent
+        // fixer is the only one that could touch the raw string).
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(source);
+        let engine = RuleEngine::new(&KtlintConfig::default());
+        let mut violations = engine.check("test.kt", &tree, source);
+        for v in &mut violations {
+            v.file = f.path().to_string_lossy().to_string();
+        }
+        formatter::auto_fix(
+            &[f.path().to_path_buf()],
+            &violations,
+            4,
+            true,
+            &Default::default(),
+            crate::config::CodeStyle::AndroidStudio,
+            120,
+        )
+        .unwrap();
+        let after = std::fs::read_to_string(f.path()).unwrap();
+        assert_eq!(after, source, "file must be byte-identical after --format");
+    }
 }

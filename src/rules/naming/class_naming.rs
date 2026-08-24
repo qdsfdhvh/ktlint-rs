@@ -13,12 +13,38 @@ impl Rule for ClassNaming {
         false
     }
 
-    fn check(&self, _tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, source: &str) -> Vec<Violation> {
         let junit_file = source.lines().any(|line| {
             line.trim_start()
                 .starts_with("import org.junit.jupiter.api")
         });
+        // Issue #260: `class`/`interface`/`object` appearing inside a string
+        // literal (e.g. "Expected a JSON object at the root") is prose, not
+        // a declaration. Collect the byte ranges of string-literal CST nodes
+        // and ignore keyword matches that land inside them.
+        let mut string_ranges: Vec<(usize, usize)> = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            if node.kind().contains("string") {
+                string_ranges.push((node.start_byte(), node.end_byte()));
+            }
+            let mut w = node.walk();
+            for c in node.children(&mut w) {
+                stack.push(c);
+            }
+        }
         let mut violations = Vec::new();
+        let line_offsets: Vec<usize> = {
+            let mut off = 0usize;
+            source
+                .lines()
+                .map(|l| {
+                    let o = off;
+                    off += l.len() + 1;
+                    o
+                })
+                .collect()
+        };
         for (line_index, line) in source.lines().enumerate() {
             // Skip comment/KDoc lines: `class`/`interface`/`object` inside
             // prose (e.g. "The class of bug...") is not a declaration.
@@ -32,7 +58,17 @@ impl Rule for ClassNaming {
             }
             let declaration = ["class ", "interface ", "object "]
                 .into_iter()
-                .filter_map(|keyword| line.find(keyword).map(|start| (start, keyword)))
+                .filter_map(|keyword| {
+                    line.find(keyword).and_then(|start| {
+                        let abs = line_offsets[line_index] + start;
+                        let in_string = string_ranges.iter().any(|&(s, e)| s <= abs && abs < e);
+                        if in_string {
+                            None
+                        } else {
+                            Some((start, keyword))
+                        }
+                    })
+                })
                 .min_by_key(|(start, _)| *start);
             let Some((keyword_start, keyword)) = declaration else {
                 continue;
@@ -151,5 +187,17 @@ mod tests {
         let violations = check("object invalid_name\n");
         assert_eq!(violations.len(), 1);
         assert_eq!(violations[0].col, 8);
+    }
+
+    // Issue #260: `class`/`interface`/`object` inside a string literal is
+    // prose, not a declaration ("Expected a JSON object at the root").
+    #[test]
+    fn ignores_keywords_inside_string_literals() {
+        let src = "package com.example\n\npublic class ClassNaming {\n    public fun describe(kind: Int): String {\n        return when (kind) {\n            0 -> \"Expected a JSON object at the root\"\n            else -> \"unknown\"\n        }\n    }\n}\n";
+        assert!(check(src).is_empty());
+        // The real declaration still reports normally.
+        let v = check("public class bad_name {\n    val x = \"an object in a string\"\n}\n");
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].line, 1);
     }
 }

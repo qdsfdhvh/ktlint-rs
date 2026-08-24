@@ -219,7 +219,16 @@ impl Rule for TrailingCommaOnDeclarationSite {
                     }
                 }
                 if let Some(last) = kids.last() {
-                    let comma_pos = list_trailing_comma(&node, bytes);
+                    // For lambda_parameters the closing `->` lives in the
+                    // parent lambda_literal, not inside the node — the
+                    // generic list_trailing_comma can't see it and wrongly
+                    // reports "Missing" (issue #260). Use the last element's
+                    // own trailing comma instead.
+                    let comma_pos = if lambda {
+                        comma_after(last, bytes)
+                    } else {
+                        list_trailing_comma(&node, bytes)
+                    };
                     if comma_pos.is_some() {
                         // Unnecessary: single-line lists always; multiline
                         // under android_studio without the allow flag.
@@ -420,5 +429,43 @@ impl Rule for TrailingCommaOnCallSite {
             }
         }
         v
+    }
+}
+
+#[cfg(test)]
+mod trailing_comma_lambda_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(source: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(source);
+        TrailingCommaOnDeclarationSite {
+            require_trailing_comma: true,
+            forbid_trailing_comma: false,
+        }
+        .check(&tree, source)
+    }
+
+    // Issue #260: a multiline lambda parameter list whose last parameter
+    // already ends with a trailing comma must not report "Missing".
+    #[test]
+    fn multiline_lambda_with_trailing_comma_is_clean() {
+        let src = "package com.example\n\npublic class FunctionLiteral {\n    public fun bind() {\n        val latest = rememberUpdatedState<(String, String) -> Unit> {\n                exampleEmail,\n                examplePassword,\n            ->\n            handle(exampleEmail, examplePassword)\n        }\n        use(latest)\n    }\n}\n";
+        assert!(check(src).is_empty());
+    }
+
+    #[test]
+    fn multiline_lambda_without_trailing_comma_reports_missing() {
+        // oracle L5: typed lambda params with the arrow on its own line and
+        // no trailing comma report "Missing". (Untyped params — L4 — are a
+        // pre-existing ktlint-rs blind spot, out of scope.)
+        let src = "package com.example\n\npublic class Test {\n    public fun a() {\n        val f = {\n            exampleEmail: String\n            ->\n            use(exampleEmail)\n        }\n        use(f)\n    }\n}\n";
+        let v = check(src);
+        assert!(
+            v.iter()
+                .any(|x| x.message.contains("Missing trailing comma")),
+            "violations: {:?}",
+            v.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
     }
 }

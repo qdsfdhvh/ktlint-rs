@@ -18,14 +18,21 @@ impl Rule for FunctionLiteralRule {
             if node.kind() == "lambda_literal" {
                 // Only lambdas with an explicit parameter list are relevant —
                 // `buildList { … }` (no parameters) is fine.
-                let has_params = {
-                    let mut w = node.walk();
-                    let kids: Vec<String> = node
-                        .children(&mut w)
-                        .map(|c| c.kind().to_string())
-                        .collect();
-                    kids.iter().any(|k| k == "lambda_parameters")
-                };
+                let lp_node = (0..node.child_count()).find_map(|i| {
+                    let c = node.child(i)?;
+                    (c.kind() == "lambda_parameters").then_some(c)
+                });
+                let has_params = lp_node.is_some();
+                // Issue #260: a lambda whose parameter list spans multiple
+                // lines (one parameter per line, Android Studio's multiline
+                // lambda format — `{ \n    a,\n    b,\n    -> …`) is legal;
+                // ktlint 1.8 reports only when the *single-line* parameter
+                // list is separated from `{` or `->` by a newline. Measured
+                // oracle matrix: L1 `{ x: Int,\n ->` reports after; L3
+                // `{\n x: Int, y: Int ->` reports before; Repro #260's
+                // multiline-params shape stays clean.
+                let lp_single_line =
+                    lp_node.is_some_and(|n| n.start_position().row == n.end_position().row);
                 let text = &source[node.start_byte()..node.end_byte()];
                 let lbrace = text.find('{');
                 let arrow = text.find("->");
@@ -33,11 +40,12 @@ impl Rule for FunctionLiteralRule {
                 if has_params {
                     if let (Some(lbrace), Some(arrow)) = (lbrace, arrow) {
                         // `{` directly followed by a newline before the parameter
-                        // list — parameters must stay on the `{` line.
+                        // list — a single-line parameter list must stay on the
+                        // `{` line.
                         let after_lbrace = &text[lbrace + 1..];
                         let after_ws =
                             after_lbrace.trim_start_matches(|c: char| c == ' ' || c == '\t');
-                        if after_ws.starts_with('\n') {
+                        if after_ws.starts_with('\n') && lp_single_line {
                             let pos = node.start_byte() + lbrace + 1;
                             let line = source[..pos].bytes().filter(|&b| b == b'\n').count() + 1;
                             let line_start = source[..pos].rfind('\n').map_or(0, |i| i + 1);
@@ -52,9 +60,19 @@ impl Rule for FunctionLiteralRule {
                         }
                         // A newline directly before `->` — parameter(s) and
                         // arrow must stay together (issue #204: multi-param
-                        // lambdas too).
-                        let params = &text[lbrace + 1..arrow];
-                        if params.contains('\n') {
+                        // lambdas too), for a single-line parameter list.
+                        // Only the gap between the parameter list's end and
+                        // the arrow counts — the newline right after `{`
+                        // (L3 shape) is the "before parameter" case, and the
+                        // oracle does not double-report it as "after".
+                        let lp_rel_end = lp_node
+                            .map(|n| n.end_byte() - node.start_byte())
+                            .unwrap_or(lbrace + 1);
+                        // tree-sitter-kotlin may include the `->` inside the
+                        // lambda_parameters span (some shapes) — clamp so the
+                        // gap slice can never invert (kataris corpus panic).
+                        let gap = &text[lp_rel_end.min(text.len()).min(arrow)..arrow];
+                        if gap.contains('\n') && lp_single_line {
                             // ktlint reports at the end of the parameter list
                             // (oracle: `{ first: Int, second: Int\n ->` -> 3:72).
                             let end_pos = node
@@ -299,5 +317,52 @@ impl Rule for MixedConditionOperatorsRule {
             }
         }
         violations
+    }
+}
+
+#[cfg(test)]
+mod function_literal_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(source: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(source);
+        FunctionLiteralRule.check(&tree, source)
+    }
+
+    #[test]
+    fn single_param_arrow_on_next_line_reports_after() {
+        // oracle L1: `{ x: Int,\n ->` reports "No newline expected after parameter"
+        let src = "package com.example\n\npublic class Test {\n    public fun a() {\n        val f = { x: Int,\n            ->\n            use(x)\n        }\n        use(f)\n    }\n}\n";
+        let v = check(src);
+        assert!(
+            v.iter().any(|x| x.message.contains("after parameter")),
+            "violations: {:?}",
+            v.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn multiline_param_list_is_clean() {
+        // Issue #260 repro: one parameter per line + trailing comma + arrow on
+        // its own line is legal Android Studio formatting — oracle is clean.
+        let src = "package com.example\n\npublic class FunctionLiteral {\n    public fun bind() {\n        val latest = rememberUpdatedState<(String, String) -> Unit> {\n                exampleEmail,\n                examplePassword,\n            ->\n            handle(exampleEmail, examplePassword)\n        }\n        use(latest)\n    }\n}\n";
+        assert!(check(src).is_empty());
+    }
+
+    #[test]
+    fn lbrace_newline_reports_before_but_not_after() {
+        // oracle L3: `{\n x: Int, y: Int ->` reports only "before parameter"
+        let src = "package com.example\n\npublic class Test {\n    public fun a() {\n        val f = {\n            x: Int, y: Int -> use(x, y)\n        }\n        use(f)\n    }\n}\n";
+        let v = check(src);
+        assert!(
+            v.iter().any(|x| x.message.contains("before parameter")),
+            "must report before: {:?}",
+            v.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
+        assert!(
+            !v.iter().any(|x| x.message.contains("after parameter")),
+            "must NOT report after (params and arrow share the line)"
+        );
     }
 }

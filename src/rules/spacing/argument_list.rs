@@ -95,7 +95,11 @@ impl ArgumentListWrapping {
             let line_end = source[node.end_byte()..]
                 .find('\n')
                 .map_or(source.len(), |i| node.end_byte() + i);
-            line_end - node.start_byte()
+            // ktlint measures the line in characters, not bytes — a CJK
+            // argument (3 UTF-8 bytes per char) must not inflate the width
+            // (kataris corpus: `previewStory("sto_1", "…40-char CJK…", 187000)`
+            // is 250+ bytes but ~100 chars; ktlint 1.8 stays silent).
+            source[node.start_byte()..line_end].chars().count()
         } else {
             0
         };

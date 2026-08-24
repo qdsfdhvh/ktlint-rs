@@ -139,7 +139,15 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
         i += 1;
     }
 
-    if prev_was_code && !in_params && !is_inline_type_annotation && !indented_annotation_group {
+    if prev_was_code
+        && !in_params
+        && !is_inline_type_annotation
+        && !indented_annotation_group
+        // `class Foo @Inject constructor(` — an annotation between the
+        // class name and its primary constructor is legal (Metro/
+        // Dagger style); ktlint 1.8 stays silent (kataris corpus).
+        && !annotates_constructor
+    {
         violations.push(Violation {
             file: String::new(),
             line: pos.row + 1,
@@ -271,5 +279,22 @@ mod tests {
         assert!(check("typealias Content = @Composable (String) -> Unit\n").is_empty());
         assert!(check("val callback: @Composable () -> Unit\n").is_empty());
         assert!(check("val email = \"reader@@example.com\"\n").is_empty());
+    }
+}
+
+#[cfg(test)]
+mod annotation_constructor_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+    fn check(s: &str) -> Vec<Violation> {
+        AnnotationSpacing.check(&KotlinParser::new().parse(s), s)
+    }
+
+    // Issue #260 / kataris: `class Foo @Inject internal constructor(` — the
+    // constructor annotation after the class name is legal.
+    #[test]
+    fn constructor_annotation_after_class_name_ok() {
+        let src = "public class StorySettingsViewModelImpl @AssistedInject internal constructor(\n    @Assisted private val playId: String,\n) {}\n";
+        assert!(check(src).is_empty());
     }
 }

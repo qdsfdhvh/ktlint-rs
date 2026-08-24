@@ -87,9 +87,30 @@ impl Rule for SpacingAroundSquareBrackets {
     fn id(&self) -> &'static str {
         "standard:square-brackets-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
+        // Issue #260: the line scan must not fire inside comments (KDoc
+        // prose quoting `[ … ]`) or string literals (a `[ ` / ` ]` inside
+        // a JSON-ish string). Collect the rows spanned by comment and
+        // string-literal CST nodes and skip them — the scan then only sees
+        // code rows, matching ktlint 1.8 (which reports index expressions
+        // and collection literals only).
+        let mut protected: Vec<(usize, usize)> = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            let kind = node.kind();
+            if kind.contains("comment") || kind.contains("string") {
+                protected.push((node.start_position().row, node.end_position().row));
+            }
+            let mut w = node.walk();
+            for c in node.children(&mut w) {
+                stack.push(c);
+            }
+        }
         for (i, l) in s.lines().enumerate() {
+            if protected.iter().any(|&(rs, re)| rs <= i && i <= re) {
+                continue;
+            }
             let t = l.trim();
             if t.contains("[ ") || t.contains(" ]") {
                 v.push(Violation {
@@ -324,5 +345,40 @@ mod nullable_type_spacing_tests {
         let source = "fun String?.normalized() = trim()\n";
         let tree = KotlinParser::new().parse(source);
         assert!(NullableTypeSpacing.check(&tree, source).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod square_brackets_spacing_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    #[test]
+    fn reports_space_inside_index_brackets() {
+        let src = "fun f(a: List<Int>) { val x = a[ 0 ] }\n";
+        let tree = KotlinParser::new().parse(src);
+        assert!(!SpacingAroundSquareBrackets.check(&tree, src).is_empty());
+    }
+
+    // Issue #260: `[ … ]` inside KDoc prose or a string literal is not an
+    // index expression / collection literal — the line scan must skip rows
+    // spanned by comment and string-literal CST nodes.
+    #[test]
+    fn ignores_brackets_inside_kdoc_and_strings() {
+        let src = concat!(
+            "package com.example\n",
+            "\n",
+            "/**\n",
+            " * Doc comment quoting a JSON array: [ { \\\"origin\": \\\"string\" } ]\n",
+            " */\n",
+            "public class SquareBrackets {\n",
+            "    public fun value(): Int {\n",
+            "        val json = \"[ { \\\"a\": 1 } ]\"\n",
+            "        return 1\n",
+            "    }\n",
+            "}\n",
+        );
+        let tree = KotlinParser::new().parse(src);
+        assert!(SpacingAroundSquareBrackets.check(&tree, src).is_empty());
     }
 }

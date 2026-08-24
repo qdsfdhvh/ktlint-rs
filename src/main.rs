@@ -256,6 +256,7 @@ fn main() -> anyhow::Result<()> {
             .cloned()
             .chain(probe_indent)
             .collect();
+        let mut format_failures = 0usize;
         for file in &files {
             let file_config = KtlintConfig::load_for_file_with_base(file, &base_config)
                 .unwrap_or_else(|_| base_config.clone());
@@ -265,7 +266,11 @@ fn main() -> anyhow::Result<()> {
                 .filter(|violation| violation.file == file_name)
                 .cloned()
                 .collect();
-            formatter::auto_fix(
+            // A single file's formatter failure (e.g. the protected-region
+            // guard from #92/#262) must not abort the whole batch: report it
+            // with the path and keep formatting the remaining files, so a
+            // bad file can't hide the state of the other 1958 (issue #262).
+            if let Err(e) = formatter::auto_fix(
                 std::slice::from_ref(file),
                 &file_violations,
                 file_config.indent_size,
@@ -273,7 +278,10 @@ fn main() -> anyhow::Result<()> {
                 &file_config.rules,
                 file_config.code_style,
                 file_config.max_line_length,
-            )?;
+            ) {
+                eprintln!("Error: {file_name}: {e:#}");
+                format_failures += 1;
+            }
         }
         // Re-lint with each file's effective EditorConfig, mirroring Spotless/ktlint.
         let mut post_violations = Vec::new();
@@ -286,7 +294,14 @@ fn main() -> anyhow::Result<()> {
             let tree = parser.parse(&source);
             post_violations.extend(engine.check(&file.to_string_lossy(), &tree, &source));
         }
-        reporter.report(&post_violations)
+        // A formatter failure on any file keeps the run non-zero even when
+        // the surviving files re-lint clean (issue #262).
+        let exit = reporter.report(&post_violations);
+        if format_failures > 0 && exit == 0 {
+            1
+        } else {
+            exit
+        }
     } else {
         reporter.report(&violations)
     };

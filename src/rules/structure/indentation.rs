@@ -1058,10 +1058,18 @@ pub(crate) fn compute_line_expected(
                 // row's lifted level: rows after the body's `{` continue
                 // the body, not the list indent. A row after a trailing
                 // lambda with a comma (`) { darkTheme },`) is a new list
-                // argument — the list indent governs it.
+                // argument — the list indent governs it. Issue #261: a row
+                // after a `}` closing the arrow lambda (chain tail
+                // `.onSuccess { … }.onFailure { … }` + sibling statement)
+                // is a fresh statement — arrow_body_depth lingers (the
+                // chain tail's `}` does not drop depth below it), so
+                // exclude that row and fresh `val`/`var` declarations too.
                 if arrow_body_depth.is_some()
                     && prev_expected > e
+                    && !t.starts_with("val ")
+                    && !t.starts_with("var ")
                     && !lines[i - 1].trim_end().ends_with(',')
+                    && !lines[i - 1].trim_end().ends_with('}')
                 {
                     e = prev_expected;
                 }
@@ -1165,11 +1173,23 @@ pub(crate) fn compute_line_expected(
                 } else if arrow_body_depth.is_some_and(|d| depth >= d)
                     && !t.starts_with('}')
                     && !t.starts_with(')')
+                    && !t.starts_with("val ")
+                    && !t.starts_with("var ")
+                    && !lines[i - 1].trim_end().ends_with('}')
                     && !matches!(prev_last_code, Some('{') | Some('=') | Some(':'))
                 {
                     // Rows inside the arrow lambda body keep the lifted level
                     // (`val selected`, `item(`, … after `val hasUnread`).
                     // Rows after `{`/`=`/`:` go to their own branches.
+                    // Issue #261: a row after a `}` that closes the arrow
+                    // lambda (a chain tail `.onSuccess { … }.onFailure { … }`
+                    // followed by a sibling statement) starts a fresh
+                    // statement — arrow_body_depth is cleared only when
+                    // depth drops below it, which the chain tail's `}` does
+                    // not (depth returns to the same level), so the sibling
+                    // was wrongly lifted to the lambda body level. A fresh
+                    // `val`/`var` declaration after a chained `val x by foo()`
+                    // + `.bar()` continuation stays at the lambda-body depth.
                     e = e.max(prev_expected);
                 } else if prev_last_code == Some('>') && lines[i - 1].trim_end().ends_with("->") {
                     // Lambda with a parameter list ending on its own line:
@@ -1907,6 +1927,87 @@ mod tests {
             "violations: {:?}",
             v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
         );
+    }
+
+    // Issue #261: the statement after a multiline dot-chain inside a lambda
+    // (`repository.reset().onSuccess { … }.onFailure { … }` then
+    // `resetting = false`) is a sibling of the statement before the chain,
+    // not a continuation of the arrow lambda body. The chain tail's `}`
+    // closes the lambda without dropping the brace depth below
+    // arrow_body_depth, so both arrow-body lifts (the paren-list one and
+    // the general one) must exclude a row following a `}` and fresh
+    // `val`/`var` declarations. Also: a `->` when-entry arrow must not be
+    // classified as a `-` binary operator (kataris corpus).
+    #[test]
+    fn statement_after_dot_chain_lambda_tail_keeps_sibling_level() {
+        // Exact issue #261 repro: the multiline 3-param signature + the
+        // `@Composable (ExampleScope.() -> Unit)?` annotated parameter
+        // parens are part of the scan's paren structure — keep them.
+        let src = concat!(
+            "package com.example\n",
+            "\n",
+            "@Composable\n",
+            "fun ExampleScreen(\n",
+            "    modifier: Modifier = Modifier,\n",
+            "    contentDescription: String? = null,\n",
+            "    success: @Composable (ExampleScope.() -> Unit)? = null,\n",
+            ") {\n",
+            "    ExampleDialog(\n",
+            "        onConfirm = {\n",
+            "            confirming = false\n",
+            "            scope.launch {\n",
+            "                resetting = true\n",
+            "                repository.reset()\n",
+            "                    .onSuccess { done ->\n",
+            "                        if (done) {\n",
+            "                            notify()\n",
+            "                        } else {\n",
+            "                            status = \"none\"\n",
+            "                        }\n",
+            "                    }\n",
+            "                    .onFailure { error ->\n",
+            "                        status = error.message ?: \"failed\"\n",
+            "                    }\n",
+            "                resetting = false\n",
+            "            }\n",
+            "        },\n",
+            "    )\n",
+            "}\n",
+        );
+        let tree = KotlinParser::new().parse(src);
+        let elevated = find_allman_elevated_blocks(&tree, src);
+        let lines: Vec<&str> = src.lines().collect();
+        let scan = compute_line_expected(&lines, 4, &elevated);
+        // `resetting = false` (row 25) sits at launch-block depth (16); it
+        // must NOT be lifted to the arrow-lambda body level (20).
+        assert_eq!(scan[24], 16, "scan row 25: {:?}", &lines[24]);
+        assert_eq!(
+            scan[12], 16,
+            "resetting = true stays a sibling: {:?}",
+            &lines[12]
+        );
+        // Full rule check on the same shape must be clean at 16 (the
+        // tree-sitter parse of this shape is dirty, so this exercises the
+        // scan path end-to-end, matching the issue's lint report).
+        assert!(check(src, 4).is_empty());
+    }
+
+    // Issue #261/kataris: `A, B,\n    ->` when-entry arrow rows must keep
+    // their when-entry depth — the `->` must not read as a `-` operator.
+    #[test]
+    fn when_entry_arrow_not_a_binary_operator() {
+        let src = "package com.example\n\nfun f(kind: Int): String =\n    when (kind) {\n        Kind.APPEND,\n        Kind.DELTA,\n        ->\n            \"delta\"\n\n        Kind.WHOLE ->\n            \"whole\"\n    }\n";
+        let tree = KotlinParser::new().parse(src);
+        let elevated = find_allman_elevated_blocks(&tree, src);
+        let lines: Vec<&str> = src.lines().collect();
+        let scan = compute_line_expected(&lines, 4, &elevated);
+        assert_eq!(
+            scan[6], 8,
+            "-> row stays at when-entry depth: {:?}",
+            &lines[6]
+        );
+        assert_eq!(scan[7], 12, "entry body stays one deeper: {:?}", &lines[7]);
+        assert!(check(src, 4).is_empty());
     }
 }
 
@@ -3019,6 +3120,13 @@ fn next_code_row(lines: &[&str], row: usize) -> Option<usize> {
 /// one level. Excludes import wildcards (`libcurl.*`), postfix `++`/`--`,
 /// and reference operators (`::`) (issue #202).
 fn binary_operator_row(t: &str, prev_code: &str) -> bool {
+    // `->` (a when-entry arrow, lambda parameter arrow) is NOT a binary
+    // operator — it starts with `-` and would otherwise be classified as a
+    // `-` continuation, lifting a when entry's own `->` row one extra level
+    // (kataris corpus: `A, B,\n    ->` entries were re-indented by --format).
+    if t.trim_start().starts_with("->") || prev_code.trim_end().ends_with("->") {
+        return false;
+    }
     let starts = ["&&", "||", "==", "!=", "<=", ">=", "??", "?:", "+", "-"];
     let ends = [
         "&&", "||", "==", "!=", "<=", ">=", "??", "+", "-", "*", "/", "%",

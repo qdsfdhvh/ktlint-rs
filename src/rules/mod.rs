@@ -83,6 +83,41 @@ pub(crate) fn code_style_allows(rule_id: &str, code_style: CodeStyle) -> bool {
     code_style == CodeStyle::KtlintOfficial || !OFFICIAL_CODE_STYLE_ONLY.contains(&rule_id)
 }
 
+/// True when the text spanned by the paren's parent (`value_arguments` /
+/// `function_value_parameters`) contains a function-type arrow (`->`) at
+/// depth 0 — i.e. the parens belong to an annotated function type
+/// (`@Composable (BoxScope.() -> Unit)?`), which tree-sitter-kotlin-sg
+/// mis-parses as an annotation constructor call (issue #260). Genuine call
+/// arguments (`@Suppress ("x")`, `foo (x)`) never contain a depth-0 arrow.
+pub(crate) fn paren_content_has_top_level_arrow(node: &tree_sitter::Node, source: &str) -> bool {
+    let Some(parent) = node.parent() else {
+        return false;
+    };
+    if !matches!(
+        parent.kind(),
+        "value_arguments" | "function_value_parameters"
+    ) {
+        return false;
+    }
+    let start = node.end_byte();
+    let end = parent.end_byte();
+    if start >= end || start >= source.len() {
+        return false;
+    }
+    let text = &source[start..end.min(source.len())];
+    let mut depth: i32 = 0;
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            '-' if depth == 0 && chars.peek() == Some(&'>') => return true,
+            _ => {}
+        }
+    }
+    false
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuleMetadata {
     pub id: &'static str,
@@ -338,3 +373,87 @@ mod rule_set_tests {
 }
 
 pub use builtins::*;
+
+#[cfg(test)]
+mod paren_arrow_helper_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn arrow_for(source: &str) -> bool {
+        let tree = KotlinParser::new().parse(source);
+        // find every "(" token node and report whether the helper exempts it
+        let mut stack = vec![tree.root_node()];
+        let mut results = Vec::new();
+        while let Some(node) = stack.pop() {
+            if node.kind() == "(" {
+                results.push(paren_content_has_top_level_arrow(&node, source));
+            }
+            for i in 0..node.child_count() {
+                if let Some(c) = node.child(i) {
+                    stack.push(c);
+                }
+            }
+        }
+        results.into_iter().any(|r| r)
+    }
+
+    // Issue #260: annotated function type inside a parameter list — the space
+    // before the type's `(` is legal; the paren must be exempt.
+    #[test]
+    fn annotated_fn_type_paren_is_exempt() {
+        let src = "fun f(loading: @Composable (BoxScope.() -> Unit)? = null) {}\n";
+        assert!(
+            arrow_for(src),
+            "helper must exempt the annotated fn type paren"
+        );
+    }
+
+    #[test]
+    fn nested_arrow_params_are_exempt() {
+        let src = "fun g(reg: @Composable (onSuccess: () -> Unit, onDismiss: () -> Unit) -> Unit = { _, _ -> }) {}\n";
+        assert!(
+            arrow_for(src),
+            "helper must exempt nested-arrow params shape"
+        );
+    }
+
+    #[test]
+    fn real_call_paren_not_exempt() {
+        let src = "fun h() { foo (x, y) }\n";
+        assert!(!arrow_for(src), "a genuine call's paren must not be exempt");
+    }
+}
+
+#[cfg(test)]
+mod paren_arrow_multiline_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn paren_violations(source: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(source);
+        crate::rules::spacing::paren::ParenSpacing.check(&tree, source)
+    }
+
+    // Issue #260 / kataris: annotated fn type in a MULTILINE parameter list
+    // (each param on its own line) — the space before the type's `(` is
+    // legal; ktlint 1.8 stays silent.
+    #[test]
+    fn multiline_param_list_annotated_fn_type_clean() {
+        let src = concat!(
+            "fun ExampleScreen(\n",
+            "    onOpenMembership: () -> Unit = {},\n",
+            "    registrationSheet: @Composable (onSuccess: () -> Unit, onDismiss: () -> Unit) -> Unit = { _, _ -> },\n",
+            "    diamondRechargeSheet: @Composable (shortfall: Long, onDismiss: () -> Unit) -> Unit = { _, _ -> },\n",
+            ") {\n",
+            "}\n",
+        );
+        let v = paren_violations(src);
+        assert!(
+            v.is_empty(),
+            "multiline annotated fn type must be clean: {:?}",
+            v.iter()
+                .map(|x| (x.line, x.col, &x.message))
+                .collect::<Vec<_>>()
+        );
+    }
+}

@@ -33,7 +33,24 @@ impl Rule for GeneralWrapping {
                     matches!(p.kind(), "value_arguments" | "function_value_parameters")
                         && p.start_position().row != p.end_position().row
                 });
-                if multiline {
+                // An annotated function type (`@Composable (BoxScope.() -> Unit)?`)
+                // is mis-parsed by tree-sitter-kotlin-sg as an annotation
+                // constructor call: its `(` lands under a fake multiline
+                // `value_arguments`. The paren is a *type* paren, not an
+                // argument list, so the wrapping check must not fire (oracle:
+                // clean, #260).
+                let paren_is_fn_type = (node.kind() == "(" || node.kind() == ")")
+                    && node.parent().is_some_and(|p| {
+                        matches!(p.kind(), "value_arguments" | "function_value_parameters")
+                    })
+                    && (crate::rules::paren_content_has_top_level_arrow(&node, source)
+                        // Nested function types mis-parse their content away
+                        // (`onOpenCoverMedia: ((url: String, …) -> Unit)?`), so
+                        // the arrow scan sees an empty list — fall back to the
+                        // `@Name ` / `name: ` leading-token discriminator
+                        // (kataris corpus, #260).
+                        || leading_type_token(&node, bytes));
+                if multiline && !paren_is_fn_type {
                     if node.kind() == "(" {
                         report_after(node, bytes, source, '(', &mut violations);
                     } else {
@@ -189,4 +206,25 @@ fn report_after(
             auto_fixable: true,
         });
     }
+}
+
+/// True when the `(`/`)` is preceded (skipping the space run) by an `@Name`
+/// annotation or a `name:` typed-parameter colon — the paren is a function
+/// TYPE paren (`@Composable (…`, `onOpenMedia: (url: String, …) -> Unit`),
+/// legal with a space before it. A real call (`foo (x)`, `@Suppress ("x")`)
+/// has a bare identifier before the space (issue #260 / kataris).
+fn leading_type_token(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+    let start = node.start_byte();
+    if start == 0 || bytes[start - 1] != b' ' {
+        return false;
+    }
+    let mut j = start - 1;
+    while j > 0 && (bytes[j - 1] == b' ' || bytes[j - 1] == b'\t') {
+        j -= 1;
+    }
+    let mut k = j;
+    while k > 0 && (bytes[k - 1].is_ascii_alphanumeric() || bytes[k - 1] == b'_') {
+        k -= 1;
+    }
+    k > 0 && (bytes[k - 1] == b'@' || bytes[k - 1] == b':')
 }

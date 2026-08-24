@@ -1025,7 +1025,19 @@ fn fix_single_parameter_fold(source: &str, max_line_length: usize) -> String {
                             .trim_end_matches(',')
                             .trim();
                         let prefix = &source[line_start..open];
-                        let line_len = prefix.len() + 1 + arg_text.len() + 1;
+                        // The folded line continues past `)` with the return
+                        // type and expression body (`): Result<…> = body` on
+                        // the same line) — kataris corpus: folding a 27-char
+                        // param on a 40-char prefix produces a 131-char line
+                        // that ktlint 1.8 would never fold. Measure to the
+                        // end of the closing-paren line, like the rule's own
+                        // signature_fits (max_line_length includes the tail).
+                        let line_end = bytes[close..]
+                            .iter()
+                            .position(|&b| b == b'\n')
+                            .map_or(bytes.len(), |i| close + i);
+                        let tail = &source[close..line_end];
+                        let line_len = prefix.len() + 1 + arg_text.len() + tail.trim_end().len();
                         if line_len <= max_line_length {
                             edits.push((open, close, format!("({})", arg_text)));
                         }
@@ -1913,10 +1925,22 @@ fn fix_indentation(source: &str, indent_size: usize) -> String {
                     .rfind(SENTINEL)
                     .map_or(0, |i| i + SENTINEL.len_utf8());
                 let tail_first = trimmed[after..].chars().find(|c| !c.is_whitespace());
-                if matches!(
-                    tail_first,
-                    Some('(') | Some(',') | Some(')') | Some('.') | Some('{')
-                ) {
+                // A fragment whose *content* starts with whitespace carries
+                // the row's indentation inside the protected span — a
+                // raw-string closing delimiter (`    """.trimIndent()`)
+                // stores its leading spaces as part of the string content.
+                // Re-indenting such a row injects spaces into the string, so
+                // the tail can never turn it into a re-indentable code row
+                // (issue #262).
+                let fragment_starts_with_ws = parse_sentinel_id(trimmed)
+                    .and_then(|id| store.get(id))
+                    .is_some_and(|orig| orig.starts_with(char::is_whitespace));
+                if !fragment_starts_with_ws
+                    && matches!(
+                        tail_first,
+                        Some('(') | Some(',') | Some(')') | Some('.') | Some('{')
+                    )
+                {
                     content = false;
                 }
             }
@@ -2828,8 +2852,17 @@ fn fix_annotation_newlines(source: &str) -> String {
                 prev_tok_start -= 1;
             }
             let prev_is_annotation = prev_tok_start > line_start && bytes[prev_tok_start] == b'@';
+            // An annotation on the class header (`class Foo @Inject`) modifies
+            // the primary constructor — legal on the header line (kataris
+            // corpus, oracle clean), so neither the `@`-newline nor the
+            // `constructor`-newline applies.
+            let line_prefix = &source[line_start..start];
+            let is_class_header = line_prefix
+                .split_whitespace()
+                .any(|w| w == "class" || w == "interface" || w == "object");
             if !in_type
                 && !prev_is_annotation
+                && !is_class_header
                 && bytes[line_start..start]
                     .iter()
                     .any(|&b| !b.is_ascii_whitespace())
@@ -2837,12 +2870,13 @@ fn fix_annotation_newlines(source: &str) -> String {
                 insertions.push((start, '\n'));
             }
             // Space after the annotation before a primary `constructor` on the
-            // same line -> newline.
+            // same line -> newline (unless the annotation is a class-header
+            // constructor modifier — `class Foo @Inject constructor(` stays).
             let after = node.end_byte();
             let rest = &source[after..];
             if rest.starts_with(' ') || rest.starts_with('\t') {
                 let tail = rest.trim_start();
-                if tail.starts_with("constructor") {
+                if tail.starts_with("constructor") && !is_class_header {
                     insertions.push((after, '\n'));
                 }
             }
@@ -3477,7 +3511,16 @@ fn fix_when_conditions_blank_lines(source: &str) -> String {
     }
     let mut text = source.to_string();
     for &pos in insert.iter().rev() {
-        text.insert(pos, '\n');
+        // Guard: a mis-derived row can point inside a multi-byte char (e.g.
+        // a CJK char on the previous line — kataris corpus). Clamp to the
+        // nearest char boundary so the blank-line insert never panics; the
+        // row it came from is the start of a line, so stepping back to a
+        // boundary lands at that line's real start.
+        let mut p = pos.min(text.len());
+        while p > 0 && !text.is_char_boundary(p) {
+            p -= 1;
+        }
+        text.insert(p, '\n');
     }
     restore_protected(&text, &store)
 }
@@ -3881,6 +3924,17 @@ mod tests {
             safe_transform("rule", &collision, |_| panic!("must not transform")).unwrap(),
             collision
         );
+    }
+
+    #[test]
+    fn fix_indentation_never_rewrites_raw_string_closing_delimiter() {
+        // Issue #262: a `when`-expression-body function above a raw string
+        // moved the indent fixer's expectations onto the closing-delimiter
+        // row (`    """.trimIndent()`), which was re-indented from 4 to 8
+        // spaces — corrupting the string content and tripping the
+        // protected-region guard. The fixer must leave the file byte-identical.
+        let source = "internal object Defaults {\n    fun of(name: Name): String = when (name) {\n        Name.CORE -> CORE\n    }\n\n    private val CORE = \"\"\"\n        {\n          \"a\": \"0.0.0\"\n        }\n    \"\"\".trimIndent()\n}\n";
+        assert_eq!(fix_indentation(source, 4), source);
     }
 
     #[test]
