@@ -107,11 +107,7 @@ impl Rule for SpacingAroundSquareBrackets {
                 stack.push(c);
             }
         }
-        let in_protected = |pos: usize| {
-            protected
-                .iter()
-                .any(|&(s, e)| pos >= s && pos < e)
-        };
+        let in_protected = |pos: usize| protected.iter().any(|&(s, e)| pos >= s && pos < e);
         // Escape-aware quote state: true when `pos` (relative to the line)
         // falls inside a double-quoted string. tree-sitter-kotlin-sg splits
         // ESCAPED strings (`"[ { \"a\": 1 } ]"`) into fragments, so the

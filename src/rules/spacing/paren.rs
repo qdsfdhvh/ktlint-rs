@@ -122,24 +122,24 @@ impl ParenSpacing {
         }
     }
 
-/// True when the `(` starts a grouping expression on its own row — the row
-/// up to `(` is pure indentation (a wrapped expression's continuation:
-/// `    (current + turnId)\n    .takeLast(…)`). tree-sitter-kotlin-sg
-/// mis-parses these as empty value_arguments, and the space before `(` is
-/// legal indentation (kataris corpus, oracle clean).
-fn grouping_paren_at_line_start(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
-    let start = node.start_byte();
-    if start == 0 {
-        return false;
+    /// True when the `(` starts a grouping expression on its own row — the row
+    /// up to `(` is pure indentation (a wrapped expression's continuation:
+    /// `    (current + turnId)\n    .takeLast(…)`). tree-sitter-kotlin-sg
+    /// mis-parses these as empty value_arguments, and the space before `(` is
+    /// legal indentation (kataris corpus, oracle clean).
+    fn grouping_paren_at_line_start(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+        let start = node.start_byte();
+        if start == 0 {
+            return false;
+        }
+        let line_start = bytes[..start]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |i| i + 1);
+        bytes[line_start..start]
+            .iter()
+            .all(|&b| b == b' ' || b == b'\t')
     }
-    let line_start = bytes[..start]
-        .iter()
-        .rposition(|&b| b == b'\n')
-        .map_or(0, |i| i + 1);
-    bytes[line_start..start]
-        .iter()
-        .all(|&b| b == b' ' || b == b'\t')
-}
 
     fn check_close_paren(
         &self,
@@ -223,10 +223,7 @@ fn annotation_leading_empty_paren(node: &tree_sitter::Node, bytes: &[u8]) -> boo
             // keeps its content: a `:` typed-parameter or `->` arrow). A
             // genuine annotation call (`@Suppress ("x")`, `@Suppress (x)`,
             // `@Suppress (Foo::class)`) has neither.
-            let content_end = node
-                .parent()
-                .map(|p| p.end_byte())
-                .unwrap_or(start_byte);
+            let content_end = node.parent().map(|p| p.end_byte()).unwrap_or(start_byte);
             let content = std::str::from_utf8(
                 &bytes[start_byte.saturating_add(1)..content_end.min(bytes.len())],
             )
@@ -294,7 +291,9 @@ mod paren_annotated_call_negative_tests {
     fn suppress_call_with_space_reports() {
         let src = "package com.example\n\n@Suppress (\"unused\")\nfun b() {}\n";
         assert!(
-            check(src).iter().any(|x| x.message.contains("before \"(\"")),
+            check(src)
+                .iter()
+                .any(|x| x.message.contains("before \"(\"")),
             "@Suppress (\"x\") must report paren-spacing"
         );
     }

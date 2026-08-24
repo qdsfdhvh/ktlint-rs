@@ -305,11 +305,10 @@ impl FunctionSignatureSpacing {
                 .iter()
                 .position(|&b| b == b'\n')
                 .map_or(bytes.len(), |i| body_expr.start_byte() + i);
-            let body_first_line_len = std::str::from_utf8(
-                &bytes[body_expr.start_byte()..body_first_line_end],
-            )
-            .map(|t| t.chars().count())
-            .unwrap_or(body_first_line_end - body_expr.start_byte());
+            let body_first_line_len =
+                std::str::from_utf8(&bytes[body_expr.start_byte()..body_first_line_end])
+                    .map(|t| t.chars().count())
+                    .unwrap_or(body_first_line_end - body_expr.start_byte());
             let total = collapsed + body_first_line_len;
             if total <= self.max_length {
                 return;

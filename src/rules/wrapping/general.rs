@@ -243,10 +243,9 @@ fn leading_type_token(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
             // Non-empty content: exempt only when function-type shaped
             // (`@Composable (draft: …)` — a `:` typed-param or `->` arrow).
             let content_end = node.parent().map(|p| p.end_byte()).unwrap_or(start);
-            let content = std::str::from_utf8(
-                &bytes[start.saturating_add(1)..content_end.min(bytes.len())],
-            )
-            .unwrap_or("");
+            let content =
+                std::str::from_utf8(&bytes[start.saturating_add(1)..content_end.min(bytes.len())])
+                    .unwrap_or("");
             let type_like = content.contains(':')
                 || content.contains("->")
                 || content.trim_start().starts_with(char::is_uppercase);
