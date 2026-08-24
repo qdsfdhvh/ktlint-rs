@@ -132,6 +132,15 @@ impl ParenSpacing {
         if start == 0 {
             return false;
         }
+        // A real parameter list (`fun f\n    (x: Int)` mis-parse) is a
+        // function_value_parameters parent — that is a call/declaration
+        // paren, not a grouping row.
+        if node
+            .parent()
+            .is_some_and(|p| p.kind() == "function_value_parameters")
+        {
+            return false;
+        }
         let line_start = bytes[..start]
             .iter()
             .rposition(|&b| b == b'\n')
@@ -218,19 +227,29 @@ fn annotation_leading_empty_paren(node: &tree_sitter::Node, bytes: &[u8]) -> boo
     if leading == b'@' {
         let empty_list = node.parent().is_some_and(|p| p.child_count() <= 2);
         if !empty_list {
-            // Non-empty content: exempt only when it is function-type shaped
-            // (`@Composable (draft: StoryPreviewDraft, onBack: () -> Unit)`
-            // keeps its content: a `:` typed-parameter or `->` arrow). A
+            // Non-empty content: exempt only when it is function-type
+            // shaped — a typed parameter (`draft: StoryPreviewDraft` — single
+            // colon + space, NOT `Foo::class`), a `->` arrow, or a function
+            // type whose return arrow follows the list (`(Type) -> Unit`). A
             // genuine annotation call (`@Suppress ("x")`, `@Suppress (x)`,
-            // `@Suppress (Foo::class)`) has neither.
+            // `@Suppress (Foo::class)`, `@Suppress (Foo)`) has none.
             let content_end = node.parent().map(|p| p.end_byte()).unwrap_or(start_byte);
             let content = std::str::from_utf8(
                 &bytes[start_byte.saturating_add(1)..content_end.min(bytes.len())],
             )
             .unwrap_or("");
-            let type_like = content.contains(':')
-                || content.contains("->")
-                || content.trim_start().starts_with(char::is_uppercase);
+            let param_colon = content.contains(": ") && !content.contains("::");
+            let arrow_in_content = content.contains("->");
+            // A return arrow right after the misparsed list (`(Type) -> Unit`)
+            // identifies a function type even when the list kept a bare
+            // type name (`StoryDetailSectionState`).
+            let after_end = content_end.min(bytes.len());
+            let arrow_after = (0..16).any(|d| {
+                let p = after_end.saturating_add(d);
+                p + 1 < bytes.len() && bytes[p] == b'-' && bytes[p + 1] == b'>'
+            });
+            let type_like =
+                !content.contains("::") && (param_colon || arrow_in_content || arrow_after);
             if !type_like {
                 return false;
             }
@@ -295,6 +314,50 @@ mod paren_annotated_call_negative_tests {
                 .iter()
                 .any(|x| x.message.contains("before \"(\"")),
             "@Suppress (\"x\") must report paren-spacing"
+        );
+    }
+}
+
+#[cfg(test)]
+mod paren_annotation_negative_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ParenSpacing.check(&tree, src)
+    }
+
+    // Issue #260 negatives: every spaced annotation CALL reports; only
+    // function-type parens are exempt (oracle 1.8 reports all four).
+    #[test]
+    fn spaced_annotation_calls_report() {
+        for src in [
+            "@Suppress (\"unused\")\nfun b() {}\n",
+            "@Suppress (x)\nfun b() {}\n",
+            "@Suppress (Foo::class)\nfun b() {}\n",
+            "@Suppress (Foo)\nfun b() {}\n",
+        ] {
+            let full = format!("package com.example\n\n{src}");
+            assert!(
+                check(&full)
+                    .iter()
+                    .any(|x| x.message.contains("before \"(\"")),
+                "must report: {src:?}"
+            );
+        }
+    }
+
+    // The line-leading grouping exemption must not hide a real parameter
+    // list paren (`fun f\n    (x: Int)` shape).
+    #[test]
+    fn line_leading_param_list_still_reports() {
+        let src = "package com.example\n\nfun f\n    (x: Int) {\n    use(x)\n}\n";
+        assert!(
+            check(src)
+                .iter()
+                .any(|x| x.message.contains("before \"(\"")),
+            "misparsed param list must report"
         );
     }
 }

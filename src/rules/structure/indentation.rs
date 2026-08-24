@@ -1335,7 +1335,7 @@ pub(crate) fn compute_line_expected(
         } else {
             ""
         };
-        let mut binary_cont = binary_operator_row(t, prev_code)
+        let mut binary_cont = (paren_depth == 0 && binary_operator_row(t, prev_code))
             || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "))
             || (arrow_body_depth.is_some()
                 && t.starts_with('.')

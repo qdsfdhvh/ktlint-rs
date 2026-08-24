@@ -115,14 +115,24 @@ impl Rule for SpacingAroundSquareBrackets {
         // closes the gap without a line scan.
         let in_string_at = |line: &str, pos: usize| {
             // Byte-level scan: backslash escapes the next byte, a `"` toggles
-            // the string state. Clamped to the line length.
+            // the string state, and a single-quoted CHAR literal (`'"'`)
+            // does not toggle it. Clamped to the line length.
             let bytes = line.as_bytes();
             let mut in_str = false;
+            let mut in_char = false;
             let mut i = 0usize;
             while i < pos.min(bytes.len()) {
                 match bytes[i] {
                     b'\\' => i += 2,
-                    b'"' => {
+                    b'\'' if !in_str => {
+                        if in_char {
+                            in_char = false;
+                        } else if bytes.get(i + 1) != Some(&b'\\') {
+                            in_char = true;
+                        }
+                        i += 1;
+                    }
+                    b'"' if !in_char => {
                         in_str = !in_str;
                         i += 1;
                     }
@@ -427,5 +437,23 @@ mod square_brackets_spacing_tests {
         );
         let tree = KotlinParser::new().parse(src);
         assert!(SpacingAroundSquareBrackets.check(&tree, src).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod square_brackets_char_literal_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    // Issue #260: a char literal `'"'` must not toggle the string-quote
+    // parity — a code `a[ 0 ]` on the same row still reports.
+    #[test]
+    fn char_literal_quote_does_not_hide_code_brackets() {
+        let src = "package com.example\n\nfun f() {\n    val q = '\"'\n    val x = a[ 0 ]\n    use(q, x)\n}\n";
+        let tree = KotlinParser::new().parse(src);
+        assert!(
+            !SpacingAroundSquareBrackets.check(&tree, src).is_empty(),
+            "a[ 0 ] after a char literal must report"
+        );
     }
 }
