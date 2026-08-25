@@ -376,10 +376,25 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
     let mut last = None;
     let mut j = node.start_byte();
     let mut in_line_comment = false;
+    let mut in_block_comment = false;
     let mut in_string = false;
     let mut in_raw_string = false;
     while j < i {
         let b = bytes[j];
+        if in_block_comment {
+            if b == b'*' && j + 1 < i && bytes[j + 1] == b'/' {
+                in_block_comment = false;
+                j += 2;
+                continue;
+            }
+            j += 1;
+            continue;
+        }
+        if !in_string && !in_raw_string && b == b'/' && j + 1 < i && bytes[j + 1] == b'*' {
+            in_block_comment = true;
+            j += 2;
+            continue;
+        }
         if !in_string && !in_raw_string {
             if b == b'"' && j + 2 < i && bytes[j + 1] == b'"' && bytes[j + 2] == b'"' {
                 in_raw_string = true;

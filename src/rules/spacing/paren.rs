@@ -265,14 +265,21 @@ fn annotation_leading_empty_paren(node: &tree_sitter::Node, bytes: &[u8]) -> boo
             .unwrap_or("");
             let param_colon = content.contains(": ") && !content.contains("::");
             let arrow_in_content = content.contains("->");
-            // A return arrow right after the misparsed list (`(Type) -> Unit`)
-            // identifies a function type even when the list kept a bare
-            // type name (`StoryDetailSectionState`).
+            // A return arrow IMMEDIATELY after the misparsed list
+            // (`(Type) -> Unit`) identifies a function type even when the
+            // list kept a bare type name (`StoryDetailSectionState`). The
+            // arrow must be the next non-whitespace token on the SAME row —
+            // a `->` further away (e.g. `@Suppress (Foo)\nval f = { -> 1 }`)
+            // is unrelated (reviewer, #260).
             let after_end = content_end.min(bytes.len());
-            let arrow_after = (0..16).any(|d| {
-                let p = after_end.saturating_add(d);
-                p + 1 < bytes.len() && bytes[p] == b'-' && bytes[p + 1] == b'>'
-            });
+            let mut arrow_after = false;
+            let mut p = after_end;
+            while p < bytes.len() && (bytes[p] == b' ' || bytes[p] == b'\t') {
+                p += 1;
+            }
+            if p + 1 < bytes.len() && bytes[p] == b'-' && bytes[p + 1] == b'>' {
+                arrow_after = true;
+            }
             let type_like =
                 !content.contains("::") && (param_colon || arrow_in_content || arrow_after);
             if !type_like {

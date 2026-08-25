@@ -1433,9 +1433,11 @@ pub(crate) fn compute_line_expected(
         // `val x = Modifier\n    .align(…)\n    // note\n    .zIndex(…)`
         // the `.zIndex` row keeps the chain level (kataris corpus, oracle
         // silent). Comments set no chain state of their own.
-        if t.starts_with("//") {
-            // keep prev_binary_cont as-is (the previous code row's state)
-        } else {
+        // Same comment-row predicate as prev_last_code below: block and
+        // KDoc comments (`/*`, `/**`) must not break the chain state either
+        // (reviewer).
+        let is_comment_row = t.starts_with("//") || t.starts_with("/*");
+        if !is_comment_row {
             prev_binary_cont = binary_cont;
         }
         if !t.trim_end().ends_with(')') {

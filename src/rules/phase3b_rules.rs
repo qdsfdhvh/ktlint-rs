@@ -679,11 +679,15 @@ impl FunctionSignatureSpacing {
         // on that line count too (issue #188).
         let end = {
             let byte = params.end_byte();
+            // Bound the scan to this function's own end — a following
+            // property's `=` (`fun f();\nval x = …` interface shape) must
+            // not be read as this signature's body (reviewer).
+            let node_end = node.end_byte().min(bytes.len());
             // First `=` after the closing paren (a block body `{` may also
             // appear before it on the same line — then no `=` beyond).
-            let mut e = bytes.len();
+            let mut e = node_end;
             let mut i = byte;
-            while i < bytes.len() {
+            while i < node_end {
                 match bytes[i] {
                     b'=' => {
                         e = i;
@@ -702,11 +706,11 @@ impl FunctionSignatureSpacing {
                 }
             }
             // No `=` found: stop at the closing-paren line end, trimmed.
-            if e == bytes.len() {
-                let line_end = bytes[byte..]
+            if e == node_end {
+                let line_end = bytes[byte..node_end]
                     .iter()
                     .position(|&b| b == b'\n')
-                    .map_or(bytes.len(), |j| byte + j);
+                    .map_or(node_end, |j| byte + j);
                 e = line_end;
                 while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
                     e -= 1;

@@ -330,14 +330,27 @@ fn leading_type_token(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
         let empty_list = node.parent().is_some_and(|p| p.child_count() <= 2);
         if !empty_list {
             // Non-empty content: exempt only when function-type shaped
-            // (`@Composable (draft: …)` — a `:` typed-param or `->` arrow).
+            // (`@Composable (draft: …)` — a `:` typed-param or `->` arrow;
+            // `@Composable (StoryDetailSectionState) -> Unit` — a return
+            // arrow right after the list). Uppercase alone is NOT enough
+            // (`@Suppress (Foo)` reports, oracle).
             let content_end = node.parent().map(|p| p.end_byte()).unwrap_or(start);
             let content =
                 std::str::from_utf8(&bytes[start.saturating_add(1)..content_end.min(bytes.len())])
                     .unwrap_or("");
-            let type_like = content.contains(':')
-                || content.contains("->")
-                || content.trim_start().starts_with(char::is_uppercase);
+            let param_colon = content.contains(": ") && !content.contains("::");
+            let arrow_in_content = content.contains("->");
+            let after_end = content_end.min(bytes.len());
+            let mut arrow_after = false;
+            let mut p = after_end;
+            while p < bytes.len() && (bytes[p] == b' ' || bytes[p] == b'\t') {
+                p += 1;
+            }
+            if p + 1 < bytes.len() && bytes[p] == b'-' && bytes[p + 1] == b'>' {
+                arrow_after = true;
+            }
+            let type_like =
+                !content.contains("::") && (param_colon || arrow_in_content || arrow_after);
             if !type_like {
                 return false;
             }
