@@ -914,7 +914,14 @@ pub(crate) fn compute_line_expected(
             last_code = Some(c);
         }
         let mut e = depth * is;
+        // The constructor-modifier lift (`class Foo\n    @Inject\n
+        // constructor(`) is ktlint_official behavior — under
+        // android_studio the annotation and constructor stay at the class
+        // row (kataris StoryEditorDiscardGuard, oracle clean).
+        let official_style =
+            CODE_STYLE.with(|c| c.get()) == CodeStyle::KtlintOfficial;
         if class_annotation_pending
+            && official_style
             && (t.starts_with('@') || t.starts_with("constructor"))
             && !t.contains(" class ")
             && !t.contains(" fun ")
@@ -1032,7 +1039,12 @@ pub(crate) fn compute_line_expected(
             // expectation for standard blocks and fixes continuation
             // headers (`when (x) {` on a `=` line closes at the when row).
             if i == close && i > open && closest_close.map(|(_, c)| open > c).unwrap_or(true) {
-                closest_close = Some((open, close));
+                // A class body whose `{` sits on a supertype-continuation
+                // row (class Foo(...) : + PopupPositionProvider {) closes at
+                // the CLASS HEADER row (0), not the continuation row (4) —
+                // kataris KatTooltipPositionProvider.
+                let align_row = supertype_body_open_header(lines, open).unwrap_or(open);
+                closest_close = Some((align_row, close));
             }
         }
         if let Some((open, _)) = closest_close {
@@ -1068,6 +1080,12 @@ pub(crate) fn compute_line_expected(
                     && prev_expected > e
                     && !t.starts_with("val ")
                     && !t.starts_with("var ")
+                    && !t.starts_with("if ")
+                    && !t.starts_with("for ")
+                    && !t.starts_with("while ")
+                    && !t.starts_with("when ")
+                    && !t.starts_with("return")
+                    && !lines[i - 1].trim().is_empty()
                     && !lines[i - 1].trim_end().ends_with(',')
                     && !lines[i - 1].trim_end().ends_with('}')
                 {
@@ -1176,6 +1194,7 @@ pub(crate) fn compute_line_expected(
                     && !t.starts_with("val ")
                     && !t.starts_with("var ")
                     && !lines[i - 1].trim_end().ends_with('}')
+                    && !lines[i - 1].trim_end().ends_with(')')
                     && !matches!(prev_last_code, Some('{') | Some('=') | Some(':'))
                 {
                     // Rows inside the arrow lambda body keep the lifted level
@@ -1188,8 +1207,9 @@ pub(crate) fn compute_line_expected(
                     // depth drops below it, which the chain tail's `}` does
                     // not (depth returns to the same level), so the sibling
                     // was wrongly lifted to the lambda body level. A fresh
-                    // `val`/`var` declaration after a chained `val x by foo()`
-                    // + `.bar()` continuation stays at the lambda-body depth.
+                    // statement after a closed paren (`.padding(…)` chain
+                    // end) likewise stays at the lambda-body depth (kataris
+                    // TransactionHistoryScreen).
                     e = e.max(prev_expected);
                 } else if prev_last_code == Some('>') && lines[i - 1].trim_end().ends_with("->") {
                     // Lambda with a parameter list ending on its own line:
@@ -1273,8 +1293,19 @@ pub(crate) fn compute_line_expected(
                     // supertype colon, initializer/expression body): the
                     // opener's expectation + one level. prev_last_code is the
                     // previous line's last *code* char — a trailing comment
-                    // ending in `=`/`:` must not open a continuation.
-
+                    // ending in `=`/`:` must not open a continuation. A
+                    // COMPARISON operator ending (`<=`, `>=`, `==`, `!=`)
+                    // is a binary continuation, not an assignment — the
+                    // continuation row keeps the lifted level (oracle,
+                    // kataris `a && … <=\n    b`).
+                    let prev_t = lines[i - 1].trim_end();
+                    let comparison_end = prev_t.ends_with("<=")
+                        || prev_t.ends_with(">=")
+                        || prev_t.ends_with("==")
+                        || prev_t.ends_with("!=");
+                    if comparison_end {
+                        e = e.max(prev_expected);
+                    } else {
                     let wrapped_return_type = prev_last_code == Some('=')
                         && prev_expected > depth * is
                         && i > 1
@@ -1303,6 +1334,7 @@ pub(crate) fn compute_line_expected(
 
                     if want > e {
                         e = want;
+                    }
                     }
                 }
             }
@@ -1443,6 +1475,39 @@ pub(crate) fn compute_line_expected(
         }
     }
     out
+}
+
+
+/// When `open` is the `{` row of a class body that sits on a
+/// supertype-continuation row (class Foo(...) : + PopupPositionProvider {),
+/// return the class HEADER row so the closing `}` aligns with the class, not
+/// the continuation. None for every other block kind.
+fn supertype_body_open_header(lines: &[&str], open: usize) -> Option<usize> {
+    let opener = lines.get(open)?.trim();
+    if !opener.ends_with('{') || opener == "{" {
+        return None;
+    }
+    // The opener row starts with a supertype name (not `class`/`)`/`{`) —
+    // a continuation row that carries the class body's `{`.
+    if opener.starts_with(')') || class_like_decl_line(opener) {
+        return None;
+    }
+    let mut r = open.saturating_sub(1);
+    while r > 0 {
+        let tl = lines[r].trim();
+        if tl.is_empty() {
+            r -= 1;
+            continue;
+        }
+        if class_like_decl_line(tl) {
+            return Some(r);
+        }
+        if !(tl.ends_with(':') || tl.ends_with(',') || tl.ends_with(')') || tl.ends_with('(')) {
+            break;
+        }
+        r -= 1;
+    }
+    None
 }
 
 #[cfg(test)]
@@ -2277,8 +2342,12 @@ pub(crate) fn ast_expected(
             | "primary_constructor" => {
                 // A `constructor(` keyword on its own line below the class
                 // row (`class C\n    @X\n    constructor(...)`) sits one
-                // level deeper than the class row (oracle).
-                if trimmed.starts_with("constructor(") {
+                // level deeper than the class row (oracle) — ktlint_official
+                // style only; under android_studio it stays at the class row
+                // (kataris StoryEditorDiscardGuard, oracle clean).
+                if trimmed.starts_with("constructor(")
+                    && CODE_STYLE.with(|c| c.get()) == CodeStyle::KtlintOfficial
+                {
                     if let Some(cd) = chain.iter().find(|n| n.kind() == "class_declaration") {
                         if cd.start_position().row < row {
                             return ast_expected(tree, src, cd.start_position().row, is)
@@ -2702,6 +2771,14 @@ pub(crate) fn ast_expected(
                 // An `else` row continues the if-expression at the if's own
                 // level (`val url = if (…) "a"\n    else "b"`).
                 if c.start_position().row != row && trimmed.starts_with("else") {
+                    return ast_expected(tree, src, c.start_position().row, is);
+                }
+                // A `)` closing an inline `if (…) {` aligns with the if's own
+                // row — even when the if ends a `= expr - if (` continuation
+                // line (kataris: `fun f() = x - if (\n    cond\n) {` — the `)`
+                // and body sit at the top-level function indent, NOT the
+                // expression-continuation level).
+                if c.start_position().row != row && trimmed.starts_with(')') {
                     return ast_expected(tree, src, c.start_position().row, is);
                 }
             }
