@@ -918,8 +918,7 @@ pub(crate) fn compute_line_expected(
         // constructor(`) is ktlint_official behavior — under
         // android_studio the annotation and constructor stay at the class
         // row (kataris StoryEditorDiscardGuard, oracle clean).
-        let official_style =
-            CODE_STYLE.with(|c| c.get()) == CodeStyle::KtlintOfficial;
+        let official_style = CODE_STYLE.with(|c| c.get()) == CodeStyle::KtlintOfficial;
         if class_annotation_pending
             && official_style
             && (t.starts_with('@') || t.starts_with("constructor"))
@@ -1306,35 +1305,35 @@ pub(crate) fn compute_line_expected(
                     if comparison_end {
                         e = e.max(prev_expected);
                     } else {
-                    let wrapped_return_type = prev_last_code == Some('=')
-                        && prev_expected > depth * is
-                        && i > 1
-                        && lines[i - 2].trim_end().ends_with(':');
-                    let mut want = prev_expected.saturating_add(is);
-                    // A named-argument RHS inside a paren list
-                    // (`NiaGradientBackground(\n    gradientColors =\n
-                    //        if (...) {`) sits one level under the argument
-                    // row, not under the list's opener.
-                    if let Some(&(list, _, _)) = paren_expected.last() {
-                        want = want.max(list.saturating_add(is));
-                    }
-                    let want = if wrapped_return_type {
-                        // The `=` sits on a continuation line itself
-                        // (wrapped return type: `fun name():\n    Type =\n
-                        //    body`): the body sits at the `=` line's own
-                        // level (oracle-verified: `when (this) {` at 4, not
-                        // declaration level 0). The extra `:` guard keeps an
-                        // ordinary `val x =` inside a lambda body (whose
-                        // prev_expected is also deeper than the brace depth)
-                        // from being mistaken for one.
-                        prev_expected
-                    } else {
-                        want
-                    };
+                        let wrapped_return_type = prev_last_code == Some('=')
+                            && prev_expected > depth * is
+                            && i > 1
+                            && lines[i - 2].trim_end().ends_with(':');
+                        let mut want = prev_expected.saturating_add(is);
+                        // A named-argument RHS inside a paren list
+                        // (`NiaGradientBackground(\n    gradientColors =\n
+                        //        if (...) {`) sits one level under the argument
+                        // row, not under the list's opener.
+                        if let Some(&(list, _, _)) = paren_expected.last() {
+                            want = want.max(list.saturating_add(is));
+                        }
+                        let want = if wrapped_return_type {
+                            // The `=` sits on a continuation line itself
+                            // (wrapped return type: `fun name():\n    Type =\n
+                            //    body`): the body sits at the `=` line's own
+                            // level (oracle-verified: `when (this) {` at 4, not
+                            // declaration level 0). The extra `:` guard keeps an
+                            // ordinary `val x =` inside a lambda body (whose
+                            // prev_expected is also deeper than the brace depth)
+                            // from being mistaken for one.
+                            prev_expected
+                        } else {
+                            want
+                        };
 
-                    if want > e {
-                        e = want;
-                    }
+                        if want > e {
+                            e = want;
+                        }
                     }
                 }
             }
@@ -1434,6 +1433,9 @@ pub(crate) fn compute_line_expected(
         if !t.trim_end().ends_with(')') {
             prev_paren_close_chain = false;
         }
+        if std::env::var("KTLINT_RS_INDENT_DBG").is_ok() {
+            eprintln!("[sc] row {} e={} depth={} paren={} arrow_d={:?} prev_last={:?} prev_expected={} t={:?}", i + 1, e, depth, paren_depth, arrow_body_depth, prev_last_code, prev_expected, &t[..t.len().min(28)]);
+        }
         out[i] = e;
         if arrow_body_depth.is_some_and(|d| depth < d) {
             arrow_body_depth = None;
@@ -1479,7 +1481,6 @@ pub(crate) fn compute_line_expected(
     }
     out
 }
-
 
 /// When `open` is the `{` row of a class body that sits on a
 /// supertype-continuation row (class Foo(...) : + PopupPositionProvider {),
@@ -2284,9 +2285,11 @@ pub(crate) fn ast_expected(
     if trimmed.starts_with("?:") && row > 0 {
         let prev_line = src.lines().nth(row - 1).map(|l| l.trim()).unwrap_or("");
         // After a `?.` chain continuation the elvis stays on the chain's
-        // own level (`?.filter\n    ?: emptyList()`). After an expression
-        // first row (`= expr\n    ?: throw …`) it sits one level deeper
-        // than the statement's first row.
+        // own level (`?.filter\n    ?: emptyList()`). After a chain
+        // lambda's closing brace (`?.let { … }\n    ?: default()`) it stays
+        // at the brace row's level too (kataris StoryEditorStoryUi). After
+        // an expression first row (`= expr\n    ?: throw …`) it sits one
+        // level deeper than the statement's first row.
         if prev_line.starts_with("?.") || prev_line.starts_with("?:") {
             return ast_expected(tree, src, row - 1, is);
         }
@@ -2300,11 +2303,20 @@ pub(crate) fn ast_expected(
                         | "return_statement"
                         | "assignment_expression"
                         | "function_declaration"
+                        | "getter"
                 ) && n.start_position().row < row
             })
             .map(|n| n.start_position().row)
             .max()
             .unwrap_or(row - 1);
+        if std::env::var("KTLINT_RS_INDENT_DBG").is_ok() {
+            eprintln!(
+                "[elvis] row {} stmt_row={} prev={:?}",
+                row + 1,
+                stmt_row + 1,
+                prev_line
+            );
+        }
         return ast_expected(tree, src, stmt_row, is).map(|e| e + is);
     }
     for c in &chain {
