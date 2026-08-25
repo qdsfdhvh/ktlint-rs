@@ -139,7 +139,15 @@ fn check_annotation(node: &tree_sitter::Node, bytes: &[u8], violations: &mut Vec
         i += 1;
     }
 
-    if prev_was_code && !in_params && !is_inline_type_annotation && !indented_annotation_group {
+    if prev_was_code
+        && !in_params
+        && !is_inline_type_annotation
+        && !indented_annotation_group
+        // `class Foo @Inject constructor(` — an annotation between the
+        // class name and its primary constructor is legal (Metro/
+        // Dagger style); ktlint 1.8 stays silent (kataris corpus).
+        && !annotates_constructor
+    {
         violations.push(Violation {
             file: String::new(),
             line: pos.row + 1,
@@ -172,10 +180,17 @@ fn check_same_line_annotation_groups(source: &str, violations: &mut Vec<Violatio
         // The last annotation is followed on the same line by a declaration.
         // A primary `constructor` after the last annotation is always
         // separated (`@Inject constructor` -> `@Inject\nconstructor`, JVM
-        // 1.8); other declaration keywords only when at least two annotations
-        // share the line (`@A("x") @B val` — issue #168). A lone
-        // `@Composable fun` / `@Inject val` stays put.
-        let followed_by_decl = after_name.starts_with("constructor(")
+        // 1.8) — EXCEPT on a class header (`class Foo @Inject constructor(`),
+        // where the annotation modifies the primary constructor and stays on
+        // the header line (kataris corpus, oracle clean, issue #260); other
+        // declaration keywords only when at least two annotations share the
+        // line (`@A("x") @B val` — issue #168). A lone `@Composable fun` /
+        // `@Inject val` stays put.
+        let line_head = &line[..last_at];
+        let class_header = line_head.contains("class ")
+            || line_head.contains("interface ")
+            || line_head.contains("object ");
+        let followed_by_decl = (after_name.starts_with("constructor(") && !class_header)
             || (at_positions.len() >= 2
                 && (after_name.starts_with("val ")
                     || after_name.starts_with("var ")
@@ -271,5 +286,22 @@ mod tests {
         assert!(check("typealias Content = @Composable (String) -> Unit\n").is_empty());
         assert!(check("val callback: @Composable () -> Unit\n").is_empty());
         assert!(check("val email = \"reader@@example.com\"\n").is_empty());
+    }
+}
+
+#[cfg(test)]
+mod annotation_constructor_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+    fn check(s: &str) -> Vec<Violation> {
+        AnnotationSpacing.check(&KotlinParser::new().parse(s), s)
+    }
+
+    // Issue #260 / kataris: `class Foo @Inject internal constructor(` — the
+    // constructor annotation after the class name is legal.
+    #[test]
+    fn constructor_annotation_after_class_name_ok() {
+        let src = "public class StorySettingsViewModelImpl @AssistedInject internal constructor(\n    @Assisted private val playId: String,\n) {}\n";
+        assert!(check(src).is_empty());
     }
 }

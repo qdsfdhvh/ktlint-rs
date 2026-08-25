@@ -87,11 +87,94 @@ impl Rule for SpacingAroundSquareBrackets {
     fn id(&self) -> &'static str {
         "standard:square-brackets-spacing"
     }
-    fn check(&self, _t: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
+    fn check(&self, tree: &tree_sitter::Tree, s: &str) -> Vec<Violation> {
         let mut v = Vec::new();
+        // Issue #260: the line scan must not fire inside comments (KDoc
+        // prose quoting `[ … ]`) or string literals (a `[ ` / ` ]` inside
+        // a JSON-ish string). Collect the BYTE spans of comment and
+        // string-literal CST nodes and skip only the matches that fall
+        // inside them — a mixed row (`val s = "[ ]"; val x = a[ 0 ]`)
+        // still reports the real code brackets.
+        let mut protected: Vec<(usize, usize)> = Vec::new();
+        let mut stack = vec![tree.root_node()];
+        while let Some(node) = stack.pop() {
+            let kind = node.kind();
+            if kind.contains("comment") || kind.contains("string") {
+                protected.push((node.start_byte(), node.end_byte()));
+            }
+            let mut w = node.walk();
+            for c in node.children(&mut w) {
+                stack.push(c);
+            }
+        }
+        let in_protected = |pos: usize| protected.iter().any(|&(s, e)| pos >= s && pos < e);
+        // Escape-aware quote state: true when `pos` (relative to the line)
+        // falls inside a double-quoted string. tree-sitter-kotlin-sg splits
+        // ESCAPED strings (`"[ { \"a\": 1 } ]"`) into fragments, so the
+        // CST spans above do not cover the whole literal — the quote parity
+        // closes the gap without a line scan.
+        let in_string_at = |line: &str, pos: usize| {
+            // Byte-level scan: backslash escapes the next byte, a `"` toggles
+            // the string state, and a single-quoted CHAR literal (`'"'`)
+            // does not toggle it. Clamped to the line length.
+            let bytes = line.as_bytes();
+            let mut in_str = false;
+            let mut in_char = false;
+            let mut i = 0usize;
+            while i < pos.min(bytes.len()) {
+                match bytes[i] {
+                    b'\\' => i += 2,
+                    b'\'' if !in_str => {
+                        if in_char {
+                            in_char = false;
+                        } else if bytes.get(i + 1) != Some(&b'\\') {
+                            in_char = true;
+                        }
+                        i += 1;
+                    }
+                    b'"' if !in_char => {
+                        in_str = !in_str;
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
+            }
+            in_str
+        };
+        let mut line_offset = 0usize;
         for (i, l) in s.lines().enumerate() {
-            let t = l.trim();
-            if t.contains("[ ") || t.contains(" ]") {
+            let mut search_from = 0usize;
+            // Any `[ ` or ` ]` in the row whose bytes are outside a
+            // protected span AND outside a string literal is a code
+            // index/collection bracket. Find the EARLIEST of either
+            // pattern on each iteration.
+            let mut candidate = None;
+            loop {
+                let open = l[search_from..].find("[ ").map(|p| (p, "[ "));
+                let close = l[search_from..].find(" ]").map(|p| (p, " ]"));
+                let next = match (open, close) {
+                    (Some((a, _)), Some((b, _))) if a <= b => open,
+                    (Some(_), Some(_)) => close,
+                    (Some(x), None) => Some(x),
+                    (None, Some(x)) => Some(x),
+                    (None, None) => None,
+                };
+                let Some((rel, pat)) = next else { break };
+                let abs = line_offset + search_from + rel;
+                let rel_pos = search_from + rel;
+                // A `]` whose only whitespace before it is the row's
+                // leading indentation (`    ],` closing a multiline
+                // collection literal, `] ?:`/`] =` continuation rows) is
+                // NOT a "space inside square brackets" — oracle stays
+                // silent (kataris corpus).
+                let close_is_indent = pat == " ]" && l[..rel_pos].trim_start().is_empty();
+                if !in_protected(abs) && !in_string_at(l, rel_pos) && !close_is_indent {
+                    candidate = Some(abs);
+                    break;
+                }
+                search_from += rel + pat.len();
+            }
+            if candidate.is_some() {
                 v.push(Violation {
                     file: String::new(),
                     line: i + 1,
@@ -101,6 +184,7 @@ impl Rule for SpacingAroundSquareBrackets {
                     auto_fixable: true,
                 });
             }
+            line_offset += l.len() + 1;
         }
         v
     }
@@ -324,5 +408,81 @@ mod nullable_type_spacing_tests {
         let source = "fun String?.normalized() = trim()\n";
         let tree = KotlinParser::new().parse(source);
         assert!(NullableTypeSpacing.check(&tree, source).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod square_brackets_spacing_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    #[test]
+    fn reports_space_inside_index_brackets() {
+        let src = "fun f(a: List<Int>) { val x = a[ 0 ] }\n";
+        let tree = KotlinParser::new().parse(src);
+        assert!(!SpacingAroundSquareBrackets.check(&tree, src).is_empty());
+    }
+
+    // Issue #260: `[ … ]` inside KDoc prose or a string literal is not an
+    // index expression / collection literal — the line scan must skip rows
+    // spanned by comment and string-literal CST nodes.
+    #[test]
+    fn ignores_brackets_inside_kdoc_and_strings() {
+        let src = concat!(
+            "package com.example\n",
+            "\n",
+            "/**\n",
+            " * Doc comment quoting a JSON array: [ { \\\"origin\": \\\"string\" } ]\n",
+            " */\n",
+            "public class SquareBrackets {\n",
+            "    public fun value(): Int {\n",
+            "        val json = \"[ { a: 1 } ]\"\n",
+            "        return 1\n",
+            "    }\n",
+            "}\n",
+        );
+        let tree = KotlinParser::new().parse(src);
+        assert!(SpacingAroundSquareBrackets.check(&tree, src).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod square_brackets_char_literal_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    // Issue #260: a char literal `'"'` must not toggle the string-quote
+    // parity — a code `a[ 0 ]` on the same row still reports.
+    #[test]
+    fn char_literal_quote_does_not_hide_code_brackets() {
+        let src = "package com.example\n\nfun f() {\n    val q = '\"'\n    val x = a[ 0 ]\n    use(q, x)\n}\n";
+        let tree = KotlinParser::new().parse(src);
+        assert!(
+            !SpacingAroundSquareBrackets.check(&tree, src).is_empty(),
+            "a[ 0 ] after a char literal must report"
+        );
+    }
+}
+
+#[cfg(test)]
+mod square_brackets_indent_close_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    // kataris StoryCacheDatabase:12: a collection literal's closing `],` at
+    // the row's indentation is NOT a "space inside square brackets".
+    #[test]
+    fn indented_close_bracket_is_clean() {
+        let src = "package com.example\n\nval entities = listOf(\n    StoryEntryCacheEntity::class,\n    StoryCacheMetaEntity::class,\n],\nversion = 1\n";
+        let tree = KotlinParser::new().parse(src);
+        assert!(SpacingAroundSquareBrackets.check(&tree, src).is_empty());
+    }
+
+    // `] ?: fallback` / `] = page` continuation rows are clean too.
+    #[test]
+    fn close_bracket_continuation_rows_are_clean() {
+        let src = "package com.example\n\nval workPage = workGiftRankingPages[\n    StoryWorkGiftRankingPageKey(period = 1)\n] ?: StoryWorkGiftRankingPageState(isLoading = true)\n";
+        let tree = KotlinParser::new().parse(src);
+        assert!(SpacingAroundSquareBrackets.check(&tree, src).is_empty());
     }
 }

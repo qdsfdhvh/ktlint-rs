@@ -25,6 +25,13 @@ impl Rule for UnnecessaryParenBeforeLambda {
                 {
                     return false;
                 }
+                // `) : this() {` / `: super() {` — secondary-constructor
+                // delegation to the primary/super constructor followed by the
+                // class body (kataris ampli-basic.kt). The parens are required
+                // and the `{` is a block, not a trailing lambda.
+                if line.contains(": this() {") || line.contains(": super() {") {
+                    return false;
+                }
                 let paren_in_string = line
                     .find("() {")
                     .is_some_and(|pos| line[..pos].matches('"').count() % 2 == 1);
@@ -185,5 +192,28 @@ mod tests {
         assert!(c("// invoke() {\n").is_empty());
         assert!(c("val raw = \"\"\"invoke() {\"\"\"\n").is_empty());
         assert!(c("class Example : Base() {\n}\n").is_empty());
+    }
+}
+
+#[cfg(test)]
+mod unnecessary_paren_delegation_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn c(s: &str) -> Vec<Violation> {
+        let mut p = KotlinParser::new();
+        UnnecessaryParenBeforeLambda.check(&p.parse(s), s)
+    }
+
+    // Issue #260 / kataris: `) : this() {` is constructor delegation + class
+    // body, not a trailing lambda.
+    #[test]
+    fn constructor_delegation_not_flagged() {
+        let src = "class MessageSent private constructor() : BaseEvent() {\n    constructor(\n        playId: String,\n        isRegister: Boolean? = null\n    ) : this() {\n        this.eventType = \"message_sent\"\n    }\n}\n";
+        assert!(c(src).is_empty());
+        assert!(c(
+            "class X : Base() {\n    constructor(a: Int) : super() {\n        use(a)\n    }\n}\n"
+        )
+        .is_empty());
     }
 }

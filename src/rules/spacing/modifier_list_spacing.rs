@@ -83,10 +83,15 @@ impl Rule for ModifierListSpacing {
 }
 
 fn annotation_gap_message(gap: &str) -> Option<&'static str> {
+    // A comment between annotations (`@Test\n// note\n@Config`) makes the
+    // gap span rows — legal, never report it (kataris corpus).
+    if contains_comment(gap) {
+        return None;
+    }
     let newline_count = gap.bytes().filter(|byte| *byte == b'\n').count();
     if newline_count > 1 {
         Some("Single newline expected after annotation")
-    } else if newline_count == 1 || gap == " " || contains_comment(gap) {
+    } else if newline_count == 1 || gap == " " {
         None
     } else {
         Some("Single whitespace or newline expected after annotation")
@@ -107,6 +112,16 @@ fn modifier_children<'tree>(
         let Some(child) = modifiers.named_child(index) else {
             continue;
         };
+        // A mis-parsed comment token (a `// …` row whose apostrophe breaks
+        // the grammar — kataris `// Robolectric's …`) must not be re-spaced
+        // as a modifier.
+        if child.kind().contains("comment")
+            || source[child.start_byte()..child.end_byte()]
+                .trim_start()
+                .starts_with("//")
+        {
+            continue;
+        }
         // `constructor` is a declaration, not a modifier: `internal constructor`
         // is legal and must not be re-spaced by modifier-list-spacing.
         if child.kind() == "constructor"

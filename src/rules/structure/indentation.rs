@@ -774,6 +774,7 @@ pub(crate) fn compute_line_expected(
     let mut pending_pops = 0usize;
     let mut prev_last_code: Option<char> = None;
     let mut in_block_comment = false;
+    let mut row_in_block_comment = false;
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
     let mut prev_binary_cont = false;
@@ -914,7 +915,13 @@ pub(crate) fn compute_line_expected(
             last_code = Some(c);
         }
         let mut e = depth * is;
+        // The constructor-modifier lift (`class Foo\n    @Inject\n
+        // constructor(`) is ktlint_official behavior — under
+        // android_studio the annotation and constructor stay at the class
+        // row (kataris StoryEditorDiscardGuard, oracle clean).
+        let official_style = CODE_STYLE.with(|c| c.get()) == CodeStyle::KtlintOfficial;
         if class_annotation_pending
+            && official_style
             && (t.starts_with('@') || t.starts_with("constructor"))
             && !t.contains(" class ")
             && !t.contains(" fun ")
@@ -1032,7 +1039,12 @@ pub(crate) fn compute_line_expected(
             // expectation for standard blocks and fixes continuation
             // headers (`when (x) {` on a `=` line closes at the when row).
             if i == close && i > open && closest_close.map(|(_, c)| open > c).unwrap_or(true) {
-                closest_close = Some((open, close));
+                // A class body whose `{` sits on a supertype-continuation
+                // row (class Foo(...) : + PopupPositionProvider {) closes at
+                // the CLASS HEADER row (0), not the continuation row (4) —
+                // kataris KatTooltipPositionProvider.
+                let align_row = supertype_body_open_header(lines, open).unwrap_or(open);
+                closest_close = Some((align_row, close));
             }
         }
         if let Some((open, _)) = closest_close {
@@ -1058,10 +1070,24 @@ pub(crate) fn compute_line_expected(
                 // row's lifted level: rows after the body's `{` continue
                 // the body, not the list indent. A row after a trailing
                 // lambda with a comma (`) { darkTheme },`) is a new list
-                // argument — the list indent governs it.
+                // argument — the list indent governs it. Issue #261: a row
+                // after a `}` closing the arrow lambda (chain tail
+                // `.onSuccess { … }.onFailure { … }` + sibling statement)
+                // is a fresh statement — arrow_body_depth lingers (the
+                // chain tail's `}` does not drop depth below it), so
+                // exclude that row and fresh `val`/`var` declarations too.
                 if arrow_body_depth.is_some()
                     && prev_expected > e
+                    && !t.starts_with("val ")
+                    && !t.starts_with("var ")
+                    && !t.starts_with("if ")
+                    && !t.starts_with("for ")
+                    && !t.starts_with("while ")
+                    && !t.starts_with("when ")
+                    && !t.starts_with("return")
+                    && !lines[i - 1].trim().is_empty()
                     && !lines[i - 1].trim_end().ends_with(',')
+                    && !lines[i - 1].trim_end().ends_with('}')
                 {
                     e = prev_expected;
                 }
@@ -1165,11 +1191,25 @@ pub(crate) fn compute_line_expected(
                 } else if arrow_body_depth.is_some_and(|d| depth >= d)
                     && !t.starts_with('}')
                     && !t.starts_with(')')
+                    && !t.starts_with("val ")
+                    && !t.starts_with("var ")
+                    && !lines[i - 1].trim_end().ends_with('}')
+                    && !lines[i - 1].trim_end().ends_with(')')
                     && !matches!(prev_last_code, Some('{') | Some('=') | Some(':'))
                 {
                     // Rows inside the arrow lambda body keep the lifted level
                     // (`val selected`, `item(`, … after `val hasUnread`).
                     // Rows after `{`/`=`/`:` go to their own branches.
+                    // Issue #261: a row after a `}` that closes the arrow
+                    // lambda (a chain tail `.onSuccess { … }.onFailure { … }`
+                    // followed by a sibling statement) starts a fresh
+                    // statement — arrow_body_depth is cleared only when
+                    // depth drops below it, which the chain tail's `}` does
+                    // not (depth returns to the same level), so the sibling
+                    // was wrongly lifted to the lambda body level. A fresh
+                    // statement after a closed paren (`.padding(…)` chain
+                    // end) likewise stays at the lambda-body depth (kataris
+                    // TransactionHistoryScreen).
                     e = e.max(prev_expected);
                 } else if prev_last_code == Some('>') && lines[i - 1].trim_end().ends_with("->") {
                     // Lambda with a parameter list ending on its own line:
@@ -1253,36 +1293,48 @@ pub(crate) fn compute_line_expected(
                     // supertype colon, initializer/expression body): the
                     // opener's expectation + one level. prev_last_code is the
                     // previous line's last *code* char — a trailing comment
-                    // ending in `=`/`:` must not open a continuation.
-
-                    let wrapped_return_type = prev_last_code == Some('=')
-                        && prev_expected > depth * is
-                        && i > 1
-                        && lines[i - 2].trim_end().ends_with(':');
-                    let mut want = prev_expected.saturating_add(is);
-                    // A named-argument RHS inside a paren list
-                    // (`NiaGradientBackground(\n    gradientColors =\n
-                    //        if (...) {`) sits one level under the argument
-                    // row, not under the list's opener.
-                    if let Some(&(list, _, _)) = paren_expected.last() {
-                        want = want.max(list.saturating_add(is));
-                    }
-                    let want = if wrapped_return_type {
-                        // The `=` sits on a continuation line itself
-                        // (wrapped return type: `fun name():\n    Type =\n
-                        //    body`): the body sits at the `=` line's own
-                        // level (oracle-verified: `when (this) {` at 4, not
-                        // declaration level 0). The extra `:` guard keeps an
-                        // ordinary `val x =` inside a lambda body (whose
-                        // prev_expected is also deeper than the brace depth)
-                        // from being mistaken for one.
-                        prev_expected
+                    // ending in `=`/`:` must not open a continuation. A
+                    // COMPARISON operator ending (`<=`, `>=`, `==`, `!=`)
+                    // is a binary continuation, not an assignment — the
+                    // continuation row keeps the lifted level (oracle,
+                    // kataris `a && … <=\n    b`).
+                    let prev_t = lines[i - 1].trim_end();
+                    let comparison_end = prev_t.ends_with("<=")
+                        || prev_t.ends_with(">=")
+                        || prev_t.ends_with("==")
+                        || prev_t.ends_with("!=");
+                    if comparison_end {
+                        e = e.max(prev_expected);
                     } else {
-                        want
-                    };
+                        let wrapped_return_type = prev_last_code == Some('=')
+                            && prev_expected > depth * is
+                            && i > 1
+                            && lines[i - 2].trim_end().ends_with(':');
+                        let mut want = prev_expected.saturating_add(is);
+                        // A named-argument RHS inside a paren list
+                        // (`NiaGradientBackground(\n    gradientColors =\n
+                        //        if (...) {`) sits one level under the argument
+                        // row, not under the list's opener.
+                        if let Some(&(list, _, _)) = paren_expected.last() {
+                            want = want.max(list.saturating_add(is));
+                        }
+                        let want = if wrapped_return_type {
+                            // The `=` sits on a continuation line itself
+                            // (wrapped return type: `fun name():\n    Type =\n
+                            //    body`): the body sits at the `=` line's own
+                            // level (oracle-verified: `when (this) {` at 4, not
+                            // declaration level 0). The extra `:` guard keeps an
+                            // ordinary `val x =` inside a lambda body (whose
+                            // prev_expected is also deeper than the brace depth)
+                            // from being mistaken for one.
+                            prev_expected
+                        } else {
+                            want
+                        };
 
-                    if want > e {
-                        e = want;
+                        if want > e {
+                            e = want;
+                        }
                     }
                 }
             }
@@ -1315,7 +1367,7 @@ pub(crate) fn compute_line_expected(
         } else {
             ""
         };
-        let mut binary_cont = binary_operator_row(t, prev_code)
+        let mut binary_cont = (paren_depth == 0 && binary_operator_row(t, prev_code))
             || (paren_depth == 0 && t.starts_with('.') && prev_code.contains(" by "))
             || (arrow_body_depth.is_some()
                 && t.starts_with('.')
@@ -1334,7 +1386,10 @@ pub(crate) fn compute_line_expected(
             // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
             // level of the previous row; the first continuation lifts one
             // level above it (JVM oracle, issue #202).
-            let want = if prev_binary_cont {
+            // A chain that resumes after a closing brace (`}.toImmutableList()`
+            // on its own row — a `when { }.foo()` result) stays at the brace
+            // row's level, not one deeper (kataris CreatorStudioSections).
+            let want = if prev_binary_cont || prev_code.trim_end().ends_with('}') {
                 prev_expected
             } else {
                 prev_expected.saturating_add(is)
@@ -1375,7 +1430,25 @@ pub(crate) fn compute_line_expected(
             // level across the lambda tail.
             brace_chain_stack.push(binary_cont || !t.trim_start().starts_with(')'));
         }
-        prev_binary_cont = binary_cont;
+        // A comment row must not break a chain's continuation state: after
+        // `val x = Modifier\n    .align(…)\n    // note\n    .zIndex(…)`
+        // the `.zIndex` row keeps the chain level (kataris corpus, oracle
+        // silent). Comments set no chain state of their own.
+        // Same comment-row predicate as prev_last_code below: block and
+        // KDoc comments (`/*`, `/**`) must not break the chain state either
+        // (reviewer).
+        // Block/KDoc comment rows (opener, interior `* text`, and closer)
+        // must not break chain state (reviewer).
+        if t.contains("/*") {
+            row_in_block_comment = true;
+        }
+        let is_comment_row = row_in_block_comment || t.starts_with("//") || t.starts_with("/*");
+        if t.contains("*/") {
+            row_in_block_comment = false;
+        }
+        if !is_comment_row {
+            prev_binary_cont = binary_cont;
+        }
         if !t.trim_end().ends_with(')') {
             prev_paren_close_chain = false;
         }
@@ -1399,7 +1472,7 @@ pub(crate) fn compute_line_expected(
         if !t.is_empty() {
             prev_expected_code = e;
         }
-        let is_comment_row = t.starts_with("//") || t.starts_with("/*");
+        let is_comment_row = row_in_block_comment || t.starts_with("//") || t.starts_with("/*");
         if !is_comment_row {
             prev_last_code = last_code;
         }
@@ -1423,6 +1496,38 @@ pub(crate) fn compute_line_expected(
         }
     }
     out
+}
+
+/// When `open` is the `{` row of a class body that sits on a
+/// supertype-continuation row (class Foo(...) : + PopupPositionProvider {),
+/// return the class HEADER row so the closing `}` aligns with the class, not
+/// the continuation. None for every other block kind.
+fn supertype_body_open_header(lines: &[&str], open: usize) -> Option<usize> {
+    let opener = lines.get(open)?.trim();
+    if !opener.ends_with('{') || opener == "{" {
+        return None;
+    }
+    // The opener row starts with a supertype name (not `class`/`)`/`{`) —
+    // a continuation row that carries the class body's `{`.
+    if opener.starts_with(')') || class_like_decl_line(opener) {
+        return None;
+    }
+    let mut r = open.saturating_sub(1);
+    while r > 0 {
+        let tl = lines[r].trim();
+        if tl.is_empty() {
+            r -= 1;
+            continue;
+        }
+        if class_like_decl_line(tl) {
+            return Some(r);
+        }
+        if !(tl.ends_with(':') || tl.ends_with(',') || tl.ends_with(')') || tl.ends_with('(')) {
+            break;
+        }
+        r -= 1;
+    }
+    None
 }
 
 #[cfg(test)]
@@ -1908,6 +2013,87 @@ mod tests {
             v.iter().map(|x| (x.line, &x.message)).collect::<Vec<_>>()
         );
     }
+
+    // Issue #261: the statement after a multiline dot-chain inside a lambda
+    // (`repository.reset().onSuccess { … }.onFailure { … }` then
+    // `resetting = false`) is a sibling of the statement before the chain,
+    // not a continuation of the arrow lambda body. The chain tail's `}`
+    // closes the lambda without dropping the brace depth below
+    // arrow_body_depth, so both arrow-body lifts (the paren-list one and
+    // the general one) must exclude a row following a `}` and fresh
+    // `val`/`var` declarations. Also: a `->` when-entry arrow must not be
+    // classified as a `-` binary operator (kataris corpus).
+    #[test]
+    fn statement_after_dot_chain_lambda_tail_keeps_sibling_level() {
+        // Exact issue #261 repro: the multiline 3-param signature + the
+        // `@Composable (ExampleScope.() -> Unit)?` annotated parameter
+        // parens are part of the scan's paren structure — keep them.
+        let src = concat!(
+            "package com.example\n",
+            "\n",
+            "@Composable\n",
+            "fun ExampleScreen(\n",
+            "    modifier: Modifier = Modifier,\n",
+            "    contentDescription: String? = null,\n",
+            "    success: @Composable (ExampleScope.() -> Unit)? = null,\n",
+            ") {\n",
+            "    ExampleDialog(\n",
+            "        onConfirm = {\n",
+            "            confirming = false\n",
+            "            scope.launch {\n",
+            "                resetting = true\n",
+            "                repository.reset()\n",
+            "                    .onSuccess { done ->\n",
+            "                        if (done) {\n",
+            "                            notify()\n",
+            "                        } else {\n",
+            "                            status = \"none\"\n",
+            "                        }\n",
+            "                    }\n",
+            "                    .onFailure { error ->\n",
+            "                        status = error.message ?: \"failed\"\n",
+            "                    }\n",
+            "                resetting = false\n",
+            "            }\n",
+            "        },\n",
+            "    )\n",
+            "}\n",
+        );
+        let tree = KotlinParser::new().parse(src);
+        let elevated = find_allman_elevated_blocks(&tree, src);
+        let lines: Vec<&str> = src.lines().collect();
+        let scan = compute_line_expected(&lines, 4, &elevated);
+        // `resetting = false` (row 25) sits at launch-block depth (16); it
+        // must NOT be lifted to the arrow-lambda body level (20).
+        assert_eq!(scan[24], 16, "scan row 25: {:?}", &lines[24]);
+        assert_eq!(
+            scan[12], 16,
+            "resetting = true stays a sibling: {:?}",
+            &lines[12]
+        );
+        // Full rule check on the same shape must be clean at 16 (the
+        // tree-sitter parse of this shape is dirty, so this exercises the
+        // scan path end-to-end, matching the issue's lint report).
+        assert!(check(src, 4).is_empty());
+    }
+
+    // Issue #261/kataris: `A, B,\n    ->` when-entry arrow rows must keep
+    // their when-entry depth — the `->` must not read as a `-` operator.
+    #[test]
+    fn when_entry_arrow_not_a_binary_operator() {
+        let src = "package com.example\n\nfun f(kind: Int): String =\n    when (kind) {\n        Kind.APPEND,\n        Kind.DELTA,\n        ->\n            \"delta\"\n\n        Kind.WHOLE ->\n            \"whole\"\n    }\n";
+        let tree = KotlinParser::new().parse(src);
+        let elevated = find_allman_elevated_blocks(&tree, src);
+        let lines: Vec<&str> = src.lines().collect();
+        let scan = compute_line_expected(&lines, 4, &elevated);
+        assert_eq!(
+            scan[6], 8,
+            "-> row stays at when-entry depth: {:?}",
+            &lines[6]
+        );
+        assert_eq!(scan[7], 12, "entry body stays one deeper: {:?}", &lines[7]);
+        assert!(check(src, 4).is_empty());
+    }
 }
 
 /// AST-level expected indent (issue #202): for a code row, the first
@@ -2112,12 +2298,26 @@ pub(crate) fn ast_expected(
             None => break,
         }
     }
-    if trimmed.starts_with("?:") && row > 0 {
+    if (trimmed.starts_with("?:") || trimmed.starts_with("]")) && row > 0 {
         let prev_line = src.lines().nth(row - 1).map(|l| l.trim()).unwrap_or("");
+        // Issue #260/kataris: `foo[\n    key\n] ?: default` and a Room
+        // `entities = [\n    X::class,\n],` — a `]`-leading row aligns
+        // with its `[` opener (indexing or collection literal).
+        if trimmed.starts_with(']') {
+            let opener = chain
+                .iter()
+                .find(|n| n.kind() == "indexing_expression" || n.kind() == "value_arguments")
+                .map(|n| n.start_position().row);
+            if let Some(o) = opener {
+                return ast_expected(tree, src, o, is);
+            }
+        }
         // After a `?.` chain continuation the elvis stays on the chain's
-        // own level (`?.filter\n    ?: emptyList()`). After an expression
-        // first row (`= expr\n    ?: throw …`) it sits one level deeper
-        // than the statement's first row.
+        // own level (`?.filter\n    ?: emptyList()`). After a chain
+        // lambda's closing brace (`?.let { … }\n    ?: default()`) it stays
+        // at the brace row's level too (kataris StoryEditorStoryUi). After
+        // an expression first row (`= expr\n    ?: throw …`) it sits one
+        // level deeper than the statement's first row.
         if prev_line.starts_with("?.") || prev_line.starts_with("?:") {
             return ast_expected(tree, src, row - 1, is);
         }
@@ -2131,6 +2331,7 @@ pub(crate) fn ast_expected(
                         | "return_statement"
                         | "assignment_expression"
                         | "function_declaration"
+                        | "getter"
                 ) && n.start_position().row < row
             })
             .map(|n| n.start_position().row)
@@ -2176,8 +2377,12 @@ pub(crate) fn ast_expected(
             | "primary_constructor" => {
                 // A `constructor(` keyword on its own line below the class
                 // row (`class C\n    @X\n    constructor(...)`) sits one
-                // level deeper than the class row (oracle).
-                if trimmed.starts_with("constructor(") {
+                // level deeper than the class row (oracle) — ktlint_official
+                // style only; under android_studio it stays at the class row
+                // (kataris StoryEditorDiscardGuard, oracle clean).
+                if trimmed.starts_with("constructor(")
+                    && CODE_STYLE.with(|c| c.get()) == CodeStyle::KtlintOfficial
+                {
                     if let Some(cd) = chain.iter().find(|n| n.kind() == "class_declaration") {
                         if cd.start_position().row < row {
                             return ast_expected(tree, src, cd.start_position().row, is)
@@ -2265,6 +2470,31 @@ pub(crate) fn ast_expected(
                 // fires when the row starts a fresh operand (never a closer
                 // or a nested block row).
                 if c.start_position().row < row && binary_continuation_row(tree, src, row) {
+                    // Issue #260/kataris: a SECOND continuation row (`A &&\n
+                    //     B <\n    C` — both prior lines end in operators)
+                    // keeps the previous continuation level; only the FIRST
+                    // continuation lifts one level above the expression
+                    // start.
+                    let op_end = |t: &str| -> bool {
+                        let t = t.trim_end();
+                        if t.ends_with("->") || t.ends_with("<-") {
+                            return false;
+                        }
+                        [
+                            "&&", "||", "==", "!=", "<=", ">=", "??", "?:", "+", "-", "*", "/",
+                            "%", "<", ">",
+                        ]
+                        .iter()
+                        .any(|op| t.ends_with(op))
+                    };
+                    let prev = src.lines().nth(row.wrapping_sub(1)).unwrap_or("");
+                    let prev_prev = src.lines().nth(row.wrapping_sub(2)).unwrap_or("");
+                    let continuing = op_end(prev) && op_end(prev_prev);
+                    if continuing {
+                        // Keep the PREVIOUS row's level (a second
+                        // continuation stays level with the first).
+                        return ast_expected(tree, src, row - 1, is);
+                    }
                     return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
                 }
             }
@@ -2603,6 +2833,14 @@ pub(crate) fn ast_expected(
                 if c.start_position().row != row && trimmed.starts_with("else") {
                     return ast_expected(tree, src, c.start_position().row, is);
                 }
+                // A `)` closing an inline `if (…) {` aligns with the if's own
+                // row — even when the if ends a `= expr - if (` continuation
+                // line (kataris: `fun f() = x - if (\n    cond\n) {` — the `)`
+                // and body sit at the top-level function indent, NOT the
+                // expression-continuation level).
+                if c.start_position().row != row && trimmed.starts_with(')') {
+                    return ast_expected(tree, src, c.start_position().row, is);
+                }
             }
             "when_expression" | "for_statement" | "while_statement" | "do_while_statement" => {
                 if c.start_position().row != row {
@@ -2928,6 +3166,25 @@ fn binary_continuation_row(tree: &tree_sitter::Tree, src: &str, row: usize) -> b
     if line.trim_start().starts_with(')') || line.trim_start().starts_with('}') {
         return false;
     }
+    // Issue #260/kataris: a row that continues a comma-separated argument
+    // list (`StoryMapHash.of(node.id, SALT,\n    ROAD_BRANCH_PROBABILITY)`)
+    // is a parameter row, not a binary continuation — even when the
+    // enclosing statement also contains `&&`/`||` (the paren list sits
+    // inside the binary expression).
+    if row > 0 {
+        let prev = src
+            .lines()
+            .nth(row - 1)
+            .unwrap_or("")
+            .trim()
+            .split("//")
+            .next()
+            .unwrap_or("")
+            .trim_end();
+        if prev.ends_with(',') {
+            return false;
+        }
+    }
     let is_binary = |k: &str| {
         matches!(
             k,
@@ -3019,6 +3276,13 @@ fn next_code_row(lines: &[&str], row: usize) -> Option<usize> {
 /// one level. Excludes import wildcards (`libcurl.*`), postfix `++`/`--`,
 /// and reference operators (`::`) (issue #202).
 fn binary_operator_row(t: &str, prev_code: &str) -> bool {
+    // `->` (a when-entry arrow, lambda parameter arrow) is NOT a binary
+    // operator — it starts with `-` and would otherwise be classified as a
+    // `-` continuation, lifting a when entry's own `->` row one extra level
+    // (kataris corpus: `A, B,\n    ->` entries were re-indented by --format).
+    if t.trim_start().starts_with("->") || prev_code.trim_end().ends_with("->") {
+        return false;
+    }
     let starts = ["&&", "||", "==", "!=", "<=", ">=", "??", "?:", "+", "-"];
     let ends = [
         "&&", "||", "==", "!=", "<=", ">=", "??", "+", "-", "*", "/", "%",

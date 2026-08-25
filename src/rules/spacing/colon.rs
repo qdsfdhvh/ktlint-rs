@@ -64,7 +64,7 @@ impl ColonSpacing {
         cursor > 0 && bytes[cursor - 1] == b'@'
     }
 
-    fn requires_space_before(&self, node: &tree_sitter::Node) -> bool {
+    fn requires_space_before(&self, node: &tree_sitter::Node, bytes: &[u8]) -> bool {
         let Some(parent) = node.parent() else {
             return false;
         };
@@ -98,7 +98,53 @@ impl ColonSpacing {
             ) {
                 break;
             }
+            // A mis-parsed annotated function type (`@Composable (Type)?`)
+            // makes tree-sitter-kotlin-sg swallow the rest of the file into
+            // an `annotated_lambda`/ERROR subtree. A declaration header colon
+            // (`interface X : Y`) then no longer sits under a
+            // `class_declaration` — fall back to a lexical check of the line
+            // (oracle: `interface Foo : Bar` needs the space, issue #260).
+            if matches!(ancestor.kind(), "annotated_lambda" | "ERROR") {
+                return self.supertype_colon_lexical(node, bytes);
+            }
             current = ancestor.parent();
+        }
+        false
+    }
+
+    /// Lexical fallback for mangled trees: the colon is a supertype-list
+    /// colon when the same line before it reads `<kw> <Name>` with kw one of
+    /// class/interface/object/enum class/data object/annotation class.
+    fn supertype_colon_lexical(&self, node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+        let start_byte = node.start_byte();
+        let line_start = bytes[..start_byte]
+            .iter()
+            .rposition(|b| *b == b'\n')
+            .map_or(0, |i| i + 1);
+        let line = &bytes[line_start..start_byte];
+        let trimmed = std::str::from_utf8(line).unwrap_or("");
+        let trimmed = trimmed.trim_start();
+        for kw in [
+            "interface ",
+            "object ",
+            "enum class ",
+            "data object ",
+            "annotation class ",
+        ] {
+            if trimmed.starts_with(kw) {
+                let rest = &trimmed[kw.len()..];
+                // `<Name>` (or `` `Name` ``) may carry type parameters
+                // (`class Foo<T> : Bar`), so require an identifier start
+                // and no `{` before the colon.
+                let name_start = rest.trim_start();
+                let ident_ok = name_start
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '`');
+                if ident_ok && !trimmed.contains('{') {
+                    return true;
+                }
+            }
         }
         false
     }
@@ -138,7 +184,7 @@ impl ColonSpacing {
             return;
         }
 
-        let requires_space_before = self.requires_space_before(node);
+        let requires_space_before = self.requires_space_before(node, bytes);
         let line_start = bytes[..start_byte]
             .iter()
             .rposition(|byte| *byte == b'\n')

@@ -79,20 +79,41 @@ impl FunctionSignatureSpacing {
                         let eq_line_start = s[..eq.start_byte()].rfind('\n').map_or(0, |i| i + 1);
                         let eq_line_len = eq.end_byte() - eq_line_start;
                         let sig_multiline = s[func_start..eq.end_byte()].contains('\n');
+                        // For a multiline signature ktlint measures the
+                        // COLLAPSED single-line signature width (incl. indent)
+                        // for the body-fit check — a long signature
+                        // (`fun …().InputStatus?.toLiveInputStatus():\n    Type =`
+                        // collapses to 128 chars > max) leaves no room, so
+                        // the body is never merged (kataris DtoMapper:1683,
+                        // oracle silent). The old eq_line_len only measured
+                        // the `=` line, which wrongly merged.
+                        let collapsed_sig = self
+                            .collapsed_signature_len(
+                                &node,
+                                &params_node.unwrap_or(node),
+                                s.as_bytes(),
+                            )
+                            .unwrap_or(sig_len);
                         let remaining = if sig_multiline
                             || (has_params && (param_multiline || sig_len > max_length))
                         {
-                            max_length.saturating_sub(eq_line_len)
+                            max_length.saturating_sub(collapsed_sig)
                         } else {
                             max_length.saturating_sub(sig_len)
                         };
-                        // First line of body expression (no leading indent —
-                        // expression node starts at first code token).
+                        // First line of body expression INCLUDING its leading
+                        // indentation — ktlint measures `firstLineOfBodyExpression`
+                        // from the line start, so a deeply indented body
+                        // (kataris H1 shape: `fun …() =\n        assertEquals(`
+                        // with 8-space indent) exceeds the remaining width and
+                        // is never merged (oracle silent); a shallow body
+                        // (Q1 shape, 4-space indent) fits and merges.
                         let body_start = expr.start_byte();
                         let body_line_end = s[body_start..]
                             .find('\n')
                             .map_or(s.len(), |i| body_start + i);
-                        let first_line = &s[body_start..body_line_end];
+                        let body_line_start = s[..body_start].rfind('\n').map_or(0, |i| i + 1);
+                        let first_line = &s[body_line_start..body_line_end];
                         let first_line_len = first_line.len();
                         // Never merge an annotated expression body.
                         if first_line.trim_start().starts_with('@') {
@@ -250,8 +271,20 @@ impl FunctionSignatureSpacing {
         };
         let start = self.measure_start(node, bytes);
         let sig_len = eq.end_byte() - start;
-        if sig_len > self.max_length {
-            return; // signature alone too long — ktlint keeps it multiline
+        // Collapsed signature width (chars, incl. indent) — the same
+        // measurement ktlint uses. A multiline signature's byte span
+        // overcounts newlines/indentation (C1b: 131 bytes but 115 chars),
+        // which would wrongly keep ktlint's "Newline expected" report silent.
+        let collapsed_sig = self
+            .collapsed_signature_len(node, &params, bytes)
+            .unwrap_or(sig_len);
+        // ktlint 1.8 counts the ` = ` after the closing paren in its
+        // singleLineFunctionSignatureLength: 118+3 = 121 > max sends the
+        // signature to the FORCED-MULTILINE branch (no "Newline expected"
+        // report, kataris K1); 115+3 = 118 <= max takes the collapse branch
+        // where the body fit check applies (C1b reports).
+        if collapsed_sig.saturating_add(3) > self.max_length {
+            return;
         }
         let mut after_eq = false;
         let mut body_expr: Option<tree_sitter::Node> = None;
@@ -268,10 +301,45 @@ impl FunctionSignatureSpacing {
         let Some(body_expr) = body_expr else {
             return;
         };
-        // The expression body must span multiple lines — a single-line body
-        // is never reported, however long it is (oracle: 140-char single-line
-        // expression bodies stay untouched; a `= launch {\n…` body reports).
-        if body_expr.start_position().row == body_expr.end_position().row {
+        // Issue #259: under `ktlint_code_style = android_studio`, ktlint
+        // 1.8.0 stays silent on multiline expression bodies (`= flow {` /
+        // `= when {` / `= if {` …) when the collapsed signature plus the
+        // first line of the body still fits max_line_length (measured oracle
+        // matrix A/B/C/F/H/I/J/O2). It DOES report the same shape when the
+        // signature + ` = ` + first body line exceeds the limit (kataris
+        // C1b: 114-char signature + `CharacterRosterMessage(` = 140 > 120
+        // reports). ktlint_official reports all multiline bodies
+        // (multiline-expression-wrapping demands the newline).
+        let body_multiline = body_expr.start_position().row != body_expr.end_position().row;
+        if body_multiline && self.code_style == crate::config::CodeStyle::AndroidStudio {
+            // Collapsed signature (chars, incl. declaration indent) + the
+            // first line of the body expression, in characters — the same
+            // measurement ktlint uses (oracle: C1b 118-char collapsed
+            // signature + 23-char `CharacterRosterMessage(` = 143 > 120
+            // reports; A's short signature + `flow {` fits and stays
+            // silent). Multiline signatures collapse to their single-line
+            // width, matching ktlint's singleLineFunctionSignatureLength.
+            let collapsed = self
+                .collapsed_signature_len(node, &params, bytes)
+                .unwrap_or(sig_len);
+            let body_first_line_end = bytes[body_expr.start_byte()..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .map_or(bytes.len(), |i| body_expr.start_byte() + i);
+            let body_first_line_len =
+                std::str::from_utf8(&bytes[body_expr.start_byte()..body_first_line_end])
+                    .map(|t| t.chars().count())
+                    .unwrap_or(body_first_line_end - body_expr.start_byte());
+            let total = collapsed + body_first_line_len;
+            if total <= self.max_length {
+                return;
+            }
+        }
+        // A single-line body is never reported, however long it is
+        // (oracle: a `= launch {\n…` body reports; a single-line body keeps
+        // the signature on one line unless the oracle's own width rules
+        // fire elsewhere).
+        if !body_multiline {
             return;
         }
         // The first token of the body must share the `=` line — a body that
@@ -536,7 +604,22 @@ impl FunctionSignatureSpacing {
             }
             len
         };
-        indent_len + collapsed_len <= self.max_length
+        // Same expression-body threshold as signature_fits: ktlint 1.8 counts
+        // the ` = ` after `)`, so a collapsed signature of 118+ chars with an
+        // expression body is NOT collapsed (oracle K1/G117 boundary).
+        let expression_body = {
+            let line_end = bytes[byte..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .map_or(bytes.len(), |i| byte + i);
+            bytes[byte..line_end].iter().any(|&b| b == b'=')
+        };
+        let fit_max = if expression_body {
+            self.max_length.saturating_sub(3)
+        } else {
+            self.max_length
+        };
+        indent_len + collapsed_len <= fit_max
     }
 
     /// Whether the collapsed signature (from the first non-annotation
@@ -550,32 +633,97 @@ impl FunctionSignatureSpacing {
         params: &tree_sitter::Node,
         bytes: &[u8],
     ) -> bool {
-        let start = self.measure_start(node, bytes);
-        // Measure to the end of the closing-paren line: ` {`, `: Int {` etc.
-        // on that line count against max_line_length too (issue #188).
-        let end = {
+        let Some(collapsed) = self.collapsed_signature_len(node, params, bytes) else {
+            return false;
+        };
+        // The oracle's fit threshold for expression-body functions is
+        // tighter than for block bodies: the collapsed signature (incl.
+        // indent) must be <= max_line_length - 3 (the ` = ` after `)`),
+        // matching ktlint 1.8.0 — a 118-char collapsed signature with
+        // `= expr` is NOT collapsed (kataris K1 shape), a 117-char one is
+        // (G117). Block bodies collapse up to max_line_length itself
+        // (issue #195: 120 collapses, 121 stays).
+        let expression_body = {
             let byte = params.end_byte();
             let line_end = bytes[byte..]
                 .iter()
                 .position(|&b| b == b'\n')
                 .map_or(bytes.len(), |i| byte + i);
-            let mut e = line_end;
-            while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
-                e -= 1;
+            bytes[byte..line_end].iter().any(|&b| b == b'=')
+        };
+        let fit_max = if expression_body {
+            self.max_length.saturating_sub(3)
+        } else {
+            self.max_length
+        };
+        collapsed <= fit_max
+    }
+
+    /// Width in characters of the signature as a single collapsed line
+    /// (declaration indent + trimmed lines joined), measured from the first
+    /// non-annotation modifier token (or `fun`) to the closing-paren row,
+    /// stopping at an expression-body `=`. This is the same measurement
+    /// ktlint 1.8 uses for its collapse and body-fit decisions.
+    fn collapsed_signature_len(
+        &self,
+        node: &tree_sitter::Node,
+        params: &tree_sitter::Node,
+        bytes: &[u8],
+    ) -> Option<usize> {
+        let start = self.measure_start(node, bytes);
+        // Measure to the expression-body `=`, which may sit on a LATER line
+        // than the closing paren (`fun f():\n    ReturnType =\n    body` —
+        // kataris DtoMapper:1683). The return type rows are part of the
+        // signature and count toward its width. Without an `=` (block body)
+        // measure to the end of the closing-paren line: ` {`, `: Int {` etc.
+        // on that line count too (issue #188).
+        let end = {
+            let byte = params.end_byte();
+            // Bound the scan to this function's own end — a following
+            // property's `=` (`fun f();\nval x = …` interface shape) must
+            // not be read as this signature's body (reviewer).
+            let node_end = node.end_byte().min(bytes.len());
+            // First `=` after the closing paren (a block body `{` may also
+            // appear before it on the same line — then no `=` beyond).
+            let mut e = node_end;
+            let mut i = byte;
+            while i < node_end {
+                match bytes[i] {
+                    b'=' => {
+                        e = i;
+                        break;
+                    }
+                    b'\n' => {
+                        // A block body `{` on the closing-paren line ends the
+                        // signature before any later `=`.
+                        if bytes[byte..i].iter().any(|&b| b == b'{') {
+                            e = i;
+                            break;
+                        }
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
             }
-            // An expression body (`) : Int = expr`) must not count: the
-            // collapse decision covers the signature only (oracle).
-            if let Some(eq) = bytes[byte..e].iter().position(|&b| b == b'=') {
-                e = byte + eq;
+            // No `=` found: stop at the closing-paren line end, trimmed.
+            if e == node_end {
+                let line_end = bytes[byte..node_end]
+                    .iter()
+                    .position(|&b| b == b'\n')
+                    .map_or(node_end, |j| byte + j);
+                e = line_end;
+                while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
+                    e -= 1;
+                }
             }
             e
         };
         if end <= start {
-            return false;
+            return None;
         }
         let text = match std::str::from_utf8(&bytes[start..end]) {
             Ok(t) => t,
-            Err(_) => return false,
+            Err(_) => return None,
         };
         let decl_start = node.start_byte();
         let line_start = bytes[..decl_start]
@@ -600,7 +748,7 @@ impl FunctionSignatureSpacing {
             }
             len
         };
-        indent_len + collapsed_len <= self.max_length
+        Some(indent_len + collapsed_len)
     }
 
     /// Byte offset where the signature measurement starts: the first
@@ -750,22 +898,29 @@ impl Rule for KeywordSpacing {
             }
             // `catch`/`finally` on their own line after a `}` (Allman) —
             // oracle: "Unexpected newline before \"catch\"" at the keyword.
+            // `} finally {` with the keyword on the SAME line as the brace is
+            // legal (kataris corpus — ktlint 1.8 stays silent).
             if matches!(node.kind(), "catch" | "finally") {
                 let start = node.start_byte();
                 let line_start = s[..start].rfind('\n').map_or(0, |i| i + 1);
-                let prev_line_end = line_start.saturating_sub(1);
-                let prev_line_start = s[..prev_line_end].rfind('\n').map_or(0, |i| i + 1);
-                let prev_trimmed = s[prev_line_start..prev_line_end].trim();
-                if prev_trimmed.ends_with('}') {
-                    let pos = node.start_position();
-                    violations.push(Violation {
-                        file: String::new(),
-                        line: pos.row + 1,
-                        col: pos.column + 1,
-                        rule_id: self.id().into(),
-                        message: format!("Unexpected newline before \"{}\"", node.kind()),
-                        auto_fixable: true,
-                    });
+                // Same-line prefix before the keyword: `} finally` has `}`
+                // on this line — legal, skip.
+                let same_line_prefix = s[line_start..start].trim();
+                if same_line_prefix.is_empty() {
+                    let prev_line_end = line_start.saturating_sub(1);
+                    let prev_line_start = s[..prev_line_end].rfind('\n').map_or(0, |i| i + 1);
+                    let prev_trimmed = s[prev_line_start..prev_line_end].trim();
+                    if prev_trimmed.ends_with('}') {
+                        let pos = node.start_position();
+                        violations.push(Violation {
+                            file: String::new(),
+                            line: pos.row + 1,
+                            col: pos.column + 1,
+                            rule_id: self.id().into(),
+                            message: format!("Unexpected newline before \"{}\"", node.kind()),
+                            auto_fixable: true,
+                        });
+                    }
                 }
             }
             for index in (0..node.child_count()).rev() {
@@ -988,5 +1143,137 @@ mod tests {
         assert_eq!(fs.len(), 1);
         assert_eq!(fs[0].line, 4);
         assert_eq!(fs[0].col, 46);
+    }
+
+    // Issue #259: "Newline expected before expression body" is a
+    // ktlint_official-only report for multiline expression bodies
+    // (`= flow {` / `= when {` / `= if {`). Under android_studio ktlint
+    // 1.8.0 stays silent (verified oracle matrix A/B/C/F/H/I/J/O2).
+    // Single-line bodies keep the report under both styles (D/L/R).
+    #[test]
+    fn expr_body_newline_is_official_only_for_multiline_bodies() {
+        let flow = "package com.example\n\npublic interface SampleRepository {\n    public fun observeItems(): Flow<Result<List<Item>>> = flow {\n        emit(getItems())\n    }\n}\n";
+        let studio = fn_check(flow, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            studio.is_empty(),
+            "android_studio must stay silent on multiline flow body: {:?}",
+            studio.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
+        let official = fn_check(flow, crate::config::CodeStyle::KtlintOfficial);
+        assert!(
+            official
+                .iter()
+                .any(|x| x.message == "Newline expected before expression body"),
+            "ktlint_official must report: {:?}",
+            official.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
+
+        let when_body = "package com.example\n\npublic fun describe(kind: Int): String = when (kind) {\n    0 -> \"zero\"\n    else -> \"other\"\n}\n";
+        assert!(
+            fn_check(when_body, crate::config::CodeStyle::AndroidStudio).is_empty(),
+            "android_studio must stay silent on multiline when body"
+        );
+        assert!(
+            fn_check(when_body, crate::config::CodeStyle::KtlintOfficial)
+                .iter()
+                .any(|x| x.message == "Newline expected before expression body")
+        );
+
+        // Single-line bodies: ktlint-rs currently never reports them even
+        // when the line exceeds max_line_length (oracle D/L/R shapes do).
+        // Known gap in the MISSING-report direction (not a false positive),
+        // pre-existing, out of scope for #259 — recorded so the gate change
+        // here provably does not affect single-line behavior.
+        let long_single = "package com.example\n\npublic fun shortName(): Int = someFunctionCallWithAVeryLongArgumentList(firstArgument, secondArgument, thirdArgument, fourthArgument)\n";
+        let single = fn_check(long_single, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            !single
+                .iter()
+                .any(|x| x.message == "Newline expected before expression body"),
+            "single-line bodies stay unreported (known width gap, oracle reports)"
+        );
+    }
+}
+
+#[cfg(test)]
+mod keyword_finally_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn kc(source: &str) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(source);
+        KeywordSpacing.check(&tree, source)
+    }
+
+    // Issue #260 / kataris: `} finally {` on one line is legal; only the
+    // Allman `}\nfinally {` reports "Unexpected newline before finally".
+    #[test]
+    fn finally_same_line_ok_allman_bad() {
+        let same = "package com.example\n\nfun a() {\n    try {\n        run()\n    } finally {\n        cleanup()\n    }\n}\n";
+        assert!(kc(same).is_empty(), "same-line finally is legal");
+        let allman = "package com.example\n\nfun a() {\n    try {\n        run()\n    }\n    finally {\n        cleanup()\n    }\n}\n";
+        assert!(
+            kc(allman).iter().any(|x| x.message.contains("finally")),
+            "Allman finally must report"
+        );
+    }
+}
+
+#[cfg(test)]
+mod expr_body_collapse_boundary_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check_style(src: &str, style: crate::config::CodeStyle) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        FunctionSignatureSpacing::new(120, style).check(&tree, src)
+    }
+
+    // Issue #259 boundary: an expression-body signature whose collapsed
+    // width is 117 chars collapses (reports the parameter whitespace); 118
+    // does not (oracle G117 vs K1, verified against ktlint 1.8.0).
+    #[test]
+    fn expr_body_collapse_boundary_117_vs_118() {
+        // 117-char collapsed signature (in class, indent 4): fixed prefix
+        // 113 chars + a 4-char param type.
+        let fits = "package com.example\n\nclass T {\n    private fun serverMessage(\n        serverId: String,\n        speaker: CharacterRosterSpeaker,\n        text: SSSS,\n    ): CharacterRosterMessage = CharacterRosterMessage(\n        localId = serverId,\n    )\n}\n";
+        let v = check_style(fits, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            v.iter().any(|x| x.message.contains("opening parenthesis")),
+            "117-char collapsed signature must collapse: {:?}",
+            v.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
+        // 118-char collapsed signature — no collapse (5-char param type).
+        let too_long = "package com.example\n\nclass T {\n    private fun serverMessage(\n        serverId: String,\n        speaker: CharacterRosterSpeaker,\n        text: SSSSS,\n    ): CharacterRosterMessage = CharacterRosterMessage(\n        localId = serverId,\n    )\n}\n";
+        assert!(check_style(too_long, crate::config::CodeStyle::AndroidStudio).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod expr_body_single_param_fit_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check_style(src: &str, style: crate::config::CodeStyle) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        FunctionSignatureSpacing::new(120, style).check(&tree, src)
+    }
+
+    // kataris AuthViewModelImplTest:492: a SINGLE-parameter multiline list
+    // with an expression body whose collapsed signature (indent 8) is 121
+    // chars must NOT collapse (oracle G117/K1 boundary: expression body
+    // counts the ` = `, so the fit threshold is max-3 = 117).
+    #[test]
+    fn single_param_expr_body_not_collapsed_when_over_117() {
+        let src = "package com.example\n\nclass Outer {\n    class Auth {\n        override suspend fun getRecommendations(\n            selectedGenreIds: Set<String>,\n        ): Result<List<OnboardingRecommendation>> = Result.success(emptyList())\n    }\n}\n";
+        let v = check_style(src, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            v.iter().all(|x| !x.message.contains("opening parenthesis")),
+            "121-char collapsed expr-body signature must not collapse: {:?}",
+            v.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
     }
 }
