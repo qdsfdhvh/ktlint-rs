@@ -79,10 +79,24 @@ impl FunctionSignatureSpacing {
                         let eq_line_start = s[..eq.start_byte()].rfind('\n').map_or(0, |i| i + 1);
                         let eq_line_len = eq.end_byte() - eq_line_start;
                         let sig_multiline = s[func_start..eq.end_byte()].contains('\n');
+                        // For a multiline signature ktlint measures the
+                        // COLLAPSED single-line signature width (incl. indent)
+                        // for the body-fit check — a long signature
+                        // (`fun …().InputStatus?.toLiveInputStatus():\n    Type =`
+                        // collapses to 128 chars > max) leaves no room, so
+                        // the body is never merged (kataris DtoMapper:1683,
+                        // oracle silent). The old eq_line_len only measured
+                        // the `=` line, which wrongly merged.
+                        let collapsed_sig = self
+                            .collapsed_signature_len(&node, &params_node.unwrap_or(node), s.as_bytes())
+                            .unwrap_or(sig_len);
+                        if std::env::var("KTLINT_RS_BM_DBG").is_ok() {
+                            eprintln!("[bm] sig_multiline={} sig_len={} collapsed={} remaining_branch={}", sig_multiline, sig_len, collapsed_sig, sig_multiline || (has_params && (param_multiline || sig_len > max_length)));
+                        }
                         let remaining = if sig_multiline
                             || (has_params && (param_multiline || sig_len > max_length))
                         {
-                            max_length.saturating_sub(eq_line_len)
+                            max_length.saturating_sub(collapsed_sig)
                         } else {
                             max_length.saturating_sub(sig_len)
                         };
