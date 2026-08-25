@@ -103,7 +103,13 @@ impl ParenSpacing {
                 // is mis-parsed as an empty value_arguments by
                 // tree-sitter-kotlin-sg; the space before it is indentation,
                 // legal (kataris corpus, oracle clean).
-                || Self::grouping_paren_at_line_start(node, bytes));
+                || Self::grouping_paren_at_line_start(node, bytes)
+                // An inner function-type paren whose preceding token is NOT
+                // an identifier (`@Composable (Type?, () -> Unit) -> Unit` —
+                // the `, ()` and `(` of nested types) is a type paren, not a
+                // call argument list; the space is legal (oracle clean,
+                // kataris corpus). `foo (x)` has an identifier before `(`.
+                || Self::type_context_paren(node, bytes));
         if node
             .parent()
             .is_some_and(|p| matches!(p.kind(), "value_arguments" | "function_value_parameters"))
@@ -148,6 +154,23 @@ impl ParenSpacing {
         bytes[line_start..start]
             .iter()
             .all(|&b| b == b' ' || b == b'\t')
+    }
+
+    /// True when the character before the whitespace run before `(` is NOT
+    /// an identifier character — the paren belongs to a type or grouping
+    /// context (`@Composable (Type?, () -> Unit) -> Unit`: the `, ()` and
+    /// nested `(` are preceded by `,`/`(`/`?`). A call's `(` (`foo (x)`)
+    /// has an identifier before it and keeps the report.
+    fn type_context_paren(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+        let start = node.start_byte();
+        if start == 0 || bytes[start - 1] != b' ' {
+            return false;
+        }
+        let mut j = start - 1;
+        while j > 0 && (bytes[j - 1] == b' ' || bytes[j - 1] == b'\t') {
+            j -= 1;
+        }
+        j > 0 && !bytes[j - 1].is_ascii_alphanumeric() && bytes[j - 1] != b'_'
     }
 
     fn check_close_paren(
@@ -206,7 +229,9 @@ fn annotation_leading_empty_paren(node: &tree_sitter::Node, bytes: &[u8]) -> boo
         j -= 1;
     }
     let mut k = j;
-    while k > 0 && (bytes[k - 1].is_ascii_alphanumeric() || bytes[k - 1] == b'_') {
+    while k > 0
+        && (bytes[k - 1].is_ascii_alphanumeric() || bytes[k - 1] == b'_' || bytes[k - 1] == b'.')
+    {
         k -= 1;
     }
     let leading = if k > 0 && bytes[k - 1] == b'@' {
@@ -348,16 +373,53 @@ mod paren_annotation_negative_tests {
         }
     }
 
-    // The line-leading grouping exemption must not hide a real parameter
-    // list paren (`fun f\n    (x: Int)` shape).
+    // A line-leading paren after `fun f` is handled by
+    // spacing-between-function-name-and-opening-parenthesis in ktlint 1.8,
+    // NOT paren-spacing — so paren-spacing stays silent (oracle reports the
+    // other rule at 3:6).
     #[test]
-    fn line_leading_param_list_still_reports() {
+    fn line_leading_param_list_not_paren_spacing() {
         let src = "package com.example\n\nfun f\n    (x: Int) {\n    use(x)\n}\n";
         assert!(
-            check(src)
+            !check(src)
                 .iter()
                 .any(|x| x.message.contains("before \"(\"")),
-            "misparsed param list must report"
+            "oracle handles this via spacing-between-function-name"
+        );
+    }
+}
+
+#[cfg(test)]
+mod paren_type_shape_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ParenSpacing.check(&tree, src)
+    }
+
+    // kataris: `@X () -> Unit` and `@X (Type, () -> Unit) -> Unit` inside a
+    // parameter type — the type's parens are legal with a space before them.
+    #[test]
+    fn annotated_fn_type_parens_clean() {
+        let s1 = "package com.example\n\nprivate fun TestTheme(content: @androidx.compose.runtime.Composable () -> Unit) {\n}\n";
+        let v1 = check(s1);
+        assert!(
+            v1.is_empty(),
+            "empty () fn type: {:?}",
+            v1.iter()
+                .map(|x| (x.line, x.col, &x.message))
+                .collect::<Vec<_>>()
+        );
+        let s2 = "package com.example\n\nfun f(content: @Composable (KatarisPassCardState?, () -> Unit, () -> Unit) -> Unit) {\n}\n";
+        let v2 = check(s2);
+        assert!(
+            v2.is_empty(),
+            "multi-param fn type: {:?}",
+            v2.iter()
+                .map(|x| (x.line, x.col, &x.message))
+                .collect::<Vec<_>>()
         );
     }
 }

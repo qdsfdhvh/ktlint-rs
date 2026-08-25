@@ -29,6 +29,16 @@ impl Rule for GeneralWrapping {
                     report_after(node, bytes, source, '{', &mut violations);
                 }
             } else if node.kind() == "(" || node.kind() == ")" {
+                // A type-paren list (`@Composable (Type, () -> Unit) -> Unit`)
+                // mis-parses as value_arguments whose SPAN is multiline even
+                // though the type is single-line — the whole list must not be
+                // wrapping-checked.
+                let type_paren_list = node.parent().is_some_and(|p| {
+                    matches!(p.kind(), "value_arguments" | "function_value_parameters")
+                        && p.child(0).is_some_and(|open| {
+                            leading_type_token(&open, bytes) || type_context_paren(&open, bytes)
+                        })
+                });
                 let multiline = node.parent().is_some_and(|p| {
                     matches!(p.kind(), "value_arguments" | "function_value_parameters")
                         && p.start_position().row != p.end_position().row
@@ -49,8 +59,9 @@ impl Rule for GeneralWrapping {
                         // the arrow scan sees an empty list — fall back to the
                         // `@Name ` / `name: ` leading-token discriminator
                         // (kataris corpus, #260).
-                        || leading_type_token(&node, bytes));
-                if multiline && !paren_is_fn_type {
+                        || leading_type_token(&node, bytes)
+                        || type_context_paren(&node, bytes));
+                if multiline && !paren_is_fn_type && !type_paren_list {
                     if node.kind() == "(" {
                         report_after(node, bytes, source, '(', &mut violations);
                     } else {
@@ -67,7 +78,12 @@ impl Rule for GeneralWrapping {
                                         && c.end_position().row == node.start_position().row
                                 })
                             });
-                            if last_arg {
+                            // `})` — the paren closes a list whose last
+                            // content is a lambda (`withTransform({ … })`,
+                            // Compose graphics) — ktlint stays silent.
+                            let prev_is_brace =
+                                prev_nonws.and_then(|i| bytes.get(i)) == Some(&b'}');
+                            if last_arg && !prev_is_brace {
                                 // oracle reports at the char before `)`
                                 // (`beta: String)` -> 4:16).
                                 let col = prev_nonws
@@ -194,6 +210,12 @@ fn report_after(
         if delim == '{' && bytes.get(pos) == Some(&b'}') {
             return;
         }
+        // `({` — a paren list whose first content is a lambda (`withTransform({\n … })
+        // — Compose graphics API) needs no newline after `(`: the lambda is the
+        // only content, oracle stays silent (kataris corpus).
+        if delim == '(' && bytes.get(pos) == Some(&b'{') {
+            return;
+        }
         // Oracle reports at the delimiter itself: `{ x` → the `{` column.
         let line = source[..start].bytes().filter(|&b| b == b'\n').count() + 1;
         let line_start = source[..start].rfind('\n').map_or(0, |i| i + 1);
@@ -223,7 +245,9 @@ fn leading_type_token(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
         j -= 1;
     }
     let mut k = j;
-    while k > 0 && (bytes[k - 1].is_ascii_alphanumeric() || bytes[k - 1] == b'_') {
+    while k > 0
+        && (bytes[k - 1].is_ascii_alphanumeric() || bytes[k - 1] == b'_' || bytes[k - 1] == b'.')
+    {
         k -= 1;
     }
     let leading = if k > 0 && bytes[k - 1] == b'@' {
@@ -255,4 +279,19 @@ fn leading_type_token(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
         }
     }
     true
+}
+
+/// True when the character before the whitespace run before `(`/`)` is NOT
+/// an identifier — the paren is a type/grouping paren, not a call argument
+/// list (kataris `@Composable (Type?, () -> Unit) -> Unit`).
+fn type_context_paren(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+    let start = node.start_byte();
+    if start == 0 || bytes[start - 1] != b' ' {
+        return false;
+    }
+    let mut j = start - 1;
+    while j > 0 && (bytes[j - 1] == b' ' || bytes[j - 1] == b'\t') {
+        j -= 1;
+    }
+    j > 0 && !bytes[j - 1].is_ascii_alphanumeric() && bytes[j - 1] != b'_'
 }
