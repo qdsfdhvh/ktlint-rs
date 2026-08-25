@@ -448,7 +448,9 @@ mod paren_string_arg_tests {
         for arg in ["\"->\"", "\"reason: detail\"", "\"x -> y\""] {
             let src = format!("package com.example\n\n@Suppress ({arg})\nfun b() {{}}\n");
             assert!(
-                check(&src).iter().any(|x| x.message.contains("before \"(\"")),
+                check(&src)
+                    .iter()
+                    .any(|x| x.message.contains("before \"(\"")),
                 "must report for {arg}"
             );
         }

@@ -377,6 +377,7 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
     let mut j = node.start_byte();
     let mut in_line_comment = false;
     let mut block_depth = 0usize;
+    let mut in_char = false;
     let mut in_string = false;
     let mut in_raw_string = false;
     while j < i {
@@ -397,12 +398,23 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
             j += 1;
             continue;
         }
-        if !in_string && !in_raw_string && b == b'/' && j + 1 < i && bytes[j + 1] == b'*' {
+        if !in_string
+            && !in_raw_string
+            && !in_char
+            && b == b'/'
+            && j + 1 < i
+            && bytes[j + 1] == b'*'
+        {
             block_depth = 1;
             j += 2;
             continue;
         }
-        if !in_string && !in_raw_string {
+        if !in_string && !in_raw_string && !in_char {
+            if b == b'\'' {
+                in_char = true;
+                j += 1;
+                continue;
+            }
             if b == b'"' && j + 2 < i && bytes[j + 1] == b'"' && bytes[j + 2] == b'"' {
                 in_raw_string = true;
                 j += 3;
@@ -410,6 +422,20 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
             }
             if b == b'"' {
                 in_string = true;
+                j += 1;
+                continue;
+            }
+        } else if in_char {
+            if b == b'\\' {
+                j += 2;
+                continue;
+            }
+            if b == b'\'' {
+                in_char = false;
+                // Closing the character literal ends the argument — record
+                // it so a `"` inside (`'"'`) does not toggle string state
+                // (reviewer, round 5).
+                last = Some((j, b));
                 j += 1;
                 continue;
             }
@@ -441,12 +467,19 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
         }
         if b == b'\n' {
             in_line_comment = false;
-        } else if !in_string && !in_raw_string && b == b'/' && j + 1 < i && bytes[j + 1] == b'/' {
+        } else if !in_string
+            && !in_raw_string
+            && !in_char
+            && b == b'/'
+            && j + 1 < i
+            && bytes[j + 1] == b'/'
+        {
             in_line_comment = true;
         }
         if !in_line_comment
             && !in_string
             && !in_raw_string
+            && !in_char
             && b != b' '
             && b != b'\t'
             && b != b'\n'
@@ -769,8 +802,11 @@ mod tc_nested_comment_tests {
 
     fn check(src: &str) -> Vec<Violation> {
         let tree = KotlinParser::new().parse(src);
-        TrailingCommaOnDeclarationSite { require_trailing_comma: true, forbid_trailing_comma: false }
-            .check(&tree, src)
+        TrailingCommaOnDeclarationSite {
+            require_trailing_comma: true,
+            forbid_trailing_comma: false,
+        }
+        .check(&tree, src)
     }
 
     // Reviewer round 4: Kotlin block comments NEST — the trailing comma
@@ -779,5 +815,28 @@ mod tc_nested_comment_tests {
     fn nested_block_comment_keeps_trailing_comma() {
         let src = "package com.example\n\nfun f(\n    a: Int,\n    b: Int, /* outer /* inner */ explanation */\n) {\n    use(a, b)\n}\n";
         assert!(check(src).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod tc_char_literal_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        TrailingCommaOnDeclarationSite { require_trailing_comma: true, forbid_trailing_comma: false }
+            .check(&tree, src)
+    }
+
+    // Reviewer round 5: a character literal containing a double quote
+    // ('"') must not toggle the string state — the trailing comma after it
+    // stays visible.
+    #[test]
+    fn char_literal_with_quote_keeps_trailing_comma() {
+        let src = "package com.example\n\nenum class Quotes {\n    DOUBLE_QUOTE,\n    SINGLE_QUOTE,\n    ;\n    val q = '\"'\n}\n";
+        assert!(check(src).is_empty());
+        let src2 = "package com.example\n\nfun f(\n    a: Char = '\\'',\n    b: Char = '\"',\n) {\n    use(a, b)\n}\n";
+        assert!(check(src2).is_empty());
     }
 }
