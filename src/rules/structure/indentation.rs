@@ -2450,7 +2450,36 @@ pub(crate) fn ast_expected(
                 // fires when the row starts a fresh operand (never a closer
                 // or a nested block row).
                 if c.start_position().row < row && binary_continuation_row(tree, src, row) {
-                    return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
+                    // Issue #260/kataris: a SECOND continuation row (`A &&\n
+                    //     B <\n    C` — both prior lines end in operators)
+                    // keeps the previous continuation level; only the FIRST
+                    // continuation lifts one level above the expression
+                    // start.
+                    let op_end = |t: &str| -> bool {
+                        let t = t.trim_end();
+                        if t.ends_with("->") || t.ends_with("<-") {
+                            return false;
+                        }
+                        ["&&", "||", "==", "!=", "<=", ">=", "??", "?:", "+", "-", "*", "/", "%", "<", ">"]
+                            .iter()
+                            .any(|op| t.ends_with(op))
+                    };
+                    let prev = src
+                        .lines()
+                        .nth(row.wrapping_sub(1))
+                        .unwrap_or("");
+                    let prev_prev = src
+                        .lines()
+                        .nth(row.wrapping_sub(2))
+                        .unwrap_or("");
+                    let continuing = op_end(prev) && op_end(prev_prev);
+                    if continuing {
+                        // Keep the PREVIOUS row's level (a second
+                        // continuation stays level with the first).
+                        return ast_expected(tree, src, row - 1, is);
+                    }
+                    return ast_expected(tree, src, c.start_position().row, is)
+                        .map(|e| e + is);
                 }
             }
             "lambda_literal" => {
@@ -3120,6 +3149,25 @@ fn binary_continuation_row(tree: &tree_sitter::Tree, src: &str, row: usize) -> b
     };
     if line.trim_start().starts_with(')') || line.trim_start().starts_with('}') {
         return false;
+    }
+    // Issue #260/kataris: a row that continues a comma-separated argument
+    // list (`StoryMapHash.of(node.id, SALT,\n    ROAD_BRANCH_PROBABILITY)`)
+    // is a parameter row, not a binary continuation — even when the
+    // enclosing statement also contains `&&`/`||` (the paren list sits
+    // inside the binary expression).
+    if row > 0 {
+        let prev = src
+            .lines()
+            .nth(row - 1)
+            .unwrap_or("")
+            .trim()
+            .split("//")
+            .next()
+            .unwrap_or("")
+            .trim_end();
+        if prev.ends_with(',') {
+            return false;
+        }
     }
     let is_binary = |k: &str| {
         matches!(
