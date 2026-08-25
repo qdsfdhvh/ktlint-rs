@@ -28,6 +28,12 @@ impl Rule for ArgumentListWrapping {
                 && node
                     .parent()
                     .is_some_and(|p| matches!(p.kind(), "call_expression" | "call_suffix"))
+                // A function-TYPE paren mis-parsed as a call's value_arguments
+                // (`onDismissStarted: (() -> Unit)? = null`, `@Composable
+                // (Type) -> Unit`) is not an argument list — the opener's
+                // leading token is `@`, `name:`, or a non-identifier
+                // (kataris corpus, oracle clean).
+                && !type_paren_arguments(&node, bytes)
             {
                 self.check_list(&node, bytes, source, &mut violations);
             }
@@ -210,6 +216,60 @@ mod argument_list_cjk_width_tests {
     #[test]
     fn cjk_argument_not_byte_inflated() {
         let src = "package com.example\n\nfun preview() {\n    previewStory(\"sto_1\", \"身代わり婚のはずが、冷酷な黒竜様の狂おしい執着愛から逃げられません\", 187000)\n    use()\n}\n";
+        assert!(check(src).is_empty());
+    }
+}
+
+
+/// True when a mis-parsed `value_arguments` is actually a function TYPE
+/// paren: the opening `(` is preceded by `@Name`, `name:`, or a
+/// non-identifier character (type/grouping context) — not a call's callee.
+/// tree-sitter-kotlin-sg produces these for `onDismissStarted: (() -> Unit)?`
+/// and `content: @Composable (Type) -> Unit` parameter types (kataris
+/// corpus, oracle clean — argument-list-wrapping must not fire).
+fn type_paren_arguments(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
+    let Some(open) = node.children(&mut node.walk()).find(|c| c.kind() == "(") else {
+        return false;
+    };
+    let start = open.start_byte();
+    if start == 0 || bytes[start - 1] != b' ' {
+        return false;
+    }
+    let mut j = start - 1;
+    while j > 0 && (bytes[j - 1] == b' ' || bytes[j - 1] == b'\t') {
+        j -= 1;
+    }
+    let mut k = j;
+    while k > 0
+        && (bytes[k - 1].is_ascii_alphanumeric()
+            || bytes[k - 1] == b'_'
+            || bytes[k - 1] == b'.')
+    {
+        k -= 1;
+    }
+    if k > 0 && (bytes[k - 1] == b'@' || bytes[k - 1] == b':') {
+        return true;
+    }
+    // A non-identifier char before the space run (`= (`, `, (`, `((`).
+    j > 0 && !bytes[j - 1].is_ascii_alphanumeric() && bytes[j - 1] != b'_'
+}
+
+#[cfg(test)]
+mod argument_list_type_paren_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ArgumentListWrapping.check(&tree, src)
+    }
+
+    // Function-TYPE parameter parens mis-parsed as value_arguments
+    // (`onDismissStarted: (() -> Unit)? = null`) are not argument lists
+    // (oracle clean, kataris KatBottomSheet).
+    #[test]
+    fn fn_type_params_not_argument_lists() {
+        let src = "package com.example\n\nprivate fun sheet(\n    onDismissStarted: (() -> Unit)? = null,\n    content: @Composable KatBottomSheetScope.() -> Unit,\n) {\n    use(onDismissStarted, content)\n}\n";
         assert!(check(src).is_empty());
     }
 }

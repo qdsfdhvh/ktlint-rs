@@ -151,7 +151,42 @@ impl Rule for ParameterListWrapping {
                 // (`beta: String)` — issue #204).
                 if let Some(last) = params.last() {
                     if let Some(rp) = node.children(&mut node.walk()).find(|c| c.kind() == ")") {
-                        if rp.start_position().row == last.end_position().row {
+                        let bytes = source.as_bytes();
+                        let rp_start = rp.start_byte();
+                        // A mis-parsed zero-width `)` node (the annotated
+                        // function type inflates the parameter list) may not
+                        // sit on an actual `)` byte — ignore it.
+                        if bytes.get(rp_start) != Some(&b')') {
+                            continue;
+                        }
+                        // The type paren's `)` (`Modifier) -> Unit` inside an
+                        // annotated function type) is not the parameter list's
+                        // closing paren: a `->` after it identifies the type.
+                        let after_rp = source[rp_start + 1..]
+                            .trim_start()
+                            .starts_with("->");
+                        if after_rp {
+                            continue;
+                        }
+                        // A trailing lambda after `)`
+                        // (`remember(comment.id) { … }` — mis-parsed as a
+                        // function_value_parameters when an annotated function
+                        // TYPE corrupts the tree) is a call, not a parameter
+                        // list; `) {` is legal (oracle clean).
+                        let after_lambda = source[rp_start + 1..]
+                            .trim_start()
+                            .starts_with('{');
+                        if after_lambda {
+                            continue;
+                        }
+                        // The closing paren must physically share the line
+                        // with the last parameter (`beta: String)`): a paren on
+                        // its own row (`): DraftHandle {`) is legal even when
+                        // the mis-parsed type inflates the last parameter's
+                        // end row (kataris corpus, oracle clean).
+                        let physically_shared =
+                            rp_start > 0 && bytes[rp_start - 1] != b'\n';
+                        if physically_shared && rp.start_position().row == last.end_position().row {
                             let pos = rp.start_position();
                             violations.push(Violation {
                                 file: String::new(),
@@ -215,4 +250,24 @@ fn top_level_wrappable_operators(line: &str) -> Vec<(usize, usize)> {
         index += 1;
     }
     operators
+}
+
+#[cfg(test)]
+mod param_wrap_type_paren_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ParameterListWrapping.check(&tree, src)
+    }
+
+    // The annotated-function-type parameter inflates the last parameter's
+    // CST end row onto the closing-paren row; the paren on its own line is
+    // legal (oracle clean, kataris StoryEditorCastBehaviorTest.kt:877).
+    #[test]
+    fn closing_paren_on_own_line_after_fn_type_param_ok() {
+        let src = "package com.example\n\nprivate fun renderEditorPage(\n    character: CastUi,\n    page: @Composable (CastUi, (CastUi) -> Unit) -> Unit,\n): DraftHandle {\n    val handle = DraftHandle(character)\n    return handle\n}\n";
+        assert!(check(src).is_empty());
+    }
 }

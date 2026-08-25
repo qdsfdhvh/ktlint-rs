@@ -22,9 +22,41 @@ impl Rule for GeneralWrapping {
         let mut stack = vec![tree.root_node()];
         while let Some(node) = stack.pop() {
             if node.kind() == "{" {
-                let block = node
-                    .parent()
-                    .is_some_and(|p| matches!(p.kind(), "function_body" | "class_body"));
+                let block = node.parent().is_some_and(|p| match p.kind() {
+                    "class_body" => true,
+                    // A real function body belongs to a `fun` declaration; a
+                    // lambda mis-parsed as function_body (the annotated
+                    // function TYPE `((IntOffset) -> Unit)` corrupts the
+                    // parse — kataris StoryCommentRow `remember(comment.id) {
+                    // … }`) must not be newline-checked (oracle clean).
+                    // A real function body belongs to a `fun` declaration;
+                    // a lambda mis-parsed as function_body (the annotated
+                    // function TYPE corrupts the parse — kataris StoryCommentRow
+                    // `remember(comment.id) { … }` becomes a fake
+                    // function_declaration with no `fun` keyword) must not be
+                    // newline-checked (oracle clean).
+                    "function_body" => p.parent().is_some_and(|g| {
+                        if g.kind() != "function_declaration"
+                            || !source[g.start_byte()..].starts_with("fun")
+                        {
+                            return false;
+                        }
+                        // The parameter list must end with `)` right before
+                        // the body — an annotated function TYPE corrupts the
+                        // parse so the fake params swallow the body content
+                        // and never close (`… remember(comment.id)`), and the
+                        // lambda `{` becomes the function body (kataris
+                        // StoryCommentRow). A real `fun f(...) {` has a `)`.
+                        let params_ok = g
+                            .children(&mut g.walk())
+                            .find(|c| c.kind() == "function_value_parameters")
+                            .is_none_or(|params| {
+                                source[params.end_byte()..].trim_start().starts_with(')')
+                            });
+                        params_ok
+                    }),
+                    _ => false,
+                });
                 if block {
                     report_after(node, bytes, source, '{', &mut violations);
                 }
@@ -68,6 +100,26 @@ impl Rule for GeneralWrapping {
                         // `"b")` — a closing paren sharing the last
                         // argument's line (issue #204).
                         let start = node.start_byte();
+                        // A mis-parsed zero-width `)` node (annotated
+                        // function type inflates the list) may not sit on an
+                        // actual `)` byte — ignore it.
+                        if bytes.get(start) != Some(&b')') {
+                            continue;
+                        }
+                        // A type paren's `)` (`Modifier) -> Unit` inside an
+                        // annotated function type) is not a call list's
+                        // closing paren.
+                        if source[start + 1..].trim_start().starts_with("->") {
+                            continue;
+                        }
+                        // A trailing lambda after `)` (`remember(comment.id) {
+                        // … }` — mis-parsed value_arguments when an annotated
+                        // function TYPE corrupts the tree) is a call, not a
+                        // multiline argument list; `) {` is legal (oracle
+                        // clean, kataris StoryCommentRow).
+                        if source[start + 1..].trim_start().starts_with('{') {
+                            continue;
+                        }
                         if start > 0 && bytes[start - 1] != b'\n' {
                             let prev_nonws = bytes[..start]
                                 .iter()
@@ -210,6 +262,19 @@ fn report_after(
         if delim == '{' && bytes.get(pos) == Some(&b'}') {
             return;
         }
+        // A lambda ANYWHERE on the `(` opener row
+        // (`MessageAvatar(item, onClick = {\n … })`, `scaleClickable(onClick =
+        // {`, `withTransform({\n … }`) exempts the list — ktlint 1.8 keeps
+        // named-argument lambdas on the callee line, while a lambda-free
+        // multiline list (`fun interaction(alpha: String,\n …)`) still
+        // reports (oracle Interaction.kt).
+        if delim == '('
+            && bytes[start..line_end.min(bytes.len())]
+                .iter()
+                .any(|&b| b == b'{')
+        {
+            return;
+        }
         // `({` — a paren list whose first content is a lambda (`withTransform({\n … })
         // — Compose graphics API) needs no newline after `(`: the lambda is the
         // only content, oracle stays silent (kataris corpus).
@@ -294,4 +359,42 @@ fn type_context_paren(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
         j -= 1;
     }
     j > 0 && !bytes[j - 1].is_ascii_alphanumeric() && bytes[j - 1] != b'_'
+}
+
+#[cfg(test)]
+mod wrapping_type_paren_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        GeneralWrapping.check(&tree, src)
+    }
+
+    // A parameter typed as an annotated function type
+    // (`page: @Composable (CastUi, (CastUi) -> Unit) -> Unit,`) mis-parses
+    // the closing paren row; `): DraftHandle {` on its own line is legal
+    // (oracle clean, kataris StoryEditorCastBehaviorTest.kt:877).
+    #[test]
+    fn closing_paren_on_own_row_after_fn_type_param_ok() {
+        let src = "package com.example\n\nprivate fun renderEditorPage(\n    character: CastUi,\n    page: @Composable (CastUi, (CastUi) -> Unit) -> Unit,\n): DraftHandle {\n    val handle = DraftHandle(character)\n    return handle\n}\n";
+        assert!(check(src).is_empty());
+    }
+
+    // A named-argument lambda on the `(` row (`MessageAvatar(item, onClick =
+    // {\n … })`) stays on the callee line (oracle clean, kataris MessageRow).
+    #[test]
+    fn named_arg_lambda_on_opener_row_ok() {
+        let src = "package com.example\n\nfun f(item: String) {\n    MessageAvatar(item, onClick = {\n        onRead()\n        onMark()\n    })\n    use(item)\n}\n";
+        assert!(check(src).is_empty());
+    }
+
+    // A lambda mis-parsed as a function body (annotated function TYPE
+    // corrupts the tree — `remember(comment.id) { … }`) must not trigger
+    // "Missing newline after {" (oracle clean, kataris StoryCommentRow).
+    #[test]
+    fn lambda_misparsed_as_function_body_ok() {
+        let src = "package com.example\n\nfun f(\n    modifier: Modifier = Modifier,\n    content: @Composable ((IntOffset) -> Unit) -> Unit,\n) {\n    var actionMenuExpanded by remember(comment.id) { mutableStateOf(false) }\n    use(actionMenuExpanded)\n}\n";
+        assert!(check(src).is_empty());
+    }
 }
