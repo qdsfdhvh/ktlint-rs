@@ -774,6 +774,7 @@ pub(crate) fn compute_line_expected(
     let mut pending_pops = 0usize;
     let mut prev_last_code: Option<char> = None;
     let mut in_block_comment = false;
+    let mut row_in_block_comment = false;
     let mut block_depth = 0usize;
     let mut in_raw_string = false;
     let mut prev_binary_cont = false;
@@ -1436,7 +1437,15 @@ pub(crate) fn compute_line_expected(
         // Same comment-row predicate as prev_last_code below: block and
         // KDoc comments (`/*`, `/**`) must not break the chain state either
         // (reviewer).
-        let is_comment_row = t.starts_with("//") || t.starts_with("/*");
+        // Block/KDoc comment rows (opener, interior `* text`, and closer)
+        // must not break chain state (reviewer).
+        if t.contains("/*") {
+            row_in_block_comment = true;
+        }
+        let is_comment_row = row_in_block_comment || t.starts_with("//") || t.starts_with("/*");
+        if t.contains("*/") {
+            row_in_block_comment = false;
+        }
         if !is_comment_row {
             prev_binary_cont = binary_cont;
         }
@@ -1463,7 +1472,7 @@ pub(crate) fn compute_line_expected(
         if !t.is_empty() {
             prev_expected_code = e;
         }
-        let is_comment_row = t.starts_with("//") || t.starts_with("/*");
+        let is_comment_row = row_in_block_comment || t.starts_with("//") || t.starts_with("/*");
         if !is_comment_row {
             prev_last_code = last_code;
         }

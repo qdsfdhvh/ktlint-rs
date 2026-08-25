@@ -263,8 +263,9 @@ fn annotation_leading_empty_paren(node: &tree_sitter::Node, bytes: &[u8]) -> boo
                 &bytes[start_byte.saturating_add(1)..content_end.min(bytes.len())],
             )
             .unwrap_or("");
-            let param_colon = content.contains(": ") && !content.contains("::");
-            let arrow_in_content = content.contains("->");
+            let (param_colon, arrow_in_content, has_dc) =
+                crate::rules::fn_type_content_markers(content);
+            let param_colon = param_colon && !has_dc;
             // A return arrow IMMEDIATELY after the misparsed list
             // (`(Type) -> Unit`) identifies a function type even when the
             // list kept a bare type name (`StoryDetailSectionState`). The
@@ -280,8 +281,7 @@ fn annotation_leading_empty_paren(node: &tree_sitter::Node, bytes: &[u8]) -> boo
             if p + 1 < bytes.len() && bytes[p] == b'-' && bytes[p + 1] == b'>' {
                 arrow_after = true;
             }
-            let type_like =
-                !content.contains("::") && (param_colon || arrow_in_content || arrow_after);
+            let type_like = !has_dc && (param_colon || arrow_in_content || arrow_after);
             if !type_like {
                 return false;
             }
@@ -428,5 +428,29 @@ mod paren_type_shape_tests {
                 .map(|x| (x.line, x.col, &x.message))
                 .collect::<Vec<_>>()
         );
+    }
+}
+
+#[cfg(test)]
+mod paren_string_arg_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ParenSpacing.check(&tree, src)
+    }
+
+    // Reviewer round 4: `->` and `: ` inside annotation STRING arguments
+    // must not be read as function-type markers — these are genuine calls.
+    #[test]
+    fn suppress_with_arrow_or_colon_strings_report() {
+        for arg in ["\"->\"", "\"reason: detail\"", "\"x -> y\""] {
+            let src = format!("package com.example\n\n@Suppress ({arg})\nfun b() {{}}\n");
+            assert!(
+                check(&src).iter().any(|x| x.message.contains("before \"(\"")),
+                "must report for {arg}"
+            );
+        }
     }
 }

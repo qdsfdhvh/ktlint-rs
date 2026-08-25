@@ -338,8 +338,9 @@ fn leading_type_token(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
             let content =
                 std::str::from_utf8(&bytes[start.saturating_add(1)..content_end.min(bytes.len())])
                     .unwrap_or("");
-            let param_colon = content.contains(": ") && !content.contains("::");
-            let arrow_in_content = content.contains("->");
+            let (param_colon, arrow_in_content, has_dc) =
+                crate::rules::fn_type_content_markers(content);
+            let param_colon = param_colon && !has_dc;
             let after_end = content_end.min(bytes.len());
             let mut arrow_after = false;
             let mut p = after_end;
@@ -349,8 +350,7 @@ fn leading_type_token(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
             if p + 1 < bytes.len() && bytes[p] == b'-' && bytes[p + 1] == b'>' {
                 arrow_after = true;
             }
-            let type_like =
-                !content.contains("::") && (param_colon || arrow_in_content || arrow_after);
+            let type_like = !has_dc && (param_colon || arrow_in_content || arrow_after);
             if !type_like {
                 return false;
             }

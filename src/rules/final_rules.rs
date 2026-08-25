@@ -376,14 +376,21 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
     let mut last = None;
     let mut j = node.start_byte();
     let mut in_line_comment = false;
-    let mut in_block_comment = false;
+    let mut block_depth = 0usize;
     let mut in_string = false;
     let mut in_raw_string = false;
     while j < i {
         let b = bytes[j];
-        if in_block_comment {
+        if block_depth > 0 {
+            // Kotlin block comments NEST — track a depth, not a boolean
+            // (reviewer: `/* outer /* inner */ … */`).
+            if b == b'/' && j + 1 < i && bytes[j + 1] == b'*' {
+                block_depth += 1;
+                j += 2;
+                continue;
+            }
             if b == b'*' && j + 1 < i && bytes[j + 1] == b'/' {
-                in_block_comment = false;
+                block_depth -= 1;
                 j += 2;
                 continue;
             }
@@ -391,7 +398,7 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
             continue;
         }
         if !in_string && !in_raw_string && b == b'/' && j + 1 < i && bytes[j + 1] == b'*' {
-            in_block_comment = true;
+            block_depth = 1;
             j += 2;
             continue;
         }
@@ -752,5 +759,25 @@ mod trailing_comma_regression_tests {
                 .any(|x| x.message.contains("Missing trailing comma")),
             "decl list without trailing comma must report"
         );
+    }
+}
+
+#[cfg(test)]
+mod tc_nested_comment_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        TrailingCommaOnDeclarationSite { require_trailing_comma: true, forbid_trailing_comma: false }
+            .check(&tree, src)
+    }
+
+    // Reviewer round 4: Kotlin block comments NEST — the trailing comma
+    // after `arg, /* outer /* inner */ … */` must still be found.
+    #[test]
+    fn nested_block_comment_keeps_trailing_comma() {
+        let src = "package com.example\n\nfun f(\n    a: Int,\n    b: Int, /* outer /* inner */ explanation */\n) {\n    use(a, b)\n}\n";
+        assert!(check(src).is_empty());
     }
 }

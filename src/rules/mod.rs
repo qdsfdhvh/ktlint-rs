@@ -106,16 +106,183 @@ pub(crate) fn paren_content_has_top_level_arrow(node: &tree_sitter::Node, source
     }
     let text = &source[start..end.min(source.len())];
     let mut depth: i32 = 0;
+    let mut in_str = false;
+    let mut in_char = false;
+    let mut in_raw = false;
+    let mut in_line_comment = false;
+    let mut block_depth = 0usize;
     let mut chars = text.chars().peekable();
     while let Some(c) = chars.next() {
-        match c {
-            '(' | '[' | '{' => depth += 1,
-            ')' | ']' | '}' => depth -= 1,
-            '-' if depth == 0 && chars.peek() == Some(&'>') => return true,
-            _ => {}
+        if in_line_comment {
+            if c == '\n' {
+                in_line_comment = false;
+            }
+            continue;
+        }
+        if block_depth > 0 {
+            if c == '/' && chars.peek() == Some(&'*') {
+                block_depth += 1;
+                chars.next();
+            } else if c == '*' && chars.peek() == Some(&'/') {
+                block_depth -= 1;
+                chars.next();
+            }
+            continue;
+        }
+        if !in_str && !in_raw && !in_char {
+            if c == '/' && chars.peek() == Some(&'/') {
+                in_line_comment = true;
+                continue;
+            }
+            if c == '/' && chars.peek() == Some(&'*') {
+                block_depth = 1;
+                chars.next();
+                continue;
+            }
+            if c == '\'' {
+                in_char = true;
+                continue;
+            }
+            if c == '"' && chars.peek() == Some(&'"') {
+                let mut c2 = chars.clone();
+                c2.next();
+                if c2.peek() == Some(&'"') {
+                    in_raw = true;
+                    chars.next();
+                    chars.next();
+                    continue;
+                }
+            }
+            if c == '"' {
+                in_str = true;
+                continue;
+            }
+            match c {
+                '(' | '[' | '{' => depth += 1,
+                ')' | ']' | '}' => depth -= 1,
+                '-' if depth == 0 && chars.peek() == Some(&'>') => return true,
+                _ => {}
+            }
+        } else if in_str {
+            if c == '\\' {
+                chars.next();
+            } else if c == '"' {
+                in_str = false;
+            }
+        } else if in_char {
+            if c == '\\' {
+                chars.next();
+            } else if c == '\'' {
+                in_char = false;
+            }
+        } else if in_raw && c == '"' && chars.peek() == Some(&'"') {
+            let mut c2 = chars.clone();
+            c2.next();
+            if c2.peek() == Some(&'"') {
+                in_raw = false;
+                chars.next();
+                chars.next();
+            }
         }
     }
     false
+}
+
+/// String/comment-aware scan of a misparsed list's content: does it contain
+/// a function-type marker (`: ` typed-param, `->` arrow, `::` reference)
+/// OUTSIDE strings/char-literals/comments? A genuine annotation call
+/// (`@Suppress ("reason: detail")`, `@Suppress ("->")`) has those tokens
+/// inside a string and must not be exempted (reviewer, #260).
+pub(crate) fn fn_type_content_markers(content: &str) -> (bool, bool, bool) {
+    let mut param_colon = false;
+    let mut arrow = false;
+    let mut double_colon = false;
+    let mut in_str = false;
+    let mut in_char = false;
+    let mut in_raw = false;
+    let mut block = 0usize;
+    let mut chars = content.chars().peekable();
+    while let Some(c) = chars.next() {
+        if block > 0 {
+            if c == '/' && chars.peek() == Some(&'*') {
+                block += 1;
+                chars.next();
+            } else if c == '*' && chars.peek() == Some(&'/') {
+                block -= 1;
+                chars.next();
+            }
+            continue;
+        }
+        if !in_str && !in_raw && !in_char {
+            if c == '/' && chars.peek() == Some(&'/') {
+                while let Some(n) = chars.next() {
+                    if n == '\n' {
+                        break;
+                    }
+                }
+                continue;
+            }
+            if c == '/' && chars.peek() == Some(&'*') {
+                block = 1;
+                chars.next();
+                continue;
+            }
+            if c == '\'' {
+                in_char = true;
+                continue;
+            }
+            if c == '"' && chars.peek() == Some(&'"') {
+                let mut c2 = chars.clone();
+                c2.next();
+                if c2.peek() == Some(&'"') {
+                    in_raw = true;
+                    chars.next();
+                    chars.next();
+                    continue;
+                }
+            }
+            if c == '"' {
+                in_str = true;
+                continue;
+            }
+            match c {
+                ':' => {
+                    if chars.peek() == Some(&':') {
+                        double_colon = true;
+                        chars.next();
+                    } else if chars.peek() == Some(&' ') {
+                        param_colon = true;
+                    }
+                }
+                '-' if chars.peek() == Some(&'>') => {
+                    arrow = true;
+                    chars.next();
+                }
+                _ => {}
+            }
+        } else if in_str {
+            if c == '\\' {
+                chars.next();
+            } else if c == '"' {
+                in_str = false;
+            }
+        } else if in_char {
+            if c == '\\' {
+                chars.next();
+            } else if c == '\'' {
+                in_char = false;
+            }
+        } else if in_raw && c == '"' && chars.peek() == Some(&'"') {
+            let mut c2 = chars.clone();
+            c2.next();
+            if c2.peek() == Some(&'"') {
+                in_raw = false;
+                chars.next();
+                chars.next();
+            }
+        }
+    }
+    (param_colon, arrow, double_colon)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
