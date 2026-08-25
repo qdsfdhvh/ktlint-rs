@@ -401,6 +401,7 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
         if !in_string
             && !in_raw_string
             && !in_char
+            && !in_line_comment
             && b == b'/'
             && j + 1 < i
             && bytes[j + 1] == b'*'
@@ -409,7 +410,7 @@ fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_si
             j += 2;
             continue;
         }
-        if !in_string && !in_raw_string && !in_char {
+        if !in_string && !in_raw_string && !in_char && !in_line_comment {
             if b == b'\'' {
                 in_char = true;
                 j += 1;
@@ -825,8 +826,11 @@ mod tc_char_literal_tests {
 
     fn check(src: &str) -> Vec<Violation> {
         let tree = KotlinParser::new().parse(src);
-        TrailingCommaOnDeclarationSite { require_trailing_comma: true, forbid_trailing_comma: false }
-            .check(&tree, src)
+        TrailingCommaOnDeclarationSite {
+            require_trailing_comma: true,
+            forbid_trailing_comma: false,
+        }
+        .check(&tree, src)
     }
 
     // Reviewer round 5: a character literal containing a double quote
