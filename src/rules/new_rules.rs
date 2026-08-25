@@ -162,7 +162,13 @@ impl Rule for SpacingAroundSquareBrackets {
                 let Some((rel, pat)) = next else { break };
                 let abs = line_offset + search_from + rel;
                 let rel_pos = search_from + rel;
-                if !in_protected(abs) && !in_string_at(l, rel_pos) {
+                // A `]` whose only whitespace before it is the row's
+                // leading indentation (`    ],` closing a multiline
+                // collection literal, `] ?:`/`] =` continuation rows) is
+                // NOT a "space inside square brackets" — oracle stays
+                // silent (kataris corpus).
+                let close_is_indent = pat == " ]" && l[..rel_pos].trim_start().is_empty();
+                if !in_protected(abs) && !in_string_at(l, rel_pos) && !close_is_indent {
                     candidate = Some(abs);
                     break;
                 }
@@ -455,5 +461,28 @@ mod square_brackets_char_literal_tests {
             !SpacingAroundSquareBrackets.check(&tree, src).is_empty(),
             "a[ 0 ] after a char literal must report"
         );
+    }
+}
+
+#[cfg(test)]
+mod square_brackets_indent_close_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    // kataris StoryCacheDatabase:12: a collection literal's closing `],` at
+    // the row's indentation is NOT a "space inside square brackets".
+    #[test]
+    fn indented_close_bracket_is_clean() {
+        let src = "package com.example\n\nval entities = listOf(\n    StoryEntryCacheEntity::class,\n    StoryCacheMetaEntity::class,\n],\nversion = 1\n";
+        let tree = KotlinParser::new().parse(src);
+        assert!(SpacingAroundSquareBrackets.check(&tree, src).is_empty());
+    }
+
+    // `] ?: fallback` / `] = page` continuation rows are clean too.
+    #[test]
+    fn close_bracket_continuation_rows_are_clean() {
+        let src = "package com.example\n\nval workPage = workGiftRankingPages[\n    StoryWorkGiftRankingPageKey(period = 1)\n] ?: StoryWorkGiftRankingPageState(isLoading = true)\n";
+        let tree = KotlinParser::new().parse(src);
+        assert!(SpacingAroundSquareBrackets.check(&tree, src).is_empty());
     }
 }

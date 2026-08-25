@@ -162,9 +162,7 @@ impl Rule for ParameterListWrapping {
                         // The type paren's `)` (`Modifier) -> Unit` inside an
                         // annotated function type) is not the parameter list's
                         // closing paren: a `->` after it identifies the type.
-                        let after_rp = source[rp_start + 1..]
-                            .trim_start()
-                            .starts_with("->");
+                        let after_rp = source[rp_start + 1..].trim_start().starts_with("->");
                         if after_rp {
                             continue;
                         }
@@ -173,9 +171,7 @@ impl Rule for ParameterListWrapping {
                         // function_value_parameters when an annotated function
                         // TYPE corrupts the tree) is a call, not a parameter
                         // list; `) {` is legal (oracle clean).
-                        let after_lambda = source[rp_start + 1..]
-                            .trim_start()
-                            .starts_with('{');
+                        let after_lambda = source[rp_start + 1..].trim_start().starts_with('{');
                         if after_lambda {
                             continue;
                         }
@@ -184,8 +180,7 @@ impl Rule for ParameterListWrapping {
                         // its own row (`): DraftHandle {`) is legal even when
                         // the mis-parsed type inflates the last parameter's
                         // end row (kataris corpus, oracle clean).
-                        let physically_shared =
-                            rp_start > 0 && bytes[rp_start - 1] != b'\n';
+                        let physically_shared = rp_start > 0 && bytes[rp_start - 1] != b'\n';
                         if physically_shared && rp.start_position().row == last.end_position().row {
                             let pos = rp.start_position();
                             violations.push(Violation {

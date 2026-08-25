@@ -244,3 +244,24 @@ mod tests {
         assert!(!official("package foo\n\nimport alpha.Bar\nimport Zeta.Foo\n").is_empty());
     }
 }
+
+#[cfg(test)]
+mod import_ordering_java_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str, style: crate::config::CodeStyle) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ImportOrdering::new(style, &Default::default()).check(&tree, src)
+    }
+
+    // android_studio sorts purely lexicographically — java.io.File belongs
+    // BETWEEN groovy and org.gradle (J2 shape is clean, java-at-end is not).
+    #[test]
+    fn android_studio_java_in_middle() {
+        let mid = "package util\n\nimport groovy.json.JsonOutput\nimport java.io.File\nimport org.gradle.api.DefaultTask\n";
+        assert!(check(mid, crate::config::CodeStyle::AndroidStudio).is_empty());
+        let end = "package util\n\nimport groovy.json.JsonOutput\nimport org.gradle.api.DefaultTask\nimport java.io.File\n";
+        assert!(!check(end, crate::config::CodeStyle::AndroidStudio).is_empty());
+    }
+}

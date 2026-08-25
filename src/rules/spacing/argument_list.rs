@@ -220,7 +220,6 @@ mod argument_list_cjk_width_tests {
     }
 }
 
-
 /// True when a mis-parsed `value_arguments` is actually a function TYPE
 /// paren: the opening `(` is preceded by `@Name`, `name:`, or a
 /// non-identifier character (type/grouping context) — not a call's callee.
@@ -241,9 +240,7 @@ fn type_paren_arguments(node: &tree_sitter::Node, bytes: &[u8]) -> bool {
     }
     let mut k = j;
     while k > 0
-        && (bytes[k - 1].is_ascii_alphanumeric()
-            || bytes[k - 1] == b'_'
-            || bytes[k - 1] == b'.')
+        && (bytes[k - 1].is_ascii_alphanumeric() || bytes[k - 1] == b'_' || bytes[k - 1] == b'.')
     {
         k -= 1;
     }

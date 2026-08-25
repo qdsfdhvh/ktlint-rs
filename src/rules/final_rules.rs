@@ -209,12 +209,47 @@ impl Rule for TrailingCommaOnDeclarationSite {
                 _ => (0, "", false),
             };
             if elem_kinds != 0 {
+                let is_param_list = matches!(
+                    node.kind(),
+                    "function_value_parameters" | "primary_constructor"
+                );
+                // A function-type parameter (`storyContent: @Composable
+                // (character: X, modifier: Y) -> Unit`) is mis-parsed by
+                // tree-sitter-kotlin-sg into several top-level parameters
+                // (the type's own `,` becomes a list separator) — the list's
+                // trailing comma can't be measured reliably and oracle stays
+                // silent (kataris corpus). Detect the `: @Name (` / `: (`
+                // type-paren marker inside the list and skip it.
+                let list_text = if is_param_list {
+                    std::str::from_utf8(&bytes[node.start_byte()..node.end_byte()]).unwrap_or("")
+                } else {
+                    ""
+                };
+                let has_type_param = is_param_list && has_type_param_marker(list_text);
+                let bare_elems = is_param_list
+                    && !has_type_param
+                    && (0..node.child_count()).any(|i| {
+                        node.child(i).is_some_and(|c| {
+                            !matches!(c.kind(), "(" | ")" | "," | "parameter" | "class_parameter")
+                        })
+                    });
+                if bare_elems || has_type_param {
+                    for i in (0..node.child_count()).rev() {
+                        if let Some(c) = node.child(i) {
+                            stack.push(c);
+                        }
+                    }
+                    continue;
+                }
                 let multiline = node.start_position().row != node.end_position().row
                     || (lambda && lambda_arrow_on_next_line(&node, s));
                 let elem = element_kind(elem_kinds);
                 let mut kids = Vec::new();
                 for c in node.children(&mut node.walk()) {
-                    if c.kind() == elem {
+                    // Destructuring lambda params (`{ index, (group, items) ->`)
+                    // are multi_variable_declaration nodes — the LAST param is
+                    // the destructuring group, not the plain variable before it.
+                    if c.kind() == elem || (lambda && c.kind() == "multi_variable_declaration") {
                         kids.push(c);
                     }
                 }
@@ -274,6 +309,33 @@ const ELEM_CLASS_PARAM: u8 = 2;
 const ELEM_VAR_DECL: u8 = 3;
 const ELEM_ENUM_ENTRY: u8 = 4;
 
+/// True when the text contains a function-type parameter marker — `: (` or
+/// `: @Name (` (a plain/annotated function type such as
+/// `storyContent: @Composable (character: X) -> Unit`). The marker is what
+/// tree-sitter-kotlin-sg mis-parses into separate top-level parameters.
+fn has_type_param_marker(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    let mut i = 0usize;
+    while i + 1 < bytes.len() {
+        if bytes[i] == b':' && bytes[i + 1] == b' ' {
+            let rest = &text[i + 2..];
+            if rest.starts_with('(') {
+                return true;
+            }
+            if let Some(r) = rest.strip_prefix('@') {
+                let id_end = r
+                    .find(|c: char| !c.is_alphanumeric() && c != '_' && c != '.')
+                    .unwrap_or(r.len());
+                if r[id_end..].trim_start().starts_with('(') {
+                    return true;
+                }
+            }
+        }
+        i += 1;
+    }
+    false
+}
+
 fn element_kind(kind: u8) -> &'static str {
     match kind {
         ELEM_PARAM => "parameter",
@@ -291,16 +353,83 @@ fn element_kind(kind: u8) -> &'static str {
 /// `)`/`}`/`->`. Works for parameters with multiline default values
 /// (`request: Request = url(\n    …,\n),` — the comma sits before `)`).
 fn list_trailing_comma(node: &tree_sitter::Node, bytes: &[u8]) -> Option<tree_sitter::Point> {
-    let close = node
-        .children(&mut node.walk())
-        .find(|c| matches!(c.kind(), ")" | "}" | "->"))?;
-    // Last non-whitespace char before the close.
+    // `;` closes an enum body with a semicolon after its entries
+    // (`UNKNOWN,` then `;` — the trailing comma sits before `;`, kataris
+    // corpus). When a `;` is present (enum semicolon) it wins over the
+    // trailing `}`. Otherwise the list's OWN close is the LAST
+    // `)`/`}`/`->` child — nested calls inside the list have their own
+    // `)` earlier.
+    let semicolon = node.children(&mut node.walk()).find(|c| c.kind() == ";");
+    let close = match semicolon {
+        Some(sc) => sc,
+        None => node
+            .children(&mut node.walk())
+            .filter(|c| matches!(c.kind(), ")" | "}" | "->"))
+            .last()?,
+    };
+    // Last non-whitespace char before the close, skipping comment text and
+    // string literals (regular, escaped and raw `"""`) — a trailing
+    // comment after the last entry (`Color(0xFFE0CFC2), // peach`), a URL
+    // argument (`Uri.parse("kataris:///…")`) or a raw-string argument
+    // (`"""<cg url="https://…">…"""`) must not hide the comma.
     let mut i = close.start_byte();
     let mut last = None;
     let mut j = node.start_byte();
+    let mut in_line_comment = false;
+    let mut in_string = false;
+    let mut in_raw_string = false;
     while j < i {
         let b = bytes[j];
-        if b != b' ' && b != b'\t' && b != b'\n' && b != b'\r' {
+        if !in_string && !in_raw_string {
+            if b == b'"' && j + 2 < i && bytes[j + 1] == b'"' && bytes[j + 2] == b'"' {
+                in_raw_string = true;
+                j += 3;
+                continue;
+            }
+            if b == b'"' {
+                in_string = true;
+                j += 1;
+                continue;
+            }
+        } else if in_string {
+            if b == b'\\' {
+                j += 2;
+                continue;
+            }
+            if b == b'"' {
+                in_string = false;
+                // The closing quote ends the argument — record it so a
+                // later scan does not fall back to an EARLIER comma inside
+                // the list (kataris KatTheme.kt `Suppress("unused", "…")`).
+                last = Some((j, b));
+                j += 1;
+                continue;
+            }
+        } else if in_raw_string
+            && b == b'"'
+            && j + 2 < i
+            && bytes[j + 1] == b'"'
+            && bytes[j + 2] == b'"'
+        {
+            in_raw_string = false;
+            // Closing triple-quote ends the argument (see the `"` case).
+            last = Some((j, b));
+            j += 3;
+            continue;
+        }
+        if b == b'\n' {
+            in_line_comment = false;
+        } else if !in_string && !in_raw_string && b == b'/' && j + 1 < i && bytes[j + 1] == b'/' {
+            in_line_comment = true;
+        }
+        if !in_line_comment
+            && !in_string
+            && !in_raw_string
+            && b != b' '
+            && b != b'\t'
+            && b != b'\n'
+            && b != b'\r'
+        {
             last = Some((j, b));
         }
         j += 1;
@@ -389,6 +518,24 @@ impl Rule for TrailingCommaOnCallSite {
         let mut stack = vec![tree.root_node()];
         while let Some(node) = stack.pop() {
             if node.kind() == "value_arguments" {
+                // A function-type argument list mis-parses as value_arguments
+                // (`onOpenCoverMedia: ((url: String, …) -> Unit)?` — the
+                // type's `(` opener is preceded by `: ` / `@`). Its trailing
+                // comma is not measurable; oracle stays silent.
+                let opener = node.start_byte();
+                let type_paren = opener > 0
+                    && (0..opener)
+                        .rev()
+                        .find(|&j| !matches!(bytes[j], b' ' | b'\t'))
+                        .is_some_and(|j| bytes[j] == b':' || bytes[j] == b'@');
+                if type_paren {
+                    for i in (0..node.child_count()).rev() {
+                        if let Some(c) = node.child(i) {
+                            stack.push(c);
+                        }
+                    }
+                    continue;
+                }
                 let multiline = node.start_position().row != node.end_position().row;
                 let mut kids = Vec::new();
                 for c in node.children(&mut node.walk()) {
@@ -397,6 +544,14 @@ impl Rule for TrailingCommaOnCallSite {
                     }
                 }
                 if let Some(last) = kids.last() {
+                    // A list whose only argument is a lambda
+                    // (`withTransform({\n … })` — anonymous, or
+                    // `scaleClickable(onClick = {\n … })` — named) needs no
+                    // trailing comma (oracle clean).
+                    let single_lambda = kids.len() == 1
+                        && s[last.start_byte()..last.end_byte()]
+                            .trim_end()
+                            .ends_with('}');
                     let comma_pos = list_trailing_comma(&node, bytes);
                     if comma_pos.is_some() {
                         if !multiline || self.forbid_trailing_comma {
@@ -409,16 +564,30 @@ impl Rule for TrailingCommaOnCallSite {
                                 auto_fixable: true,
                             });
                         }
-                    } else if multiline && self.require_trailing_comma {
-                        let pos = last.end_position();
-                        v.push(Violation {
-                            file: String::new(),
-                            line: pos.row + 1,
-                            col: pos.column + 1,
-                            rule_id: self.id().into(),
-                            message: "Missing trailing comma before \")\"".into(),
-                            auto_fixable: true,
-                        });
+                    } else if multiline && self.require_trailing_comma && !single_lambda {
+                        // A lambda as the LAST argument with the FIRST
+                        // argument on the opener line (`MessageAvatar(item,
+
+                        // onClick = { … })`) is a trailing-lambda style —
+                        // oracle stays silent; only a fully multiline list
+                        // (first arg on its own line) demands the comma.
+                        let first_on_open_line = kids
+                            .first()
+                            .is_some_and(|f| f.start_position().row == node.start_position().row);
+                        let last_is_lambda = s[last.start_byte()..last.end_byte()]
+                            .trim_end()
+                            .ends_with('}');
+                        if !(first_on_open_line && last_is_lambda) {
+                            let pos = last.end_position();
+                            v.push(Violation {
+                                file: String::new(),
+                                line: pos.row + 1,
+                                col: pos.column + 1,
+                                rule_id: self.id().into(),
+                                message: "Missing trailing comma before \")\"".into(),
+                                auto_fixable: true,
+                            });
+                        }
                     }
                 }
             }
@@ -466,6 +635,107 @@ mod trailing_comma_lambda_tests {
                 .any(|x| x.message.contains("Missing trailing comma")),
             "violations: {:?}",
             v.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
+    }
+}
+
+#[cfg(test)]
+mod trailing_comma_regression_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn decl_check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        TrailingCommaOnDeclarationSite {
+            require_trailing_comma: true,
+            forbid_trailing_comma: false,
+        }
+        .check(&tree, src)
+    }
+
+    fn call_check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        TrailingCommaOnCallSite {
+            require_trailing_comma: true,
+            forbid_trailing_comma: false,
+        }
+        .check(&tree, src)
+    }
+
+    // kataris: destructuring lambda params ({ index, (group, items) -> }) —
+    // the destructuring group is the LAST param; no trailing comma present.
+    #[test]
+    fn lambda_destructuring_no_trailing_comma_clean() {
+        let src = "package com.example\n\nfun main() {\n    val grouped = listOf(1 to 2)\n    grouped.forEachIndexed { groupIndex, (group, items) ->\n        println(\"$groupIndex $group $items\")\n    }\n}\n";
+        assert!(decl_check(src).is_empty());
+    }
+
+    // kataris: function-type param mis-parses — trailing comma present.
+    #[test]
+    fn function_type_param_misparse_clean() {
+        let src = "package com.example\n\nfun HomeShelfSection(\n    storyContent: @Composable (character: HomeCharacter, modifier: Modifier) -> Unit,\n) {\n    use(storyContent)\n}\n";
+        assert!(decl_check(src).is_empty());
+    }
+
+    // kataris: enum body with a semicolon after the entries.
+    #[test]
+    fn enum_with_semicolon_clean() {
+        let src = "package com.example\n\nenum class CreatorStudioGenerationStatus {\n    PENDING,\n    UNKNOWN,\n    ;\n}\n";
+        assert!(decl_check(src).is_empty());
+    }
+
+    // kataris: single anonymous lambda argument ({ … }).
+    #[test]
+    fn single_lambda_argument_clean() {
+        let src = "package com.example\n\nfun main() {\n    withTransform({\n        translate(1f)\n    }) {\n        drawPath()\n    }\n}\n";
+        assert!(call_check(src).is_empty());
+    }
+
+    // kataris: named lambda last arg with first arg on opener line.
+    #[test]
+    fn first_arg_on_open_line_with_lambda_clean() {
+        let src = "package com.example\n\nfun main() {\n    MessageAvatar(item, onClick = {\n        onMarkRead()\n    })\n}\n";
+        assert!(call_check(src).is_empty());
+    }
+
+    // kataris: trailing comment must not hide the existing comma.
+    #[test]
+    fn trailing_comment_keeps_existing_comma() {
+        let src = "package com.example\n\nval colors = listOf(\n    Color(0xFFDED6CB), // taupe\n    Color(0xFFE0CFC2), // peach\n)\n";
+        assert!(call_check(src).is_empty());
+    }
+
+    // kataris: a URL inside an argument must not hide the comma or trigger
+    // a false "Missing" (nested multiline call).
+    #[test]
+    fn nested_call_with_url_clean() {
+        let src = "package com.example\n\nfun main() {\n    assertEquals(\n        home(HomeDeepLinkTarget(homeTabId = \"new\")),\n        DeepLinkParser.parse(Uri.parse(\"kataris:///home?tab=new\"), hosts),\n    )\n}\n";
+        assert!(call_check(src).is_empty());
+    }
+
+    // A fully-multiline list still demands the trailing comma (oracle C8).
+    #[test]
+    fn fully_multiline_still_reports_missing() {
+        let src =
+            "package com.example\n\nfun main() {\n    foo(\n        a,\n        b\n    )\n}\n";
+        assert!(
+            call_check(src)
+                .iter()
+                .any(|x| x.message.contains("Missing trailing comma")),
+            "fully-multiline list must report Missing"
+        );
+    }
+
+    // Missing trailing comma in a DECL parameter list still reports.
+    #[test]
+    fn decl_missing_comma_still_reports() {
+        let src =
+            "package com.example\n\nfun g(\n    a: Int,\n    b: String\n) {\n    use(a, b)\n}\n";
+        assert!(
+            decl_check(src)
+                .iter()
+                .any(|x| x.message.contains("Missing trailing comma")),
+            "decl list without trailing comma must report"
         );
     }
 }

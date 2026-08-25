@@ -433,15 +433,24 @@ impl ClassSignatureSpacing {
             }
         }
         // Empty primary constructor: `class C()` — ktlint wants the bare
-        // parentheses removed ("No parenthesis expected", at the `(`).
+        // parentheses removed ("No parenthesis expected", at the `(`). An
+        // EXPLICIT `constructor()` keyword is legal and stays (oracle:
+        // `class X private constructor() : BaseEvent() {` silent — kataris
+        // ampli-basic + HomeCollapsingPagerScaffold, issue #260).
         if let Some(ctor) = node
             .children(&mut node.walk())
             .find(|c| c.kind() == "primary_constructor")
         {
+            // tree-sitter-kotlin-sg folds the `constructor` keyword away
+            // (primary_constructor text is `private constructor()` but its
+            // children are modifiers + `(` + `)`), so detect it on the text.
+            let ctor_text =
+                std::str::from_utf8(&bytes[ctor.start_byte()..ctor.end_byte()]).unwrap_or("");
+            let explicit_constructor = ctor_text.contains("constructor");
             let has_param = ctor
                 .children(&mut ctor.walk())
                 .any(|c| c.kind() == "class_parameter");
-            if !has_param {
+            if !has_param && !explicit_constructor {
                 for c in ctor.children(&mut ctor.walk()) {
                     if c.kind() == "(" {
                         let pos = c.start_position();
@@ -718,6 +727,38 @@ mod tests {
             v.is_empty(),
             "collapsed width 189 > default 120 must stay silent: {:?}",
             v.iter().map(|x| (&x.message, x.line)).collect::<Vec<_>>()
+        );
+    }
+}
+
+#[cfg(test)]
+mod class_explicit_constructor_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check(src: &str) -> Vec<Violation> {
+        let tree = KotlinParser::new().parse(src);
+        ClassSignatureSpacing::new(crate::config::CodeStyle::AndroidStudio, 120).check(&tree, src)
+    }
+
+    // kataris ampli-basic: `class X private constructor() : BaseEvent() {`
+    // — an explicit empty constructor is legal (oracle silent).
+    #[test]
+    fn explicit_empty_constructor_is_clean() {
+        let src =
+            "package com.example\n\nclass MessageSent private constructor() : BaseEvent() {\n}\n";
+        assert!(check(src).is_empty());
+    }
+
+    // `class C()` without the keyword still reports.
+    #[test]
+    fn bare_empty_constructor_reports() {
+        let src = "package com.example\n\nclass C() {\n}\n";
+        assert!(
+            check(src)
+                .iter()
+                .any(|x| x.message.contains("No parenthesis")),
+            "bare empty constructor must report"
         );
     }
 }

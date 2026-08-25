@@ -88,11 +88,12 @@ impl FunctionSignatureSpacing {
                         // oracle silent). The old eq_line_len only measured
                         // the `=` line, which wrongly merged.
                         let collapsed_sig = self
-                            .collapsed_signature_len(&node, &params_node.unwrap_or(node), s.as_bytes())
+                            .collapsed_signature_len(
+                                &node,
+                                &params_node.unwrap_or(node),
+                                s.as_bytes(),
+                            )
                             .unwrap_or(sig_len);
-                        if std::env::var("KTLINT_RS_BM_DBG").is_ok() {
-                            eprintln!("[bm] sig_multiline={} sig_len={} collapsed={} remaining_branch={}", sig_multiline, sig_len, collapsed_sig, sig_multiline || (has_params && (param_multiline || sig_len > max_length)));
-                        }
                         let remaining = if sig_multiline
                             || (has_params && (param_multiline || sig_len > max_length))
                         {
@@ -100,13 +101,19 @@ impl FunctionSignatureSpacing {
                         } else {
                             max_length.saturating_sub(sig_len)
                         };
-                        // First line of body expression (no leading indent —
-                        // expression node starts at first code token).
+                        // First line of body expression INCLUDING its leading
+                        // indentation — ktlint measures `firstLineOfBodyExpression`
+                        // from the line start, so a deeply indented body
+                        // (kataris H1 shape: `fun …() =\n        assertEquals(`
+                        // with 8-space indent) exceeds the remaining width and
+                        // is never merged (oracle silent); a shallow body
+                        // (Q1 shape, 4-space indent) fits and merges.
                         let body_start = expr.start_byte();
                         let body_line_end = s[body_start..]
                             .find('\n')
                             .map_or(s.len(), |i| body_start + i);
-                        let first_line = &s[body_start..body_line_end];
+                        let body_line_start = s[..body_start].rfind('\n').map_or(0, |i| i + 1);
+                        let first_line = &s[body_line_start..body_line_end];
                         let first_line_len = first_line.len();
                         // Never merge an annotated expression body.
                         if first_line.trim_start().starts_with('@') {
@@ -597,7 +604,22 @@ impl FunctionSignatureSpacing {
             }
             len
         };
-        indent_len + collapsed_len <= self.max_length
+        // Same expression-body threshold as signature_fits: ktlint 1.8 counts
+        // the ` = ` after `)`, so a collapsed signature of 118+ chars with an
+        // expression body is NOT collapsed (oracle K1/G117 boundary).
+        let expression_body = {
+            let line_end = bytes[byte..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .map_or(bytes.len(), |i| byte + i);
+            bytes[byte..line_end].iter().any(|&b| b == b'=')
+        };
+        let fit_max = if expression_body {
+            self.max_length.saturating_sub(3)
+        } else {
+            self.max_length
+        };
+        indent_len + collapsed_len <= fit_max
     }
 
     /// Whether the collapsed signature (from the first non-annotation
@@ -649,22 +671,46 @@ impl FunctionSignatureSpacing {
         bytes: &[u8],
     ) -> Option<usize> {
         let start = self.measure_start(node, bytes);
-        // Measure to the end of the closing-paren line: ` {`, `: Int {` etc.
-        // on that line count against max_line_length too (issue #188).
+        // Measure to the expression-body `=`, which may sit on a LATER line
+        // than the closing paren (`fun f():\n    ReturnType =\n    body` —
+        // kataris DtoMapper:1683). The return type rows are part of the
+        // signature and count toward its width. Without an `=` (block body)
+        // measure to the end of the closing-paren line: ` {`, `: Int {` etc.
+        // on that line count too (issue #188).
         let end = {
             let byte = params.end_byte();
-            let line_end = bytes[byte..]
-                .iter()
-                .position(|&b| b == b'\n')
-                .map_or(bytes.len(), |i| byte + i);
-            let mut e = line_end;
-            while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
-                e -= 1;
+            // First `=` after the closing paren (a block body `{` may also
+            // appear before it on the same line — then no `=` beyond).
+            let mut e = bytes.len();
+            let mut i = byte;
+            while i < bytes.len() {
+                match bytes[i] {
+                    b'=' => {
+                        e = i;
+                        break;
+                    }
+                    b'\n' => {
+                        // A block body `{` on the closing-paren line ends the
+                        // signature before any later `=`.
+                        if bytes[byte..i].iter().any(|&b| b == b'{') {
+                            e = i;
+                            break;
+                        }
+                        i += 1;
+                    }
+                    _ => i += 1,
+                }
             }
-            // An expression body (`) : Int = expr`) must not count toward
-            // the collapse width (signature only).
-            if let Some(eq) = bytes[byte..e].iter().position(|&b| b == b'=') {
-                e = byte + eq;
+            // No `=` found: stop at the closing-paren line end, trimmed.
+            if e == bytes.len() {
+                let line_end = bytes[byte..]
+                    .iter()
+                    .position(|&b| b == b'\n')
+                    .map_or(bytes.len(), |j| byte + j);
+                e = line_end;
+                while e > byte && (bytes[e - 1] == b' ' || bytes[e - 1] == b'\t') {
+                    e -= 1;
+                }
             }
             e
         };
@@ -1198,5 +1244,32 @@ mod expr_body_collapse_boundary_tests {
         // 118-char collapsed signature — no collapse (5-char param type).
         let too_long = "package com.example\n\nclass T {\n    private fun serverMessage(\n        serverId: String,\n        speaker: CharacterRosterSpeaker,\n        text: SSSSS,\n    ): CharacterRosterMessage = CharacterRosterMessage(\n        localId = serverId,\n    )\n}\n";
         assert!(check_style(too_long, crate::config::CodeStyle::AndroidStudio).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod expr_body_single_param_fit_tests {
+    use super::*;
+    use crate::parser::KotlinParser;
+
+    fn check_style(src: &str, style: crate::config::CodeStyle) -> Vec<Violation> {
+        let mut parser = KotlinParser::new();
+        let tree = parser.parse(src);
+        FunctionSignatureSpacing::new(120, style).check(&tree, src)
+    }
+
+    // kataris AuthViewModelImplTest:492: a SINGLE-parameter multiline list
+    // with an expression body whose collapsed signature (indent 8) is 121
+    // chars must NOT collapse (oracle G117/K1 boundary: expression body
+    // counts the ` = `, so the fit threshold is max-3 = 117).
+    #[test]
+    fn single_param_expr_body_not_collapsed_when_over_117() {
+        let src = "package com.example\n\nclass Outer {\n    class Auth {\n        override suspend fun getRecommendations(\n            selectedGenreIds: Set<String>,\n        ): Result<List<OnboardingRecommendation>> = Result.success(emptyList())\n    }\n}\n";
+        let v = check_style(src, crate::config::CodeStyle::AndroidStudio);
+        assert!(
+            v.iter().all(|x| !x.message.contains("opening parenthesis")),
+            "121-char collapsed expr-body signature must not collapse: {:?}",
+            v.iter().map(|x| &x.message).collect::<Vec<_>>()
+        );
     }
 }
