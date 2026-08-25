@@ -1386,7 +1386,10 @@ pub(crate) fn compute_line_expected(
             // Chain rows (`a() &&\n    b() &&\n    c()`) keep the lifted
             // level of the previous row; the first continuation lifts one
             // level above it (JVM oracle, issue #202).
-            let want = if prev_binary_cont {
+            // A chain that resumes after a closing brace (`}.toImmutableList()`
+            // on its own row — a `when { }.foo()` result) stays at the brace
+            // row's level, not one deeper (kataris CreatorStudioSections).
+            let want = if prev_binary_cont || prev_code.trim_end().ends_with('}') {
                 prev_expected
             } else {
                 prev_expected.saturating_add(is)
