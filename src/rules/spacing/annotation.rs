@@ -180,10 +180,17 @@ fn check_same_line_annotation_groups(source: &str, violations: &mut Vec<Violatio
         // The last annotation is followed on the same line by a declaration.
         // A primary `constructor` after the last annotation is always
         // separated (`@Inject constructor` -> `@Inject\nconstructor`, JVM
-        // 1.8); other declaration keywords only when at least two annotations
-        // share the line (`@A("x") @B val` — issue #168). A lone
-        // `@Composable fun` / `@Inject val` stays put.
-        let followed_by_decl = after_name.starts_with("constructor(")
+        // 1.8) — EXCEPT on a class header (`class Foo @Inject constructor(`),
+        // where the annotation modifies the primary constructor and stays on
+        // the header line (kataris corpus, oracle clean, issue #260); other
+        // declaration keywords only when at least two annotations share the
+        // line (`@A("x") @B val` — issue #168). A lone `@Composable fun` /
+        // `@Inject val` stays put.
+        let line_head = &line[..last_at];
+        let class_header = line_head.contains("class ")
+            || line_head.contains("interface ")
+            || line_head.contains("object ");
+        let followed_by_decl = (after_name.starts_with("constructor(") && !class_header)
             || (at_positions.len() >= 2
                 && (after_name.starts_with("val ")
                     || after_name.starts_with("var ")

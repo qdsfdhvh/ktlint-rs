@@ -107,6 +107,14 @@ fn modifier_children<'tree>(
         let Some(child) = modifiers.named_child(index) else {
             continue;
         };
+        // A mis-parsed comment token (a `// …` row whose apostrophe breaks
+        // the grammar — kataris `// Robolectric's …`) must not be re-spaced
+        // as a modifier.
+        if child.kind().contains("comment")
+            || source[child.start_byte()..child.end_byte()].trim_start().starts_with("//")
+        {
+            continue;
+        }
         // `constructor` is a declaration, not a modifier: `internal constructor`
         // is legal and must not be re-spaced by modifier-list-spacing.
         if child.kind() == "constructor"
