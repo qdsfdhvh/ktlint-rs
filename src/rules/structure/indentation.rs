@@ -1429,12 +1429,17 @@ pub(crate) fn compute_line_expected(
             // level across the lambda tail.
             brace_chain_stack.push(binary_cont || !t.trim_start().starts_with(')'));
         }
-        prev_binary_cont = binary_cont;
+        // A comment row must not break a chain's continuation state: after
+        // `val x = Modifier\n    .align(…)\n    // note\n    .zIndex(…)`
+        // the `.zIndex` row keeps the chain level (kataris corpus, oracle
+        // silent). Comments set no chain state of their own.
+        if t.starts_with("//") {
+            // keep prev_binary_cont as-is (the previous code row's state)
+        } else {
+            prev_binary_cont = binary_cont;
+        }
         if !t.trim_end().ends_with(')') {
             prev_paren_close_chain = false;
-        }
-        if std::env::var("KTLINT_RS_INDENT_DBG").is_ok() {
-            eprintln!("[sc] row {} e={} depth={} paren={} arrow_d={:?} prev_last={:?} prev_expected={} t={:?}", i + 1, e, depth, paren_depth, arrow_body_depth, prev_last_code, prev_expected, &t[..t.len().min(28)]);
         }
         out[i] = e;
         if arrow_body_depth.is_some_and(|d| depth < d) {
@@ -2282,8 +2287,20 @@ pub(crate) fn ast_expected(
             None => break,
         }
     }
-    if trimmed.starts_with("?:") && row > 0 {
+    if (trimmed.starts_with("?:") || trimmed.starts_with("]")) && row > 0 {
         let prev_line = src.lines().nth(row - 1).map(|l| l.trim()).unwrap_or("");
+        // Issue #260/kataris: `foo[\n    key\n] ?: default` and a Room
+        // `entities = [\n    X::class,\n],` — a `]`-leading row aligns
+        // with its `[` opener (indexing or collection literal).
+        if trimmed.starts_with(']') {
+            let opener = chain
+                .iter()
+                .find(|n| n.kind() == "indexing_expression" || n.kind() == "value_arguments")
+                .map(|n| n.start_position().row);
+            if let Some(o) = opener {
+                return ast_expected(tree, src, o, is);
+            }
+        }
         // After a `?.` chain continuation the elvis stays on the chain's
         // own level (`?.filter\n    ?: emptyList()`). After a chain
         // lambda's closing brace (`?.let { … }\n    ?: default()`) it stays
@@ -2309,14 +2326,6 @@ pub(crate) fn ast_expected(
             .map(|n| n.start_position().row)
             .max()
             .unwrap_or(row - 1);
-        if std::env::var("KTLINT_RS_INDENT_DBG").is_ok() {
-            eprintln!(
-                "[elvis] row {} stmt_row={} prev={:?}",
-                row + 1,
-                stmt_row + 1,
-                prev_line
-            );
-        }
         return ast_expected(tree, src, stmt_row, is).map(|e| e + is);
     }
     for c in &chain {
@@ -2460,26 +2469,22 @@ pub(crate) fn ast_expected(
                         if t.ends_with("->") || t.ends_with("<-") {
                             return false;
                         }
-                        ["&&", "||", "==", "!=", "<=", ">=", "??", "?:", "+", "-", "*", "/", "%", "<", ">"]
-                            .iter()
-                            .any(|op| t.ends_with(op))
+                        [
+                            "&&", "||", "==", "!=", "<=", ">=", "??", "?:", "+", "-", "*", "/",
+                            "%", "<", ">",
+                        ]
+                        .iter()
+                        .any(|op| t.ends_with(op))
                     };
-                    let prev = src
-                        .lines()
-                        .nth(row.wrapping_sub(1))
-                        .unwrap_or("");
-                    let prev_prev = src
-                        .lines()
-                        .nth(row.wrapping_sub(2))
-                        .unwrap_or("");
+                    let prev = src.lines().nth(row.wrapping_sub(1)).unwrap_or("");
+                    let prev_prev = src.lines().nth(row.wrapping_sub(2)).unwrap_or("");
                     let continuing = op_end(prev) && op_end(prev_prev);
                     if continuing {
                         // Keep the PREVIOUS row's level (a second
                         // continuation stays level with the first).
                         return ast_expected(tree, src, row - 1, is);
                     }
-                    return ast_expected(tree, src, c.start_position().row, is)
-                        .map(|e| e + is);
+                    return ast_expected(tree, src, c.start_position().row, is).map(|e| e + is);
                 }
             }
             "lambda_literal" => {
